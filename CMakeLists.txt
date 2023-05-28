@@ -14,11 +14,6 @@ include_directories(libs/sdl/include)
 file(GLOB sdl_binaries CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/libs/sdl/bin/*")
 target_link_libraries(${PROJECT_NAME} ${sdl_binaries})
 
-# changed SDL-related includes ('#include "*.h"' including *_code.h) to '#include <sdl/*.h>' in 'SDL_ttf.h'
-include_directories(libs/sdl_ttf/include)
-file(GLOB sdl_ttf_binaries CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/libs/sdl_ttf/bin/*")
-target_link_libraries(${PROJECT_NAME} ${sdl_ttf_binaries})
-
 # changed SDL-related includes ('#include "*.h"' including *_code.h) to '#include <sdl/*.h>' in 'SDL_net.h'
 include_directories(libs/sdl_net/include)
 file(GLOB sdl_net_binaries CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/libs/sdl_net/bin/*")
@@ -31,6 +26,7 @@ target_link_libraries(${PROJECT_NAME} m) # c math lib used by nuklear
 
 file(COPY res DESTINATION ${CMAKE_BINARY_DIR})
 
+#
 # libs
 #     nuklear
 #         include
@@ -47,11 +43,5 @@ file(COPY res DESTINATION ${CMAKE_BINARY_DIR})
 #             <.so|.a>
 #         include
 #             sdl_net
-#                 <.h>
-#     sdl_ttf
-#         bin
-#             <.so|.a>
-#         include
-#             sdl_ttf
 #                 <.h>
 #
