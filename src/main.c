@@ -126,8 +126,15 @@ int main() {
             nk_rect(0, 0, (float) width, (float) height),
             NK_WINDOW_BORDER
         )) {
-            nk_layout_row_dynamic(context, (float) height / 2, 1);
+            nk_layout_row_dynamic(context, 15, 2);
             nk_label(context, message ? message : "Unable to connect", NK_TEXT_CENTERED);
+
+            if (nk_button_label(context, "Retry")) {
+                SDL_free(message);
+                message = net();
+            }
+
+            nk_spacer(context);
         }
         nk_end(context);
 
