@@ -8,7 +8,7 @@ set(CMAKE_C_STANDARD 11)
 #add_compile_options("-O3")
 #add_link_options("-s")
 
-file(GLOB sources CONFIGURE_DEPENDS "src/*.c" "src/*.h")
+file(GLOB sources CONFIGURE_DEPENDS "src/*.c" "src/*.h" "src/*/*.c" "src/*/*.h")
 add_executable(${PROJECT_NAME} ${sources})
 
 include_directories(libs/sdl/include)
