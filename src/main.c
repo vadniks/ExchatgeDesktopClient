@@ -111,9 +111,8 @@ int main() {
 
     // loop
 
-    bool running = true;
     SDL_Event event;
-    while (running) {
+    while (true) {
         nk_input_begin(context);
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) goto cleanup;
