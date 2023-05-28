@@ -7,6 +7,13 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+#include <sdl/SDL.h> // TODO: test only
+#include <sdl_net/SDL_net.h>
+#include <sdl_net/SDLnetsys.h>
+#include <sdl_ttf/SDL_ttf.h>
+#include <nuklear/nuklear.h>
+#include <nuklear/nuklear_sdl_renderer.h>
+
 void error(const char* msg) {
     perror(msg);
     exit(EXIT_FAILURE);
