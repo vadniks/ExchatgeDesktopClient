@@ -1,3 +1,4 @@
+
 cmake_minimum_required(VERSION 3.20)
 set(CMAKE_C_COMPILER "/usr/bin/clang")
 project(ExchatgeDesktopClient C)
