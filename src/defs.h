@@ -2,6 +2,7 @@
 #pragma once
 
 typedef void* (*function)(void*);
+typedef unsigned char byte;
 
 extern const char* APP_TITLE;
 

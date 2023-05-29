@@ -1,8 +1,15 @@
 
 #include <sdl_net/SDL_net.h>
+#include "crypto.h"
 #include "net.h"
 
-char* net() {
+typedef struct {
+    byte* publicKey;
+} this_t;
+
+static this_t* this = NULL;
+
+char* net() { // TODO: left as an example, will be removed
     IPaddress address;
     SDLNet_ResolveHost(&address, "127.0.0.1", 8080);
 
@@ -20,4 +27,26 @@ char* net() {
     end:
     SDLNet_TCP_Close(socket);
     return buffer;
+}
+
+static unsigned char* fetchPublicKey() {
+    return NULL;
+}
+
+bool ntInit() {
+    this = SDL_calloc(1024/*TODO*/, sizeof(byte));
+    this->publicKey = fetchPublicKey();
+    return false;
+}
+
+void ntSend(byte* message) {
+
+}
+
+byte* ntReceive() {
+    return NULL;
+}
+
+void ntClean() {
+    SDL_free(this->publicKey);
 }
