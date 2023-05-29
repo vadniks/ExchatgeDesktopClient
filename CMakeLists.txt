@@ -24,6 +24,10 @@ target_link_libraries(${PROJECT_NAME} ${sdl_net_binaries})
 include_directories(libs/nuklear/include)
 target_link_libraries(${PROJECT_NAME} m) # c math lib used by nuklear
 
+include_directories(libs/sodium/include)
+file(GLOB sodium_binaries CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/libs/sodium/bin/*")
+target_link_libraries(${PROJECT_NAME} ${sodium_binaries})
+
 file(COPY res DESTINATION ${CMAKE_BINARY_DIR})
 
 #
@@ -43,5 +47,11 @@ file(COPY res DESTINATION ${CMAKE_BINARY_DIR})
 #             <.so|.a>
 #         include
 #             sdl_net
+#                 <.h>
+#     sodium
+#         bin
+#             <.so|.a>
+#         include
+#             sodium
 #                 <.h>
 #
