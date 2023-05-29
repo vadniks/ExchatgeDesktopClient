@@ -3,9 +3,7 @@
 #include "crypto.h"
 #include "net.h"
 
-typedef struct {
-    byte* publicKey;
-} this_t;
+typedef struct {} this_t;
 
 static this_t* this = NULL;
 
@@ -34,19 +32,26 @@ static unsigned char* fetchPublicKey() {
 }
 
 bool ntInit() {
-    this = SDL_calloc(1024/*TODO*/, sizeof(byte));
-    this->publicKey = fetchPublicKey();
+    this = SDL_malloc(sizeof *this);
+    crInit(fetchPublicKey());
     return false;
 }
 
 void ntSend(byte* message) {
+    byte* encrypted = crEncrypt(message);
+    SDL_free(message);
 
+    // TODO
 }
 
 byte* ntReceive() {
+    byte* message = NULL; // TODO
+    byte* decrypted = crDecrypt(message);
+    SDL_free(message);
+
     return NULL;
 }
 
 void ntClean() {
-    SDL_free(this->publicKey);
+    SDL_free(this);
 }
