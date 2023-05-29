@@ -7,3 +7,4 @@ extern const char* APP_TITLE;
 
 extern const int APP_WIDTH;
 extern const int APP_HEIGHT;
+extern const int UI_UPDATE_PERIOD;
