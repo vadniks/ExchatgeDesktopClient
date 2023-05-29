@@ -22,7 +22,6 @@ target_link_libraries(${PROJECT_NAME} ${sdl_net_binaries})
 
 # changed SDL-related includes ('#include "*.h"' | '#include <SDL2/*.h>') to '#include <sdl/*.h>' in 'nuklear_sdl_renderer.h'
 include_directories(libs/nuklear/include)
-target_precompile_headers(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/nuklear.h)
 target_link_libraries(${PROJECT_NAME} m) # c math lib used by nuklear
 
 file(COPY res DESTINATION ${CMAKE_BINARY_DIR})
