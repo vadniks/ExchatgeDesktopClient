@@ -1,30 +1,29 @@
 
 #include <stdbool.h>
 #include <time.h>
-#include <pthread.h>
 #include "render.h"
 #include "defs.h"
 #include "lifecycle.h"
 
 typedef struct {
-    bool running;
-    pthread_cond_t uiUpdateCond;
-    pthread_mutex_t uiUpdateLock;
+    volatile bool running;
+    SDL_cond* uiUpdateCond;
+    SDL_mutex* uiUpdateLock;
     SDL_TimerID uiUpdateTimerId;
 } this_t;
 
 static this_t* this = NULL;
 
 static unsigned uiUpdate(__attribute_maybe_unused__ unsigned _, __attribute_maybe_unused__ void* _2) {
-    pthread_cond_signal(&(this->uiUpdateCond));
+    SDL_CondSignal(this->uiUpdateCond);
     return this->running ? UI_UPDATE_PERIOD : 0;
 }
 
 void lcInit() {
     this = SDL_malloc(sizeof *this);
     this->running = true;
-    this->uiUpdateCond = (pthread_cond_t) PTHREAD_COND_INITIALIZER;
-    this->uiUpdateLock = (pthread_mutex_t) PTHREAD_MUTEX_INITIALIZER;
+    this->uiUpdateCond = SDL_CreateCond();
+    this->uiUpdateLock = SDL_CreateMutex();
 
     rdInit();
 
@@ -48,10 +47,10 @@ static bool processEvents() {
 }
 
 static void uiUpdateSynchronized(function action) {
-    pthread_mutex_lock(&(this->uiUpdateLock));
+    SDL_LockMutex(this->uiUpdateLock);
     action(NULL);
-    pthread_cond_wait(&(this->uiUpdateCond), &(this->uiUpdateLock));
-    pthread_mutex_unlock(&(this->uiUpdateLock));
+    SDL_CondWait(this->uiUpdateCond, this->uiUpdateLock);
+    SDL_UnlockMutex(this->uiUpdateLock);
 }
 
 void lcLoop() {
@@ -72,6 +71,9 @@ void lcClean() {
     SDL_RemoveTimer(this->uiUpdateTimerId);
 
     rdClean();
+
+    SDL_DestroyCond(this->uiUpdateCond);
+    SDL_DestroyMutex(this->uiUpdateLock);
 
     SDL_free(this);
     this = NULL;

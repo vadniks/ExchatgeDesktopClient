@@ -24,8 +24,6 @@ target_link_libraries(${PROJECT_NAME} ${sdl_net_binaries})
 include_directories(libs/nuklear/include)
 target_link_libraries(${PROJECT_NAME} m) # c math lib used by nuklear
 
-target_link_libraries(${PROJECT_NAME} pthread)
-
 file(COPY res DESTINATION ${CMAKE_BINARY_DIR})
 
 #
