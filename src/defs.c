@@ -17,3 +17,5 @@ message:
     1024-bytes long body for a message;
     4-bytes long tail for a service information specifier
 */
+
+// TODO: add a local storage to cache messages
