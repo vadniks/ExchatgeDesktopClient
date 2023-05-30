@@ -18,3 +18,7 @@ extern const char* APP_TITLE;
 extern const int APP_WIDTH;
 extern const int APP_HEIGHT;
 extern const int UI_UPDATE_PERIOD;
+extern const int NET_UPDATE_PERIOD;
+extern const int NET_RECEIVE_BUFFER_SIZE;
+extern const int NET_MESSAGE_HEAD_SIZE;
+extern const int NET_MESSAGE_TAIL_SIZE;

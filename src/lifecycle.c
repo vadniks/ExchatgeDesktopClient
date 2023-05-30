@@ -3,6 +3,7 @@
 #include <time.h>
 #include "render.h"
 #include "defs.h"
+#include "net.h"
 #include "lifecycle.h"
 
 THIS(
@@ -10,10 +11,23 @@ THIS(
     SDL_cond* uiUpdateCond;
     SDL_mutex* uiUpdateLock;
     SDL_TimerID uiUpdateTimerId;
+    unsigned updateThreadCounter;
 )
 
-static unsigned uiUpdate(__attribute_maybe_unused__ unsigned _, __attribute_maybe_unused__ void* _2) {
+inline static void netUpdate() { ntListen(); }
+
+static unsigned uiUpdate(
+    __attribute_maybe_unused__ unsigned _,
+    __attribute_maybe_unused__ void* _2
+) {
     SDL_CondSignal(this->uiUpdateCond);
+
+    if (this->updateThreadCounter == NET_UPDATE_PERIOD) {
+        this->updateThreadCounter = 1;
+        netUpdate();
+    } else
+        this->updateThreadCounter++;
+
     return this->running ? UI_UPDATE_PERIOD : 0;
 }
 
@@ -22,7 +36,9 @@ void lcInit() {
     this->running = true;
     this->uiUpdateCond = SDL_CreateCond();
     this->uiUpdateLock = SDL_CreateMutex();
+    this->updateThreadCounter = 1;
 
+    ntInit();
     rdInit();
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
@@ -69,6 +85,7 @@ void lcClean() {
     SDL_RemoveTimer(this->uiUpdateTimerId);
 
     rdClean();
+    ntClean();
 
     SDL_DestroyCond(this->uiUpdateCond);
     SDL_DestroyMutex(this->uiUpdateLock);
