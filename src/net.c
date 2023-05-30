@@ -21,7 +21,7 @@ bool ntInit() {
     SDLNet_ResolveHost(&address, "127.0.0.1", 8080);
 
     this->socket = SDLNet_TCP_OpenClient(&address);
-    if (!this->socket) exit(-1);
+    if (!this->socket) exit(1);
 
     this->socketSet = SDLNet_AllocSocketSet(1);
     SDLNet_TCP_AddSocket(this->socketSet, this->socket);
