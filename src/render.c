@@ -3,16 +3,14 @@
 #include "defs.h"
 #include "render.h"
 
-typedef struct {
+THIS(
     int width;
     int height;
     SDL_Window* window;
     SDL_Renderer* renderer;
     struct nk_context* context;
     struct nk_colorf colorf;
-} this_t;
-
-static this_t* this = NULL;
+)
 
 static void setStyle() {
     struct nk_color table[NK_COLOR_COUNT];

@@ -5,14 +5,12 @@
 #include "defs.h"
 #include "lifecycle.h"
 
-typedef struct {
+THIS(
     volatile bool running;
     SDL_cond* uiUpdateCond;
     SDL_mutex* uiUpdateLock;
     SDL_TimerID uiUpdateTimerId;
-} this_t;
-
-static this_t* this = NULL;
+)
 
 static unsigned uiUpdate(__attribute_maybe_unused__ unsigned _, __attribute_maybe_unused__ void* _2) {
     SDL_CondSignal(this->uiUpdateCond);

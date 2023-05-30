@@ -3,24 +3,38 @@
 #include <sodium/sodium.h>
 #include "crypto.h"
 
-typedef struct {
-    byte* publicKey;
-} this_t;
+THIS(
+    byte serverPublicKey[crypto_kx_PUBLICKEYBYTES];
+    byte clientPublicKey[crypto_kx_PUBLICKEYBYTES];
+    byte clientSecretKey[crypto_kx_SECRETKEYBYTES];
+    byte clientReceiveKey[crypto_kx_SESSIONKEYBYTES];
+    byte clientSendKey[crypto_kx_SESSIONKEYBYTES];
+)
 
-static this_t* this = NULL;
-
-bool crInit(byte* publicKey) {
+bool crInit(byte* serverPublicKey) {
     if (sodium_init() < 0) return false;
 
     this = SDL_malloc(sizeof *this);
-    this->publicKey = publicKey;
+    SDL_memcpy(this->serverPublicKey, serverPublicKey, crypto_kx_PUBLICKEYBYTES);
+    SDL_free(serverPublicKey);
+
+    crypto_kx_keypair(this->clientPublicKey, this->clientSecretKey);
+
+    if (crypto_kx_client_session_keys(
+        this->clientReceiveKey,
+        this->clientSendKey,
+        this->clientPublicKey,
+        this->clientSecretKey,
+        this->serverPublicKey
+    ) != 0)
+        return false;
+
+
 
     return true;
 }
 
-void crGenerateKeypair() {
-
-}
+unsigned crPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
 
 byte* crEncrypt(byte* bytes) {
     return NULL;

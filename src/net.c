@@ -3,11 +3,9 @@
 #include "crypto.h"
 #include "net.h"
 
-typedef struct {} this_t;
+THIS()
 
-static this_t* this = NULL;
-
-char* net() { // TODO: left as an example, will be removed
+__attribute_deprecated__ char* net() { // TODO: left as an example, will be removed
     IPaddress address;
     SDLNet_ResolveHost(&address, "127.0.0.1", 8080);
 
@@ -27,13 +25,16 @@ char* net() { // TODO: left as an example, will be removed
     return buffer;
 }
 
-static unsigned char* fetchPublicKey() {
-    return NULL;
+#include <sodium/sodium.h> // TODO: test only
+static byte* fetchServerPublicKey() {
+    byte* serverPublicKey = SDL_malloc(crPublicKeySize() * sizeof(char));
+    crypto_box_keypair(serverPublicKey, alloca(crypto_box_SECRETKEYBYTES * sizeof(char))); // TODO: test only
+    return serverPublicKey;
 }
 
 bool ntInit() {
     this = SDL_malloc(sizeof *this);
-    crInit(fetchPublicKey());
+    crInit(fetchServerPublicKey());
     return false;
 }
 
