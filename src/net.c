@@ -16,6 +16,7 @@ static byte* fetchServerPublicKey() {
 
 bool ntInit() {
     this = SDL_malloc(sizeof *this);
+    SDLNet_Init();
 
     IPaddress address;
     SDLNet_ResolveHost(&address, "127.0.0.1", 8080);
@@ -61,5 +62,6 @@ byte* ntReceive() {
 void ntClean() {
     SDLNet_FreeSocketSet(this->socketSet);
     SDLNet_TCP_Close(this->socket);
+    SDLNet_Quit();
     SDL_free(this);
 }
