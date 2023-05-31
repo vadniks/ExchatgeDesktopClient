@@ -3,9 +3,16 @@
 #include "crypto.h"
 #include "net.h"
 
+#define STATE(x, y) static const int STATE_ ## x = y;
+
+STATE(DISCONNECTED, 0)
+STATE(OBTAINED_SERVER_PUBLIC_KEY, 1)
+STATE(SENT_CLIENT_PUBLIC_KEY, 2)
+
 THIS(
     TCPsocket socket;
     SDLNet_SocketSet socketSet;
+    int state;
 )
 
 static byte* fetchServerPublicKey() {
@@ -19,7 +26,7 @@ bool ntInit() {
     SDLNet_Init();
 
     IPaddress address;
-    SDLNet_ResolveHost(&address, "127.0.0.1", 8080);
+    SDLNet_ResolveHost(&address, NET_HOST, NET_PORT);
 
     this->socket = SDLNet_TCP_OpenClient(&address);
     if (!this->socket) exit(1);
