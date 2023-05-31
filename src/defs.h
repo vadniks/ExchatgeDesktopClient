@@ -5,6 +5,8 @@
     typedef struct { x } this_t; \
     static this_t* this = NULL;
 
+#define _MESSAGE_BODY_SIZE (1 << 10)
+
 #ifdef __clang__
 #   define nullable _Nullable
 #   define staticAssert(x) _Static_assert(x, "")
@@ -15,11 +17,6 @@
 
 typedef void* (*function)(void*);
 typedef unsigned char byte;
-
-__attribute__((deprecated)) typedef struct {
-    const byte* chars;
-    unsigned length;
-} string;
 
 extern const char* APP_TITLE;
 extern const char* NET_HOST;
@@ -32,3 +29,10 @@ extern const int NET_PORT;
 extern const int NET_RECEIVE_BUFFER_SIZE;
 extern const int NET_MESSAGE_HEAD_SIZE;
 extern const int NET_MESSAGE_BODY_SIZE;
+
+typedef struct {
+    int flags;
+    long timestamp;
+    int size;
+    byte body[_MESSAGE_BODY_SIZE]; // here's why constants are usually declared via macros
+} message;

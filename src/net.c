@@ -66,7 +66,7 @@ void ntListen() {
 //    byte* body = NULL;
     byte* buffer = NULL;
 
-    if (isDataAvailable()) {
+    if (isDataAvailable()) { // TODO: don't apply message sections splitting while setting secured connection
         /*byte**/ buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
         SDLNet_TCP_Recv(this->socket, buffer, NET_RECEIVE_BUFFER_SIZE);
 
