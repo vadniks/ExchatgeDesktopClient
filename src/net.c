@@ -44,6 +44,7 @@ static void initiateSecuredConnection(byte* body) {
     byte* clientPublicKey = crInit(serverPublicKey);
     SDLNet_TCP_Send(this->socket, clientPublicKey, (int) publicKeySize);
 
+    SDL_Log("key sent");
     this->state = STATE_SECURED_CONNECTION_INITIATED;
 }
 
@@ -59,19 +60,28 @@ static int receiveBufferToMessageHead(byte* buffer) {
     return head;
 }
 
+static bool test = false; // TODO: test only
 void ntListen() {
-    if (!isDataAvailable()) return;
+    int head = 0;
+    byte* body = NULL;
 
-    byte* buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
-    SDLNet_TCP_Recv(this->socket, buffer, NET_RECEIVE_BUFFER_SIZE);
+    if (isDataAvailable()) {
+        byte* buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
+        SDLNet_TCP_Recv(this->socket, buffer, NET_RECEIVE_BUFFER_SIZE);
 
-    int head = receiveBufferToMessageHead(buffer);
-    byte* body = receiveBufferToMessageBody(buffer);
-    SDL_free(buffer);
+        head = receiveBufferToMessageHead(buffer);
+        body = receiveBufferToMessageBody(buffer);
+        SDL_free(buffer);
+    }
 
     switch (this->state) {
         case STATE_DISCONNECTED: initiateSecuredConnection(body); break;
-        case STATE_SECURED_CONNECTION_INITIATED: break; // TODO
+        case STATE_SECURED_CONNECTION_INITIATED:
+            if (test) break;
+            test = true;
+            SDLNet_TCP_Send(this->socket, (byte*) "Hello World!", 12); // TODO: test only
+            SDL_Log("hello world sent");
+            break; // TODO
     }
 }
 
