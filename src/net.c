@@ -55,7 +55,7 @@ static byte* receiveBufferToMessageBody(byte* buffer) {
 
 static int receiveBufferToMessageHead(byte* buffer) {
     int head = 0;
-    SDL_memcpy(&head, buffer, NET_MESSAGE_BODY_SIZE);
+    SDL_memcpy(&head, buffer, NET_MESSAGE_HEAD_SIZE);
     return head;
 }
 
