@@ -5,7 +5,13 @@
     typedef struct { x } this_t; \
     static this_t* this = NULL;
 
-#define nullable _Nullable
+#ifdef __clang__
+#   define nullable _Nullable
+#   define staticAssert(x) _Static_assert(x, "")
+#else
+#   define nullable
+#   define staticAssert(x)
+#endif
 
 typedef void* (*function)(void*);
 typedef unsigned char byte;

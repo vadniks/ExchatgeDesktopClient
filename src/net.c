@@ -44,7 +44,7 @@ static void initiateSecuredConnection(byte* body) {
     byte* clientPublicKey = crInit(serverPublicKey);
     SDLNet_TCP_Send(this->socket, clientPublicKey, (int) publicKeySize);
 
-    SDL_Log("key sent");
+    SDL_Log("key sent"); // TODO: test only
     this->state = STATE_SECURED_CONNECTION_INITIATED;
 }
 
@@ -79,17 +79,21 @@ void ntListen() {
         case STATE_SECURED_CONNECTION_INITIATED:
             if (test) break;
             test = true;
-            SDLNet_TCP_Send(this->socket, (byte*) "Hello World!", 12); // TODO: test only
+
+            ntSend((byte*) "Hello World!", 12); // TODO: test only
             SDL_Log("hello world sent");
+
             break; // TODO
     }
 }
 
-void ntSend(byte* message) {
-    byte* encrypted = crEncrypt(message);
-    SDL_free(message);
+void ntSend(byte* message, unsigned size) {
+    byte* encrypted = crEncrypt(message, size);
+//    SDL_free(message);
+    if (!encrypted) return;
 
-    // TODO
+    SDLNet_TCP_Send(this->socket, encrypted, (int) size);
+    SDL_free(encrypted);
 }
 
 byte* ntReceive() {

@@ -6,6 +6,6 @@
 
 byte* nullable crInit(byte* serverPublicKey);
 unsigned crPublicKeySize();
-byte* crEncrypt(byte* bytes);
+byte* nullable crEncrypt(byte* bytes, unsigned size);
 byte* crDecrypt(byte* bytes);
 void crClean();
