@@ -6,20 +6,13 @@
 #define STATE(x, y) static const int STATE_ ## x = y;
 
 STATE(DISCONNECTED, 0)
-STATE(OBTAINED_SERVER_PUBLIC_KEY, 1)
-STATE(SENT_CLIENT_PUBLIC_KEY, 2)
+STATE(SECURED_CONNECTION_INITIATED, 1)
 
 THIS(
     TCPsocket socket;
     SDLNet_SocketSet socketSet;
     int state;
 )
-
-static byte* fetchServerPublicKey() {
-    byte* serverPublicKey = SDL_malloc(crPublicKeySize() * sizeof(char));
-    // TODO
-    return serverPublicKey;
-}
 
 bool ntInit() {
     this = SDL_malloc(sizeof *this);
@@ -34,7 +27,6 @@ bool ntInit() {
     this->socketSet = SDLNet_AllocSocketSet(1);
     SDLNet_TCP_AddSocket(this->socketSet, this->socket);
 
-    crInit(fetchServerPublicKey());
     return false;
 }
 
@@ -43,12 +35,44 @@ static bool isDataAvailable() {
         && SDLNet_SocketReady(this->socket) != 0;
 }
 
+static void initiateSecuredConnection(byte* body) {
+    const unsigned publicKeySize = crPublicKeySize();
+
+    byte* serverPublicKey = SDL_calloc(publicKeySize, sizeof(char));
+    SDL_memcpy(serverPublicKey, body, publicKeySize);
+
+    byte* clientPublicKey = crInit(serverPublicKey);
+    SDLNet_TCP_Send(this->socket, clientPublicKey, (int) publicKeySize);
+
+    this->state = STATE_SECURED_CONNECTION_INITIATED;
+}
+
+static byte* receiveBufferToMessageBody(byte* buffer) {
+    byte* body = SDL_calloc(NET_MESSAGE_BODY_SIZE, sizeof(char));
+    SDL_memcpy(body, buffer + NET_MESSAGE_HEAD_SIZE, NET_MESSAGE_BODY_SIZE);
+    return body;
+}
+
+static int receiveBufferToMessageHead(byte* buffer) {
+    int head = 0;
+    SDL_memcpy(&head, buffer, NET_MESSAGE_BODY_SIZE);
+    return head;
+}
+
 void ntListen() {
     if (!isDataAvailable()) return;
 
     byte* buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
     SDLNet_TCP_Recv(this->socket, buffer, NET_RECEIVE_BUFFER_SIZE);
-    // TODO
+
+    int head = receiveBufferToMessageHead(buffer);
+    byte* body = receiveBufferToMessageBody(buffer);
+    SDL_free(buffer);
+
+    switch (this->state) {
+        case STATE_DISCONNECTED: initiateSecuredConnection(body); break;
+        case STATE_SECURED_CONNECTION_INITIATED: break; // TODO
+    }
 }
 
 void ntSend(byte* message) {

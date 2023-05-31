@@ -22,7 +22,7 @@ static unsigned uiUpdate(
 ) {
     SDL_CondSignal(this->uiUpdateCond);
 
-    if (this->updateThreadCounter == NET_UPDATE_PERIOD) {
+    if (this->updateThreadCounter == (unsigned) NET_UPDATE_PERIOD) {
         this->updateThreadCounter = 1;
         netUpdate();
     } else

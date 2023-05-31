@@ -5,6 +5,10 @@ project(ExchatgeDesktopClient C)
 
 set(CMAKE_C_STANDARD 11)
 
+add_compile_options("-Wall")
+add_compile_options("-Wextra")
+add_compile_options("-Wno-nullability-completeness")
+
 #add_compile_options("-O3")
 #add_link_options("-s")
 

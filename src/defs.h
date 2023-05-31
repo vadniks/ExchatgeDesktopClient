@@ -5,6 +5,8 @@
     typedef struct { x } this_t; \
     static this_t* this = NULL;
 
+#define nullable _Nullable
+
 typedef void* (*function)(void*);
 typedef unsigned char byte;
 

@@ -11,8 +11,8 @@ THIS(
     byte clientSendKey[crypto_kx_SESSIONKEYBYTES];
 )
 
-bool crInit(byte* serverPublicKey) {
-    if (sodium_init() < 0) return false;
+byte* nullable crInit(byte* serverPublicKey) {
+    if (sodium_init() < 0) return NULL;
 
     this = SDL_malloc(sizeof *this);
     SDL_memcpy(this->serverPublicKey, serverPublicKey, crypto_kx_PUBLICKEYBYTES);
@@ -29,9 +29,7 @@ bool crInit(byte* serverPublicKey) {
     ) != 0)
         return false;
 
-
-
-    return true;
+    return this->clientPublicKey;
 }
 
 unsigned crPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
