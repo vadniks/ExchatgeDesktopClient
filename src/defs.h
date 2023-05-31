@@ -16,7 +16,7 @@
 typedef void* (*function)(void*);
 typedef unsigned char byte;
 
-typedef struct {
+__attribute__((deprecated)) typedef struct {
     const byte* chars;
     unsigned length;
 } string;
