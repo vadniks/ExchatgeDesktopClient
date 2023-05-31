@@ -62,20 +62,21 @@ static int receiveBufferToMessageHead(byte* buffer) {
 
 static bool test = false; // TODO: test only
 void ntListen() {
-    int head = 0;
-    byte* body = NULL;
+//    int head = 0;
+//    byte* body = NULL;
+    byte* buffer = NULL;
 
     if (isDataAvailable()) {
-        byte* buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
+        /*byte**/ buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
         SDLNet_TCP_Recv(this->socket, buffer, NET_RECEIVE_BUFFER_SIZE);
 
-        head = receiveBufferToMessageHead(buffer);
-        body = receiveBufferToMessageBody(buffer);
-        SDL_free(buffer);
+//        head = receiveBufferToMessageHead(buffer); // TODO: implement message sections splitting on the server
+//        body = receiveBufferToMessageBody(buffer);
+//        SDL_free(buffer);
     }
 
     switch (this->state) {
-        case STATE_DISCONNECTED: initiateSecuredConnection(body); break;
+        case STATE_DISCONNECTED: initiateSecuredConnection(buffer/*body*/); break;
         case STATE_SECURED_CONNECTION_INITIATED:
             if (test) break;
             test = true;

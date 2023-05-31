@@ -2,6 +2,7 @@
 #include <sdl/SDL.h>
 #include <sodium/sodium.h>
 #include "crypto.h"
+#include <stdio.h> // TODO: test only
 
 staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_box_PUBLICKEYBYTES);
 staticAssert(crypto_kx_SECRETKEYBYTES == crypto_box_SECRETKEYBYTES);
@@ -30,6 +31,12 @@ byte* nullable crInit(byte* serverPublicKey) {
         this->serverPublicKey
     ) != 0)
         return false;
+
+    printf("rx: "); // TODO: test only
+    for (int i = 0; i < crypto_kx_PUBLICKEYBYTES; i++) printf("%d ", this->clientReceiveKey[i]);
+    printf("tx: ");
+    for (int i = 0; i < crypto_kx_PUBLICKEYBYTES; i++) printf("%d ", this->clientSendKey[i]);
+    printf("\n");
 
     return this->clientPublicKey;
 }
