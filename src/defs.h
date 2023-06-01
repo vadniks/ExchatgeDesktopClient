@@ -28,6 +28,7 @@ extern const int NET_UPDATE_PERIOD;
 extern const int NET_PORT;
 extern const int NET_MESSAGE_HEAD_SIZE;
 extern const int NET_RECEIVE_BUFFER_SIZE;
+extern const int NET_FLAG_FINISH;
 
 typedef struct {
     // begin head

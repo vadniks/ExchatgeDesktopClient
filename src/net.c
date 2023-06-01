@@ -107,7 +107,11 @@ void ntListen() {
             if (test) break;
             test = true;
 
-            ntSend((byte*) "Hello World!", 12); // TODO: test only
+            const char* text = "Hello World!";
+            byte* testMsg = SDL_malloc(12 * sizeof(char));
+            SDL_memcpy(testMsg, text, 12);
+            ntSend(testMsg, 12); // TODO: test only
+
             SDL_Log("hello world sent");
 
             break; // TODO
@@ -116,13 +120,26 @@ void ntListen() {
     SDL_free(msg);
 }
 
-void ntSend(byte* message, unsigned size) {
-    byte* encrypted = crEncrypt(message, size);
-//    SDL_free(message);
-    if (!encrypted) return;
+void ntSend(byte* bytes, unsigned size) {
+    message* msg = SDL_malloc(sizeof *msg);
+    msg->flag = 0;
+    msg->timestamp = 0;
+    msg->size = 0;
+    msg->index = 0;
+    msg->count = 0;
 
-    SDLNet_TCP_Send(this->socket, encrypted, (int) size);
-    SDL_free(encrypted);
+    SDL_memcpy(&(msg->body), bytes, size);
+    SDL_free(bytes);
+
+    byte* buffer = packMessage(msg);
+    byte* encryptedBuffer = crEncrypt(buffer, NET_RECEIVE_BUFFER_SIZE);
+    if (!encryptedBuffer) goto cleanup;
+
+    SDLNet_TCP_Send(this->socket, buffer, NET_RECEIVE_BUFFER_SIZE);
+
+    cleanup:
+    SDL_free(encryptedBuffer);
+    SDL_free(buffer);
 }
 
 void ntClean() {
