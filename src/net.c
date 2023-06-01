@@ -8,8 +8,7 @@
 STATE(DISCONNECTED, 0)
 STATE(SERVER_PUBLIC_KEY_RECEIVED, 1)
 STATE(CLIENT_PUBLIC_KEY_SENT, 2)
-STATE(NONCE_RECEIVED, 3)
-STATE(READY, STATE_NONCE_RECEIVED) // TODO: check client signature on server and check server signature on client
+STATE(READY, STATE_CLIENT_PUBLIC_KEY_SENT) // TODO: check client signature on server and check server signature on client
 
 THIS( // TODO: check client's authentication by token
     TCPsocket socket;
@@ -19,23 +18,17 @@ THIS( // TODO: check client's authentication by token
 
 static void initiateSecuredConnection() {
     const unsigned publicKeySize = crPublicKeySize(),
-        charSize = sizeof(char),
-        nonceSize = crNonceSize();
+        charSize = sizeof(char);
 
     byte* serverPublicKey = SDL_calloc(publicKeySize, charSize);
     SDLNet_TCP_Recv(this->socket, serverPublicKey, (int) publicKeySize);
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
-    byte* clientPublicKey = crInit(serverPublicKey);
+    byte* clientPublicKey = crInit(serverPublicKey, NET_RECEIVE_BUFFER_SIZE);
     if (!clientPublicKey) return;
 
     SDLNet_TCP_Send(this->socket, clientPublicKey, (int) publicKeySize);
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
-
-    byte* nonce = SDL_calloc(nonceSize, charSize);
-    SDLNet_TCP_Recv(this->socket, nonce, (int) nonceSize);
-    crSetNonce(nonce);
-    this->state = STATE_NONCE_RECEIVED;
 }
 
 bool ntInit() {

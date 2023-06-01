@@ -13,11 +13,12 @@ THIS(
     byte clientSecretKey[crypto_kx_SECRETKEYBYTES];
     byte clientReceiveKey[crypto_kx_SESSIONKEYBYTES];
     byte clientSendKey[crypto_kx_SESSIONKEYBYTES];
-    byte nonce[crypto_secretbox_NONCEBYTES];
+    unsigned maxEncryptedSize;
 )
 
-byte* nullable crInit(byte* serverPublicKey) {
+byte* nullable crInit(byte* serverPublicKey, unsigned maxEncryptedSize) {
     if (sodium_init() < 0) return NULL;
+
     this = SDL_malloc(sizeof *this);
     SDL_memcpy(this->serverPublicKey, serverPublicKey, crPublicKeySize());
     SDL_free(serverPublicKey);
@@ -39,25 +40,28 @@ byte* nullable crInit(byte* serverPublicKey) {
     for (unsigned i = 0; i < crPublicKeySize(); i++) printf("%d ", this->clientSendKey[i]);
     printf("\n");
 
+    this->maxEncryptedSize = maxEncryptedSize;
     return this->clientPublicKey;
 }
 
-void crSetNonce(byte* nonce) {
-    SDL_memcpy(this->nonce, nonce, crNonceSize());
-    SDL_free(nonce);
-}
-
 unsigned crPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
-unsigned crNonceSize() { return crypto_secretbox_NONCEBYTES; }
 
 byte* nullable crEncrypt(byte* bytes, unsigned size) { // TODO: add padding to hide original message's length
-    byte* encrypted = SDL_calloc(crypto_secretbox_MACBYTES + size, sizeof(char));
+    const unsigned encryptedSize = crypto_secretbox_MACBYTES + size + crypto_secretbox_NONCEBYTES;
+    if (encryptedSize > this->maxEncryptedSize) { // TODO: implement this properly on the server side
+        SDL_free(bytes);
+        return NULL;
+    }
 
-    byte* result = crypto_secretbox_easy( // TODO: 'nonce should never ever be reused with the same key' - find a crypto function that doesn't require nonce
-        encrypted,                        // TODO: or generate a new nonce for each encryption and store it together with encrypted message in some message
-        bytes,                            // TODO: bundle as 'nonce doesn't have to be confidential'
-        size,                             // TODO: the second way was chosen (---^)
-        this->nonce,
+    byte* encrypted = SDL_calloc(encryptedSize, sizeof(char));
+    byte* nonceStart = encrypted + crypto_secretbox_MACBYTES + size;
+    randombytes_buf(nonceStart, crypto_secretbox_NONCEBYTES);
+
+    byte* result = crypto_secretbox_easy(
+        encrypted,
+        bytes,
+        size,
+        nonceStart,
         this->clientSendKey
     ) == 0 ? encrypted : NULL;
 
@@ -67,13 +71,14 @@ byte* nullable crEncrypt(byte* bytes, unsigned size) { // TODO: add padding to h
 }
 
 byte* nullable crDecrypt(byte* bytes, unsigned size) {
-    byte* decrypted = SDL_calloc(size - crypto_secretbox_MACBYTES, sizeof(char));
+    const unsigned decryptedSize = size - crypto_secretbox_MACBYTES - crypto_secretbox_NONCEBYTES;
+    byte* decrypted = SDL_calloc(decryptedSize, sizeof(char));
 
     byte* result = crypto_secretbox_open_easy(
         decrypted,
         bytes,
         size,
-        this->nonce,
+        bytes + crypto_secretbox_MACBYTES + decryptedSize,
         this->clientReceiveKey
     ) == 0 ? decrypted : NULL;
 
