@@ -53,13 +53,12 @@ unsigned crNonceSize() { return crypto_secretbox_NONCEBYTES; }
 byte* nullable crEncrypt(byte* bytes, unsigned size) {
     byte* encrypted = SDL_calloc(crypto_box_MACBYTES + size, sizeof(char));
 
-    byte* result = crypto_box_easy(
+    byte* result = crypto_secretbox_easy(
         encrypted,
         bytes,
         size,
         this->nonce,
-        this->serverPublicKey,
-        this->clientSecretKey
+        this->clientSendKey
     ) == 0 ? encrypted : NULL;
 
     if (!result) SDL_free(encrypted);
