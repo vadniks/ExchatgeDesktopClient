@@ -4,8 +4,8 @@
 #include "crypto.h"
 #include <stdio.h> // TODO: test only
 
-staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_box_PUBLICKEYBYTES);
-staticAssert(crypto_kx_SECRETKEYBYTES == crypto_box_SECRETKEYBYTES);
+staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_secretbox_KEYBYTES);
+staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 
 THIS(
     byte serverPublicKey[crypto_kx_PUBLICKEYBYTES];
@@ -50,13 +50,13 @@ void crSetNonce(byte* nonce) {
 unsigned crPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
 unsigned crNonceSize() { return crypto_secretbox_NONCEBYTES; }
 
-byte* nullable crEncrypt(byte* bytes, unsigned size) {
-    byte* encrypted = SDL_calloc(crypto_box_MACBYTES + size, sizeof(char));
+byte* nullable crEncrypt(byte* bytes, unsigned size) { // TODO: add padding to hide original message's length
+    byte* encrypted = SDL_calloc(crypto_secretbox_MACBYTES + size, sizeof(char));
 
-    byte* result = crypto_secretbox_easy(
-        encrypted,
-        bytes,
-        size,
+    byte* result = crypto_secretbox_easy( // TODO: 'nonce should never ever be reused with the same key' - find a crypto function that doesn't require nonce
+        encrypted,                        // TODO: or generate a new nonce for each encryption and store it together with encrypted message in some message
+        bytes,                            // TODO: bundle as 'nonce doesn't have to be confidential'
+        size,                             // TODO: the second way was chosen (---^)
         this->nonce,
         this->clientSendKey
     ) == 0 ? encrypted : NULL;
@@ -66,7 +66,19 @@ byte* nullable crEncrypt(byte* bytes, unsigned size) {
     return result;
 }
 
-byte* crDecrypt(byte* bytes) {
+byte* nullable crDecrypt(byte* bytes, unsigned size) {
+    byte* decrypted = SDL_calloc(size - crypto_secretbox_MACBYTES, sizeof(char));
+
+    byte* result = crypto_secretbox_open_easy(
+        decrypted,
+        bytes,
+        size,
+        this->nonce,
+        this->clientReceiveKey
+    ) == 0 ? decrypted : NULL;
+
+    if (!result) SDL_free(decrypted);
+    SDL_free(bytes);
     return NULL;
 }
 

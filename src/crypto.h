@@ -9,5 +9,5 @@ void crSetNonce(byte* nonce);
 unsigned crPublicKeySize();
 unsigned crNonceSize();
 byte* nullable crEncrypt(byte* bytes, unsigned size);
-byte* crDecrypt(byte* bytes);
+byte* nullable crDecrypt(byte* bytes, unsigned size);
 void crClean();
