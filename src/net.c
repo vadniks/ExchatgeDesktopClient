@@ -133,13 +133,11 @@ void ntSend(byte* bytes, unsigned size) {
 
     byte* buffer = packMessage(msg);
     byte* encryptedBuffer = crEncrypt(buffer, NET_RECEIVE_BUFFER_SIZE);
-    if (!encryptedBuffer) goto cleanup;
+    if (!encryptedBuffer) return;
 
     SDLNet_TCP_Send(this->socket, buffer, NET_RECEIVE_BUFFER_SIZE);
 
-    cleanup:
     SDL_free(encryptedBuffer);
-    SDL_free(buffer);
 }
 
 void ntClean() {

@@ -51,20 +51,20 @@ unsigned crPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
 unsigned crNonceSize() { return crypto_secretbox_NONCEBYTES; }
 
 byte* nullable crEncrypt(byte* bytes, unsigned size) {
-//    byte nonce[crypto_box_NONCEBYTES];
-//    randombytes_buf(nonce, sizeof nonce);
-    byte* nonce = (byte*) "123456789012345678901234"; // TODO: randomize nonce for each session and add an exchange mechanism
-
     byte* encrypted = SDL_calloc(crypto_box_MACBYTES + size, sizeof(char));
 
-    return crypto_box_easy(
+    byte* result = crypto_box_easy(
         encrypted,
         bytes,
         size,
-        nonce,
+        this->nonce,
         this->serverPublicKey,
         this->clientSecretKey
     ) == 0 ? encrypted : NULL;
+
+    if (!result) SDL_free(encrypted);
+    SDL_free(bytes);
+    return result;
 }
 
 byte* crDecrypt(byte* bytes) {
