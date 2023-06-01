@@ -40,13 +40,15 @@ static void initiateSecuredConnection() {
 
 bool ntInit() {
     this = SDL_malloc(sizeof *this);
+    this->socket = NULL;
+    this->socketSet = NULL;
     SDLNet_Init();
 
     IPaddress address;
     SDLNet_ResolveHost(&address, NET_HOST, NET_PORT);
 
     this->socket = SDLNet_TCP_OpenClient(&address);
-    if (!this->socket) exit(1);
+    if (!this->socket) return false;
 
     this->socketSet = SDLNet_AllocSocketSet(1);
     SDLNet_TCP_AddSocket(this->socketSet, this->socket);

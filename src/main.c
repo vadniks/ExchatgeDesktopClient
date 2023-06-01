@@ -2,7 +2,7 @@
 #include "lifecycle.h"
 
 int main() {
-    lcInit();
+    if (!lcInit()) return 1;
     lcLoop();
     lcClean();
     return 0;

@@ -1,5 +1,4 @@
 
-#include <stdbool.h>
 #include <time.h>
 #include "render.h"
 #include "defs.h"
@@ -45,8 +44,23 @@ static unsigned uiUpdate(
     return this->running ? UI_UPDATE_PERIOD : 0;
 }
 
-void lcInit() {
+bool lcInit() {
     this = SDL_malloc(sizeof *this);
+    this->running = false;
+    this->uiUpdateCond = NULL;
+    this->uiUpdateLock = NULL;
+    this->updateThreadCounter = 1;
+    this->netUpdateCond = NULL;
+    this->netUpdateLock = NULL;
+    this->netThread = NULL;
+
+    if (!ntInit()) {
+        this->running = false;
+        lcClean();
+        return false;
+    }
+    rdInit();
+
     this->running = true;
     this->uiUpdateCond = SDL_CreateCond();
     this->uiUpdateLock = SDL_CreateMutex();
@@ -55,13 +69,11 @@ void lcInit() {
     this->netUpdateLock = SDL_CreateMutex();
     this->netThread = SDL_CreateThread(&netThread, "netThread", NULL);
 
-    ntInit();
-    rdInit();
-
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER);
 
     this->uiUpdateTimerId = SDL_AddTimer(UI_UPDATE_PERIOD, &uiUpdate, NULL);
+    return true;
 }
 
 static bool processEvents() {
@@ -99,6 +111,9 @@ void lcClean() {
 
     SDL_DestroyCond(this->uiUpdateCond);
     SDL_DestroyMutex(this->uiUpdateLock);
+    SDL_DetachThread(this->netThread);
+    SDL_DestroyMutex(this->netUpdateLock);
+    SDL_DestroyCond(this->netUpdateCond);
 
     SDL_free(this);
     this = NULL;
