@@ -62,8 +62,8 @@ static bool isDataAvailable() {
         && SDLNet_SocketReady(this->socket) != 0;
 }
 
-static message* unpackMessage(byte* buffer) {
-    message* msg = SDL_malloc(sizeof *msg);
+static Message* unpackMessage(byte* buffer) {
+    Message* msg = SDL_malloc(sizeof *msg);
     unsigned intSize = sizeof(int), longSize = sizeof(long);
 
     SDL_memcpy(&(msg->flag), buffer, intSize);
@@ -77,7 +77,7 @@ static message* unpackMessage(byte* buffer) {
     return msg;
 }
 
-static byte* packMessage(message* msg) {
+static byte* packMessage(Message* msg) {
     byte* buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
     unsigned intSize = sizeof(int), longSize = sizeof(long);
 
@@ -93,7 +93,7 @@ static byte* packMessage(message* msg) {
 
 static bool test = false; // TODO: test only
 void ntListen() {
-    message* msg = NULL;
+    Message* msg = NULL;
 
     if (isDataAvailable()) {
         byte* buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
@@ -121,7 +121,7 @@ void ntListen() {
 }
 
 void ntSend(byte* bytes, unsigned size) {
-    message* msg = SDL_malloc(sizeof *msg);
+    Message* msg = SDL_malloc(sizeof *msg);
     msg->flag = 0;
     msg->timestamp = 0;
     msg->size = 0;
