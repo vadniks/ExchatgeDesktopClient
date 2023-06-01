@@ -7,5 +7,4 @@
 bool ntInit();
 void ntListen();
 void ntSend(byte* message, unsigned size);
-byte* ntReceive();
 void ntClean();

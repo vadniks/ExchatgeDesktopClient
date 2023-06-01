@@ -6,13 +6,37 @@
 #define STATE(x, y) static const int STATE_ ## x = y;
 
 STATE(DISCONNECTED, 0)
-STATE(SECURED_CONNECTION_INITIATED, 1)
+STATE(SERVER_PUBLIC_KEY_RECEIVED, 1)
+STATE(CLIENT_PUBLIC_KEY_SENT, 2)
+STATE(NONCE_RECEIVED, 3)
+STATE(READY, STATE_NONCE_RECEIVED)
 
 THIS(
     TCPsocket socket;
     SDLNet_SocketSet socketSet;
     int state;
 )
+
+static void initiateSecuredConnection() {
+    const unsigned publicKeySize = crPublicKeySize(),
+        charSize = sizeof(char),
+        nonceSize = crNonceSize();
+
+    byte* serverPublicKey = SDL_calloc(publicKeySize, charSize);
+    SDLNet_TCP_Recv(this->socket, serverPublicKey, (int) publicKeySize);
+    this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
+
+    byte* clientPublicKey = crInit(serverPublicKey);
+    if (!clientPublicKey) return;
+
+    SDLNet_TCP_Send(this->socket, clientPublicKey, (int) publicKeySize);
+    this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
+
+    byte* nonce = SDL_calloc(nonceSize, charSize);
+    SDLNet_TCP_Recv(this->socket, nonce, (int) nonceSize);
+    crSetNonce(nonce);
+    this->state = STATE_NONCE_RECEIVED;
+}
 
 bool ntInit() {
     this = SDL_malloc(sizeof *this);
@@ -27,7 +51,8 @@ bool ntInit() {
     this->socketSet = SDLNet_AllocSocketSet(1);
     SDLNet_TCP_AddSocket(this->socketSet, this->socket);
 
-    return false;
+    initiateSecuredConnection();
+    return this->state == STATE_READY;
 }
 
 static bool isDataAvailable() {
@@ -35,49 +60,48 @@ static bool isDataAvailable() {
         && SDLNet_SocketReady(this->socket) != 0;
 }
 
-static void initiateSecuredConnection(byte* body) {
-    const unsigned publicKeySize = crPublicKeySize();
+static message* unpackMessage(byte* buffer) {
+    message* msg = SDL_malloc(sizeof *msg);
+    unsigned intSize = sizeof(int), longSize = sizeof(long);
 
-    byte* serverPublicKey = SDL_calloc(publicKeySize, sizeof(char));
-    SDL_memcpy(serverPublicKey, body, publicKeySize);
+    SDL_memcpy(&(msg->flag), buffer, intSize);
+    SDL_memcpy(&(msg->timestamp), buffer, longSize);
+    SDL_memcpy(&(msg->size), buffer, intSize);
+    SDL_memcpy(&(msg->index), buffer, intSize);
+    SDL_memcpy(&(msg->count), buffer, intSize);
+    SDL_memcpy(&(msg->body), buffer + NET_MESSAGE_HEAD_SIZE, NET_MESSAGE_BODY_SIZE);
 
-    byte* clientPublicKey = crInit(serverPublicKey);
-    SDLNet_TCP_Send(this->socket, clientPublicKey, (int) publicKeySize);
-
-    SDL_Log("key sent"); // TODO: test only
-    this->state = STATE_SECURED_CONNECTION_INITIATED;
+    SDL_free(buffer);
+    return msg;
 }
 
-//static byte* receiveBufferToMessageBody(byte* buffer) {
-//    byte* body = SDL_calloc(NET_MESSAGE_BODY_SIZE, sizeof(char));
-//    SDL_memcpy(body, buffer + NET_MESSAGE_HEAD_SIZE, NET_MESSAGE_BODY_SIZE);
-//    return body;
-//}
-//
-//static int receiveBufferToMessageHead(byte* buffer) {
-//    int head = 0;
-//    SDL_memcpy(&head, buffer, NET_MESSAGE_HEAD_SIZE);
-//    return head;
-//}
+static byte* packMessage(message* msg) {
+    byte* buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
+    unsigned intSize = sizeof(int), longSize = sizeof(long);
+
+    SDL_memcpy(buffer, &(msg->flag), intSize);
+    SDL_memcpy(buffer + intSize, &(msg->timestamp), longSize);
+    SDL_memcpy(buffer + intSize + longSize, &(msg->size), intSize);
+    SDL_memcpy(buffer + intSize * 2 + longSize, &(msg->index), intSize);
+    SDL_memcpy(buffer + intSize * 3 + longSize, &(msg->count), intSize);
+
+    SDL_free(msg);
+    return buffer;
+}
 
 static bool test = false; // TODO: test only
 void ntListen() {
-//    int head = 0;
-//    byte* body = NULL;
-    byte* buffer = NULL;
+    message* msg = NULL;
 
-    if (isDataAvailable()) { // TODO: don't apply message sections splitting while setting secured connection
-        /*byte**/ buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
+    if (isDataAvailable()) {
+        byte* buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
+
         SDLNet_TCP_Recv(this->socket, buffer, NET_RECEIVE_BUFFER_SIZE);
-
-//        head = receiveBufferToMessageHead(buffer); // TODO: implement message sections splitting on the server
-//        body = receiveBufferToMessageBody(buffer);
-//        SDL_free(buffer);
+        msg = unpackMessage(buffer);
     }
 
     switch (this->state) {
-        case STATE_DISCONNECTED: initiateSecuredConnection(buffer/*body*/); break;
-        case STATE_SECURED_CONNECTION_INITIATED:
+        case STATE_READY:
             if (test) break;
             test = true;
 
@@ -86,6 +110,8 @@ void ntListen() {
 
             break; // TODO
     }
+
+    SDL_free(msg);
 }
 
 void ntSend(byte* message, unsigned size) {
@@ -95,14 +121,6 @@ void ntSend(byte* message, unsigned size) {
 
     SDLNet_TCP_Send(this->socket, encrypted, (int) size);
     SDL_free(encrypted);
-}
-
-byte* ntReceive() {
-    byte* message = NULL; // TODO
-    byte* decrypted = crDecrypt(message);
-    SDL_free(message);
-
-    return NULL;
 }
 
 void ntClean() {

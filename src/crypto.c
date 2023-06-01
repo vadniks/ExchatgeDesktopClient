@@ -13,12 +13,13 @@ THIS(
     byte clientSecretKey[crypto_kx_SECRETKEYBYTES];
     byte clientReceiveKey[crypto_kx_SESSIONKEYBYTES];
     byte clientSendKey[crypto_kx_SESSIONKEYBYTES];
+    byte nonce[crypto_secretbox_NONCEBYTES];
 )
 
 byte* nullable crInit(byte* serverPublicKey) {
     if (sodium_init() < 0) return NULL;
     this = SDL_malloc(sizeof *this);
-    SDL_memcpy(this->serverPublicKey, serverPublicKey, crypto_kx_PUBLICKEYBYTES);
+    SDL_memcpy(this->serverPublicKey, serverPublicKey, crPublicKeySize());
     SDL_free(serverPublicKey);
 
     crypto_kx_keypair(this->clientPublicKey, this->clientSecretKey);
@@ -30,18 +31,24 @@ byte* nullable crInit(byte* serverPublicKey) {
         this->clientSecretKey,
         this->serverPublicKey
     ) != 0)
-        return false;
+        return NULL;
 
     printf("rx: "); // TODO: test only
-    for (int i = 0; i < crypto_kx_PUBLICKEYBYTES; i++) printf("%d ", this->clientReceiveKey[i]);
+    for (unsigned i = 0; i < crPublicKeySize(); i++) printf("%d ", this->clientReceiveKey[i]);
     printf("tx: ");
-    for (int i = 0; i < crypto_kx_PUBLICKEYBYTES; i++) printf("%d ", this->clientSendKey[i]);
+    for (unsigned i = 0; i < crPublicKeySize(); i++) printf("%d ", this->clientSendKey[i]);
     printf("\n");
 
     return this->clientPublicKey;
 }
 
+void crSetNonce(byte* nonce) {
+    SDL_memcpy(this->nonce, nonce, crNonceSize());
+    SDL_free(nonce);
+}
+
 unsigned crPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
+unsigned crNonceSize() { return crypto_secretbox_NONCEBYTES; }
 
 byte* nullable crEncrypt(byte* bytes, unsigned size) {
 //    byte nonce[crypto_box_NONCEBYTES];
