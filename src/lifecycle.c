@@ -12,9 +12,23 @@ THIS(
     SDL_mutex* uiUpdateLock;
     SDL_TimerID uiUpdateTimerId;
     unsigned updateThreadCounter;
+    SDL_cond* netUpdateCond;
+    SDL_mutex* netUpdateLock;
+    SDL_Thread* netThread;
 )
 
-inline static void netUpdate() { ntListen(); }
+static void updateSynchronized(function action, SDL_cond* cond, SDL_mutex* lock) {
+    SDL_LockMutex(lock);
+    action(NULL);
+    SDL_CondWait(cond, lock);
+    SDL_UnlockMutex(lock);
+}
+
+static int netThread(__attribute_maybe_unused__ void* _) {
+    while (this->running)
+        updateSynchronized((function) &ntListen, this->netUpdateCond, this->netUpdateLock);
+    return 0;
+}
 
 static unsigned uiUpdate(
     __attribute_maybe_unused__ unsigned _,
@@ -24,7 +38,7 @@ static unsigned uiUpdate(
 
     if (this->updateThreadCounter == (unsigned) NET_UPDATE_PERIOD) {
         this->updateThreadCounter = 1;
-        netUpdate();
+        SDL_CondSignal(this->netUpdateCond);
     } else
         this->updateThreadCounter++;
 
@@ -37,6 +51,9 @@ void lcInit() {
     this->uiUpdateCond = SDL_CreateCond();
     this->uiUpdateLock = SDL_CreateMutex();
     this->updateThreadCounter = 1;
+    this->netUpdateCond = SDL_CreateCond();
+    this->netUpdateLock = SDL_CreateMutex();
+    this->netThread = SDL_CreateThread(&netThread, "netThread", NULL);
 
     ntInit();
     rdInit();
@@ -60,13 +77,6 @@ static bool processEvents() {
     return false;
 }
 
-static void uiUpdateSynchronized(function action) {
-    SDL_LockMutex(this->uiUpdateLock);
-    action(NULL);
-    SDL_CondWait(this->uiUpdateCond, this->uiUpdateLock);
-    SDL_UnlockMutex(this->uiUpdateLock);
-}
-
 void lcLoop() {
     while (this->running) {
         if (processEvents()) {
@@ -75,7 +85,7 @@ void lcLoop() {
             break;
         }
 
-        uiUpdateSynchronized((function) &rdDraw);
+        updateSynchronized((function) &rdDraw, this->uiUpdateCond, this->uiUpdateLock);
     }
 }
 

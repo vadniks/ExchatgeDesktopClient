@@ -48,17 +48,17 @@ static void initiateSecuredConnection(byte* body) {
     this->state = STATE_SECURED_CONNECTION_INITIATED;
 }
 
-static byte* receiveBufferToMessageBody(byte* buffer) {
-    byte* body = SDL_calloc(NET_MESSAGE_BODY_SIZE, sizeof(char));
-    SDL_memcpy(body, buffer + NET_MESSAGE_HEAD_SIZE, NET_MESSAGE_BODY_SIZE);
-    return body;
-}
-
-static int receiveBufferToMessageHead(byte* buffer) {
-    int head = 0;
-    SDL_memcpy(&head, buffer, NET_MESSAGE_HEAD_SIZE);
-    return head;
-}
+//static byte* receiveBufferToMessageBody(byte* buffer) {
+//    byte* body = SDL_calloc(NET_MESSAGE_BODY_SIZE, sizeof(char));
+//    SDL_memcpy(body, buffer + NET_MESSAGE_HEAD_SIZE, NET_MESSAGE_BODY_SIZE);
+//    return body;
+//}
+//
+//static int receiveBufferToMessageHead(byte* buffer) {
+//    int head = 0;
+//    SDL_memcpy(&head, buffer, NET_MESSAGE_HEAD_SIZE);
+//    return head;
+//}
 
 static bool test = false; // TODO: test only
 void ntListen() {
