@@ -11,7 +11,7 @@ STATE(CLIENT_PUBLIC_KEY_SENT, 2)
 STATE(NONCE_RECEIVED, 3)
 STATE(READY, STATE_NONCE_RECEIVED) // TODO: check client signature on server and check server signature on client
 
-THIS(
+THIS( // TODO: check client's authentication by token
     TCPsocket socket;
     SDLNet_SocketSet socketSet;
     int state;
@@ -143,6 +143,7 @@ void ntSend(byte* bytes, unsigned size) {
 }
 
 void ntClean() {
+    crClean();
     SDLNet_FreeSocketSet(this->socketSet);
     SDLNet_TCP_Close(this->socket);
     SDLNet_Quit();

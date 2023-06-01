@@ -28,15 +28,16 @@ extern const int NET_UPDATE_PERIOD;
 extern const int NET_PORT;
 extern const int NET_MESSAGE_HEAD_SIZE;
 extern const int NET_RECEIVE_BUFFER_SIZE;
+extern const int NET_FLAG_UNAUTHENTICATED;
 extern const int NET_FLAG_FINISH;
 
 typedef struct {
     // begin head
-    int flag; // short service description of Message
-    unsigned long timestamp; // Message created at
+    int flag; // short service description of message
+    unsigned long timestamp; // message created at
     unsigned size; // actual size of th payload
-    unsigned index; // Message part index if the whole Message cannot fit in boy
-    unsigned count; // total count of Message parts
+    unsigned index; // message part index if the whole message cannot fit in boy
+    unsigned count; // total count of message parts
     // end head
     byte body[NET_MESSAGE_BODY_SIZE]; // payload
 } Message;

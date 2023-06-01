@@ -55,7 +55,6 @@ bool lcInit() {
     this->netThread = NULL;
 
     if (!ntInit()) {
-        this->running = false;
         lcClean();
         return false;
     }

@@ -11,6 +11,7 @@ const int NET_UPDATE_PERIOD = 60 / 15;
 const int NET_PORT = 8080;
 const int NET_MESSAGE_HEAD_SIZE = sizeof(int) * 4 + sizeof(long);
 const int NET_RECEIVE_BUFFER_SIZE = NET_MESSAGE_HEAD_SIZE + NET_MESSAGE_BODY_SIZE;
+const int NET_FLAG_UNAUTHENTICATED = 0x7ffffffe;
 const int NET_FLAG_FINISH = 0x7fffffff;
 
 staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8);
