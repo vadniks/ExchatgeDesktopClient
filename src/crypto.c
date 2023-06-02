@@ -18,10 +18,15 @@ THIS(
 
 byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     if (sodium_init() < 0) {
-        SDL_free(serverPublicKey);
+//        SDL_free(serverPublicKey);
         SDL_free(cryptDetails);
         return NULL;
     }
+
+    serverPublicKey = SDL_malloc(crypto_kx_PUBLICKEYBYTES); // TODO: test only
+    byte* serverSecretKey = SDL_malloc(crypto_kx_SECRETKEYBYTES);
+    crypto_kx_keypair(serverPublicKey, serverSecretKey);
+    SDL_free(serverSecretKey);
 
     this = SDL_malloc(sizeof *this);
     SDL_memcpy(this->serverPublicKey, serverPublicKey, crPublicKeySize());
@@ -48,6 +53,28 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     this->cryptDetails.unpaddedSize = cryptDetails->unpaddedSize;
     this->cryptDetails.paddedSize = cryptDetails->paddedSize;
     SDL_free(cryptDetails);
+
+    const char* test = "test"; // TODO: test only
+    byte* msg = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
+    SDL_memcpy(msg, test, 4);
+
+    printf("aa\n");
+    for (int i = 0; i < NET_RECEIVE_BUFFER_SIZE; printf("%c ", msg[i++] == 0 ? 't' : 'f'));
+    printf("\n");
+
+    byte* encrypted = crEncrypt(msg);
+    if (!encrypted) return false;
+
+    printf("a\n");
+    for (int i = 0; i < NET_RECEIVE_BUFFER_SIZE; printf("%c ", encrypted[i++]));
+    printf("\nb\n");
+
+    byte* decrypted = crDecrypt(encrypted);
+    if (!decrypted) return false;
+
+    for (int i = 0; i < NET_RECEIVE_BUFFER_SIZE; printf("%c ", decrypted[i++]));
+    SDL_free(decrypted);
+    printf("\n");
 
     return this->clientPublicKey;
 }
@@ -76,7 +103,7 @@ static byte* nullable addPadding(byte* bytes) {
 }
 
 static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
-    const unsigned encryptedSize = bytesSize + crypto_secretbox_MACBYTES;
+    const unsigned encryptedSize = bytesSize + crypto_secretbox_MACBYTES; // TODO: wrong size
     byte* encrypted = SDL_calloc(encryptedSize, sizeof(char));
 
     byte* nonceStart = encrypted + encryptedSize;
@@ -91,7 +118,7 @@ static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
     ) == 0 ? encrypted : NULL;
 
     if (!result) SDL_free(encrypted);
-    SDL_free(bytes);
+    SDL_free(bytes); // TODO: sigabrt
     return result;
 }
 
@@ -101,9 +128,10 @@ byte* nullable crEncrypt(byte* bytes) {
     return encrypt(padded, this->cryptDetails.paddedSize);
 }
 
-static byte* nullable decrypt(byte* bytes, unsigned decryptedSize) {
+static byte* nullable decrypt(byte* bytes, unsigned bytesSize) {
+    const unsigned decryptedSize = bytesSize - crypto_secretbox_MACBYTES - crypto_secretbox_NONCEBYTES;
     byte* decrypted = SDL_calloc(decryptedSize, sizeof(char));
-    const unsigned encryptedAndTagSize = decryptedSize + crypto_secretbox_MACBYTES - crypto_secretbox_NONCEBYTES;
+    const unsigned encryptedAndTagSize = bytesSize - crypto_secretbox_NONCEBYTES;
 
     byte* result = crypto_secretbox_open_easy(
         decrypted,
