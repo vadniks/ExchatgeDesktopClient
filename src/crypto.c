@@ -77,12 +77,8 @@ static byte* nullable addPadding(byte* bytes) {
 
 static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
     const unsigned encryptedSize = bytesSize + crypto_secretbox_MACBYTES;
-    if (bytesSize + crypto_secretbox_MACBYTES + crypto_secretbox_NONCEBYTES > encryptedSize) {
-        SDL_free(bytes);
-        return NULL;
-    }
-
     byte* encrypted = SDL_calloc(encryptedSize, sizeof(char));
+
     byte* nonceStart = encrypted + encryptedSize;
     randombytes_buf(nonceStart, crypto_secretbox_NONCEBYTES);
 
