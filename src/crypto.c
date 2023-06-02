@@ -62,14 +62,14 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     for (int i = 0; i < NET_RECEIVE_BUFFER_SIZE; printf("%c ", msg[i++] == 0 ? 't' : 'f'));
     printf("\n");
 
-    byte* encrypted = crEncrypt(msg); // TODO: not working
+    byte* encrypted = crEncrypt(msg);
     if (!encrypted) return false;
 
     printf("a\n");
     for (int i = 0; i < NET_RECEIVE_BUFFER_SIZE; printf("%c ", encrypted[i++]));
     printf("\nb\n");
 
-    byte* decrypted = crDecrypt(encrypted);
+    byte* decrypted = crDecrypt(encrypted); // TODO: now this doesn't work...
     if (!decrypted) return false;
 
     for (int i = 0; i < NET_RECEIVE_BUFFER_SIZE; printf("%c ", decrypted[i++]));
@@ -103,25 +103,22 @@ static byte* nullable addPadding(byte* bytes) {
 }
 
 static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
-    const unsigned encryptedSize = bytesSize + crypto_secretbox_MACBYTES;
+    const unsigned encryptedSize = bytesSize + crypto_secretbox_MACBYTES + crypto_secretbox_NONCEBYTES;
     byte* encrypted = SDL_calloc(encryptedSize, sizeof(char));
 
-    byte* nonceStart = encrypted + encryptedSize; // TODO: why the f*** am I trying to set memory OUTSIDE the bounds of the required memory region? Add crypto_secretbox_NONCEBYTES instead of encryptedSize!
-    printf("# %u %u\n", encrypted, nonceStart);
-//    SDL_memset(nonceStart, 1, 10);
-    SDL_memset(encrypted + 1070, 1, 10); // TODO: this one works
-    SDL_memset(encrypted + /*1071*/encryptedSize, 1, 10); // TODO: but this one causes 'corrupted size vs. prev_size' in --LB1--. Definitely wrong size is used smwhr
-//    randombytes_buf(nonceStart, crypto_secretbox_NONCEBYTES);
+    byte* nonceStart = encrypted + encryptedSize - crypto_secretbox_NONCEBYTES;
+    SDL_memset(nonceStart, 1, 10);
+    randombytes_buf(nonceStart, crypto_secretbox_NONCEBYTES);
 
-    byte* result = /*crypto_secretbox_easy(
+    byte* result = crypto_secretbox_easy(
         encrypted,
         bytes,
         bytesSize,
         nonceStart,
         this->clientSendKey
-    ) == 0 ? encrypted :*/ NULL;
+    ) == 0 ? encrypted : NULL;
 
-    if (!result) SDL_free(encrypted); // TODO: --LB1--
+    if (!result) SDL_free(encrypted);
     SDL_free(bytes);
     return result;
 }
