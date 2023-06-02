@@ -107,17 +107,21 @@ static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
     byte* encrypted = SDL_calloc(encryptedSize, sizeof(char));
 
     byte* nonceStart = encrypted + encryptedSize;
-    randombytes_buf(nonceStart, crypto_secretbox_NONCEBYTES);
+    printf("# %u %u\n", encrypted, nonceStart);
+//    SDL_memset(nonceStart, 1, 10);
+    SDL_memset(encrypted + 1070, 1, 10); // TODO: this one works
+    SDL_memset(encrypted + 1072/*encryptedSize*/, 1, 10); // TODO: but this one causes 'corrupted size vs. prev_size' in --LB1--. Definitely wrong size is used smwhr
+//    randombytes_buf(nonceStart, crypto_secretbox_NONCEBYTES);
 
-    byte* result = crypto_secretbox_easy(
+    byte* result = /*crypto_secretbox_easy(
         encrypted,
         bytes,
         bytesSize,
         nonceStart,
         this->clientSendKey
-    ) == 0 ? encrypted : NULL;
+    ) == 0 ? encrypted :*/ NULL;
 
-    if (!result) SDL_free(encrypted);
+    if (!result) SDL_free(encrypted); // TODO: --LB1--
     SDL_free(bytes);
     return result;
 }
@@ -138,7 +142,7 @@ static byte* nullable decrypt(byte* bytes, unsigned bytesSize) {
         bytes,
         encryptedAndTagSize,
         bytes + encryptedAndTagSize,
-        this->clientReceiveKey
+        this->clientSendKey // TODO: receive key
     ) == 0 ? decrypted : NULL;
 
     if (!result) SDL_free(decrypted);
