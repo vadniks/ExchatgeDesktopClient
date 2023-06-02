@@ -62,7 +62,7 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     for (int i = 0; i < NET_RECEIVE_BUFFER_SIZE; printf("%c ", msg[i++] == 0 ? 't' : 'f'));
     printf("\n");
 
-    byte* encrypted = crEncrypt(msg);
+    byte* encrypted = crEncrypt(msg); // TODO: not working
     if (!encrypted) return false;
 
     printf("a\n");
