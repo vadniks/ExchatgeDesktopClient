@@ -107,7 +107,6 @@ static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
     byte* encrypted = SDL_calloc(encryptedSize, sizeof(char));
 
     byte* nonceStart = encrypted + encryptedSize - crypto_secretbox_NONCEBYTES;
-    SDL_memset(nonceStart, 1, 10); // TODO: <--- setting first 10 bytes of the message to smth thereby corrupting the memory, f*** genius!
     randombytes_buf(nonceStart, crypto_secretbox_NONCEBYTES);
 
     byte* result = crypto_secretbox_easy(
