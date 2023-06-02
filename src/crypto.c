@@ -106,11 +106,11 @@ static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
     const unsigned encryptedSize = bytesSize + crypto_secretbox_MACBYTES;
     byte* encrypted = SDL_calloc(encryptedSize, sizeof(char));
 
-    byte* nonceStart = encrypted + encryptedSize;
+    byte* nonceStart = encrypted + encryptedSize; // TODO: why the f*** am I trying to set memory OUTSIDE the bounds of the required memory region? Add crypto_secretbox_NONCEBYTES instead of encryptedSize!
     printf("# %u %u\n", encrypted, nonceStart);
 //    SDL_memset(nonceStart, 1, 10);
     SDL_memset(encrypted + 1070, 1, 10); // TODO: this one works
-    SDL_memset(encrypted + 1072/*encryptedSize*/, 1, 10); // TODO: but this one causes 'corrupted size vs. prev_size' in --LB1--. Definitely wrong size is used smwhr
+    SDL_memset(encrypted + /*1071*/encryptedSize, 1, 10); // TODO: but this one causes 'corrupted size vs. prev_size' in --LB1--. Definitely wrong size is used smwhr
 //    randombytes_buf(nonceStart, crypto_secretbox_NONCEBYTES);
 
     byte* result = /*crypto_secretbox_easy(
