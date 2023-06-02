@@ -103,7 +103,7 @@ static byte* nullable addPadding(byte* bytes) {
 }
 
 static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
-    const unsigned encryptedSize = bytesSize + crypto_secretbox_MACBYTES; // TODO: wrong size
+    const unsigned encryptedSize = bytesSize + crypto_secretbox_MACBYTES;
     byte* encrypted = SDL_calloc(encryptedSize, sizeof(char));
 
     byte* nonceStart = encrypted + encryptedSize;
@@ -118,7 +118,7 @@ static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
     ) == 0 ? encrypted : NULL;
 
     if (!result) SDL_free(encrypted);
-    SDL_free(bytes); // TODO: sigabrt
+    SDL_free(bytes);
     return result;
 }
 
