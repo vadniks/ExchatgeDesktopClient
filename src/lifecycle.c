@@ -45,21 +45,10 @@ static unsigned uiUpdate(
 }
 
 bool lcInit() {
-    this = SDL_malloc(sizeof *this);
-    this->running = false;
-    this->uiUpdateCond = NULL;
-    this->uiUpdateLock = NULL;
-    this->updateThreadCounter = 1;
-    this->netUpdateCond = NULL;
-    this->netUpdateLock = NULL;
-    this->netThread = NULL;
-
-    if (!ntInit()) {
-        lcClean();
-        return false;
-    }
+    if (!ntInit()) return false;
     rdInit();
 
+    this = SDL_malloc(sizeof *this);
     this->running = true;
     this->uiUpdateCond = SDL_CreateCond();
     this->uiUpdateLock = SDL_CreateMutex();

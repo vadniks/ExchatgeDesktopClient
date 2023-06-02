@@ -4,8 +4,15 @@
 #include <stdbool.h>
 #include "defs.h"
 
-byte* nullable crInit(byte* serverPublicKey, unsigned maxEncryptedSize);
+typedef struct {
+    unsigned blockSize;
+    unsigned unpaddedSize; // decrypted & unpadded
+    unsigned paddedSize; // decrypted & padded
+} crCryptDetails;
+
+byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails);
 unsigned crPublicKeySize();
-byte* nullable crEncrypt(byte* bytes, unsigned size);
-byte* nullable crDecrypt(byte* bytes, unsigned size);
+unsigned crServiceSectionSize();
+byte* nullable crEncrypt(byte* bytes);
+byte* nullable crDecrypt(byte* bytes);
 void crClean();

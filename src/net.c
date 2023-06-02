@@ -24,7 +24,12 @@ static void initiateSecuredConnection() {
     SDLNet_TCP_Recv(this->socket, serverPublicKey, (int) publicKeySize);
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
-    byte* clientPublicKey = crInit(serverPublicKey, NET_RECEIVE_BUFFER_SIZE);
+    crCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails);
+    cryptDetails->blockSize = 16;
+    cryptDetails->unpaddedSize = NET_MESSAGE_SIZE;
+    cryptDetails->paddedSize = NET_RECEIVE_BUFFER_SIZE;
+
+    byte* clientPublicKey = crInit(serverPublicKey, cryptDetails);
     if (!clientPublicKey) return;
 
     SDLNet_TCP_Send(this->socket, clientPublicKey, (int) publicKeySize);
@@ -41,13 +46,19 @@ bool ntInit() {
     SDLNet_ResolveHost(&address, NET_HOST, NET_PORT);
 
     this->socket = SDLNet_TCP_OpenClient(&address);
-    if (!this->socket) return false;
+    if (!this->socket) {
+        ntClean();
+        return false;
+    }
 
     this->socketSet = SDLNet_AllocSocketSet(1);
     SDLNet_TCP_AddSocket(this->socketSet, this->socket);
 
     initiateSecuredConnection();
-    return this->state == STATE_READY;
+    bool result = this->state == STATE_READY;
+
+    if (!result) ntClean();
+    return result;
 }
 
 static bool isDataAvailable() {
@@ -125,7 +136,7 @@ void ntSend(byte* bytes, unsigned size) {
     SDL_free(bytes);
 
     byte* buffer = packMessage(msg);
-    byte* encryptedBuffer = crEncrypt(buffer, NET_RECEIVE_BUFFER_SIZE);
+    byte* encryptedBuffer = crEncrypt(buffer);
     if (!encryptedBuffer) return;
 
     SDLNet_TCP_Send(this->socket, buffer, NET_RECEIVE_BUFFER_SIZE);
