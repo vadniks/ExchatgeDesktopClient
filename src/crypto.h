@@ -12,7 +12,6 @@ typedef struct {
 
 byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails);
 unsigned crPublicKeySize();
-unsigned crServiceSectionSize();
 byte* nullable crEncrypt(byte* bytes);
 byte* nullable crDecrypt(byte* bytes);
 void crClean();

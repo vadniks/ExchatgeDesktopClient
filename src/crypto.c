@@ -53,7 +53,6 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
 }
 
 unsigned crPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
-unsigned crServiceSectionSize() { return crypto_secretbox_MACBYTES + crypto_secretbox_NONCEBYTES; }
 
 static byte* nullable addPadding(byte* bytes) {
     byte* padded = SDL_malloc(this->cryptDetails.paddedSize);
