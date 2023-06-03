@@ -13,6 +13,6 @@ byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails);
 unsigned crPublicKeySize();
 unsigned crEncryptedSize();
 unsigned crPaddedSize();
-byte* nullable crEncrypt(byte* bytes);
-byte* nullable crDecrypt(byte* bytes);
+byte* nullable crEncrypt(byte* bytes); // returns mac (tag) + encrypted bytes + nonce
+byte* nullable crDecrypt(byte* bytes); // consumes what is returned by encrypt
 void crClean();

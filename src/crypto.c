@@ -91,13 +91,16 @@ static byte* nullable addPadding(byte* bytes) {
     SDL_free(bytes);
 
     unsigned long generatedPaddedSize = 0;
-    sodium_pad(
+    if (sodium_pad(
         &generatedPaddedSize,
         padded,
         this->cryptDetails.unpaddedSize,
         this->cryptDetails.blockSize,
         this->cryptDetails.paddedSize
-    );
+    ) != 0) {
+        SDL_free(padded);
+        return NULL;
+    }
 
     if (generatedPaddedSize != (unsigned long) this->cryptDetails.paddedSize) {
         SDL_free(padded);
