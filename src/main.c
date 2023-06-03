@@ -1,9 +1,10 @@
 
+#include <stdlib.h>
 #include "lifecycle.h"
 
 int main() {
-    if (!lifecycleInit()) return 1;
+    if (!lifecycleInit()) return EXIT_FAILURE;
     lifecycleLoop();
     lifecycleClean();
-    return 0;
+    return EXIT_SUCCESS;
 }
