@@ -19,7 +19,7 @@ typedef unsigned char byte;
 extern const char* APP_TITLE;
 extern const char* NET_HOST;
 
-extern const int APP_WIDTH;
-extern const int APP_HEIGHT;
-extern const int UI_UPDATE_PERIOD;
-extern const int NET_UPDATE_PERIOD;
+extern const unsigned APP_WIDTH;
+extern const unsigned APP_HEIGHT;
+extern const unsigned UI_UPDATE_PERIOD;
+extern const unsigned NET_UPDATE_PERIOD;

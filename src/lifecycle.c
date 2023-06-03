@@ -1,5 +1,5 @@
 
-#include <time.h>
+#include <assert.h>
 #include "render.h"
 #include "defs.h"
 #include "net.h"
@@ -35,7 +35,7 @@ static unsigned uiUpdate(
 ) {
     SDL_CondSignal(this->uiUpdateCond);
 
-    if (this->updateThreadCounter == (unsigned) NET_UPDATE_PERIOD) {
+    if (this->updateThreadCounter == NET_UPDATE_PERIOD) {
         this->updateThreadCounter = 1;
         SDL_CondSignal(this->netUpdateCond);
     } else
@@ -58,7 +58,7 @@ bool lifecycleInit() {
     this->netThread = SDL_CreateThread(&netThread, "netThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER);
+    assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
 
     this->uiUpdateTimerId = SDL_AddTimer(UI_UPDATE_PERIOD, &uiUpdate, NULL);
     return true;
@@ -79,6 +79,7 @@ static bool processEvents() {
 
 void lifecycleLoop() {
     while (this->running) {
+
         if (processEvents()) {
             this->running = false;
             lifecycleClean();
