@@ -100,7 +100,7 @@ byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails) {
 unsigned crPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
 unsigned crEncryptedSize() { return this->cryptDetails.paddedSize + crypto_secretbox_MACBYTES + crypto_secretbox_NONCEBYTES; }
 
-unsigned crPaddedSize() { // 1096
+unsigned crPaddedSize() { // 1056
     const int dividend = (int) this->cryptDetails.unpaddedSize,
         divider = (int) this->cryptDetails.blockSize;
 
