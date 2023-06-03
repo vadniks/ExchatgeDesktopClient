@@ -41,18 +41,18 @@ typedef struct {
 } Message;
 
 static void initiateSecuredConnection() {
-    const unsigned publicKeySize = crPublicKeySize(),
+    const unsigned publicKeySize = cryptoPublicKeySize(),
         charSize = sizeof(char);
 
     byte* serverPublicKey = SDL_calloc(publicKeySize, charSize);
     SDLNet_TCP_Recv(this->socket, serverPublicKey, (int) publicKeySize);
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
-    CrCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails);
+    CryptoCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails);
     cryptDetails->blockSize = 16;
     cryptDetails->unpaddedSize = MESSAGE_SIZE;
 
-    byte* clientPublicKey = crInit(serverPublicKey, cryptDetails);
+    byte* clientPublicKey = cryptoInit(serverPublicKey, cryptDetails);
     if (!clientPublicKey) return;
 
     SDLNet_TCP_Send(this->socket, clientPublicKey, (int) publicKeySize);
@@ -63,7 +63,7 @@ static void initiateSecuredConnection() {
 static Message* unpackMessage(byte* buffer);
 static byte* packMessage(Message* msg);
 
-bool ntInit() { // TODO: add compression
+bool netInit() { // TODO: add compression
     this = SDL_malloc(sizeof *this);
     this->socket = NULL;
     this->socketSet = NULL;
@@ -85,16 +85,16 @@ bool ntInit() { // TODO: add compression
     for (unsigned i = 0; i < MESSAGE_BODY_SIZE; printf("%u ", packed[i++]));
     printf("\n");
 
-    CrCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails); // TODO: test only
+    CryptoCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails); // TODO: test only
     cryptDetails->blockSize = PADDING_BLOCK_SIZE;
     cryptDetails->unpaddedSize = MESSAGE_SIZE;
-    crInit(NULL, cryptDetails);
+    cryptoInit(NULL, cryptDetails);
 
-    byte* encrypted = crEncrypt(packed); // TODO: test only
-    for (unsigned i = 0; i < crEncryptedSize(); printf("%u ", encrypted[i++]));
+    byte* encrypted = cryptoEncrypt(packed); // TODO: test only
+    for (unsigned i = 0; i < cryptoEncryptedSize(); printf("%u ", encrypted[i++]));
     printf("\n");
 
-    byte* decrypted = crDecrypt(encrypted); // TODO: test only
+    byte* decrypted = cryptoDecrypt(encrypted); // TODO: test only
 
     Message* unpacked = unpackMessage(decrypted); // TODO: test only
     printf("%d %ld %d %d %d\n", unpacked->flag, unpacked->timestamp, unpacked->size, unpacked->index, unpacked->count);
@@ -108,7 +108,7 @@ bool ntInit() { // TODO: add compression
 
     this->socket = SDLNet_TCP_OpenClient(&address);
     if (!this->socket) {
-        ntClean();
+        netClean();
         return false;
     }
 
@@ -118,7 +118,7 @@ bool ntInit() { // TODO: add compression
     initiateSecuredConnection();
     bool result = this->state == STATE_READY;
 
-    if (!result) ntClean();
+    if (!result) netClean();
     return result;
 }
 
@@ -159,7 +159,7 @@ static byte* packMessage(Message* msg) {
 
 static bool test = false; // TODO: test only
 #define NET_RECEIVE_BUFFER_SIZE 1
-void ntListen() {
+void netListen() {
     Message* msg = NULL;
 
     if (isDataAvailable()) {
@@ -177,7 +177,7 @@ void ntListen() {
             const char* text = "Hello World!";
             byte* testMsg = SDL_malloc(12 * sizeof(char));
             SDL_memcpy(testMsg, text, 12);
-            ntSend(testMsg, 12); // TODO: test only
+            netSend(testMsg, 12); // TODO: test only
 
             SDL_Log("hello world sent");
 
@@ -187,7 +187,7 @@ void ntListen() {
     SDL_free(msg);
 }
 
-void ntSend(byte* bytes, unsigned size) {
+void netSend(byte* message, unsigned size) {
     Message* msg = SDL_malloc(sizeof *msg);
     msg->flag = 0;
     msg->timestamp = 0;
@@ -195,11 +195,11 @@ void ntSend(byte* bytes, unsigned size) {
     msg->index = 0;
     msg->count = 0;
 
-    SDL_memcpy(&(msg->body), bytes, size);
-    SDL_free(bytes);
+    SDL_memcpy(&(msg->body), message, size);
+    SDL_free(message);
 
     byte* buffer = packMessage(msg);
-    byte* encryptedBuffer = crEncrypt(buffer);
+    byte* encryptedBuffer = cryptoEncrypt(buffer);
     if (!encryptedBuffer) return;
 
     SDLNet_TCP_Send(this->socket, buffer, NET_RECEIVE_BUFFER_SIZE);
@@ -207,8 +207,8 @@ void ntSend(byte* bytes, unsigned size) {
     SDL_free(encryptedBuffer);
 }
 
-void ntClean() {
-    crClean();
+void netClean() {
+    cryptoClean();
     SDLNet_FreeSocketSet(this->socketSet);
     SDLNet_TCP_Close(this->socket);
     SDLNet_Quit();

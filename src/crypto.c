@@ -11,11 +11,11 @@ typedef struct {
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmicrosoft-anon-tag"
-    CrCryptDetails;
+    CryptoCryptDetails;
 #pragma clang diagnostic pop
 
     unsigned paddedSize;
-} CrCryptDetailsInternal;
+} CryptoCryptDetailsInternal;
 
 THIS(
     byte serverPublicKey[crypto_kx_PUBLICKEYBYTES];
@@ -23,10 +23,10 @@ THIS(
     byte clientSecretKey[crypto_kx_SECRETKEYBYTES];
     byte clientReceiveKey[crypto_kx_SESSIONKEYBYTES];
     byte clientSendKey[crypto_kx_SESSIONKEYBYTES];
-    CrCryptDetailsInternal cryptDetails;
+    CryptoCryptDetailsInternal cryptDetails;
 )
 
-byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails) {
+byte* nullable cryptoInit(byte* serverPublicKey, CryptoCryptDetails* cryptDetails) {
     assert(cryptDetails->blockSize > 0 && cryptDetails->unpaddedSize > 0);
 
     if (sodium_init() < 0) {
@@ -39,12 +39,12 @@ byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails) {
     crypto_kx_keypair(serverPublicKey, (byte[crypto_kx_SECRETKEYBYTES]){});
 
     this = SDL_malloc(sizeof *this);
-    SDL_memcpy(this->serverPublicKey, serverPublicKey, crPublicKeySize());
+    SDL_memcpy(this->serverPublicKey, serverPublicKey, cryptoPublicKeySize());
     SDL_free(serverPublicKey);
 
     this->cryptDetails.blockSize = cryptDetails->blockSize;
     this->cryptDetails.unpaddedSize = cryptDetails->unpaddedSize;
-    this->cryptDetails.paddedSize = crPaddedSize();
+    this->cryptDetails.paddedSize = cryptoPaddedSize();
     SDL_free(cryptDetails);
 
     crypto_kx_keypair(this->clientPublicKey, this->clientSecretKey);
@@ -56,28 +56,28 @@ byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails) {
         this->clientSecretKey,
         this->serverPublicKey
     ) != 0) {
-        crClean();
+        cryptoClean();
         return NULL;
     }
 
     printf("rx: "); // TODO: test only
-    for (unsigned i = 0; i < crPublicKeySize(); i++) printf("%d ", this->clientReceiveKey[i]);
+    for (unsigned i = 0; i < cryptoPublicKeySize(); i++) printf("%d ", this->clientReceiveKey[i]);
     printf("tx: ");
-    for (unsigned i = 0; i < crPublicKeySize(); i++) printf("%d ", this->clientSendKey[i]);
+    for (unsigned i = 0; i < cryptoPublicKeySize(); i++) printf("%d ", this->clientSendKey[i]);
     printf("\n");
 
     return this->clientPublicKey;
 }
 
-unsigned crPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
+unsigned cryptoPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
 
-unsigned crEncryptedSize() {
+unsigned cryptoEncryptedSize() {
     return this->cryptDetails.paddedSize
         + crypto_secretbox_MACBYTES
         + crypto_secretbox_NONCEBYTES;
 }
 
-unsigned crPaddedSize() { // 1056
+unsigned cryptoPaddedSize() { // 1056
     const int dividend = (int) this->cryptDetails.unpaddedSize,
         divider = (int) this->cryptDetails.blockSize;
 
@@ -130,9 +130,9 @@ static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
 }
 
 #pragma clang diagnostic push
-#pragma ide diagnostic ignored "ConstantFunctionResult" // SAT thinks this function always return null, but it really doesn't
+#pragma ide diagnostic ignored "ConstantFunctionResult" // SAT thinks this Function always return null, but it really doesn't
 
-byte* nullable crEncrypt(byte* bytes) {
+byte* nullable cryptoEncrypt(byte* bytes) {
     byte* padded = addPadding(bytes);
     if (!padded) return NULL;
     return encrypt(padded, this->cryptDetails.paddedSize);
@@ -187,9 +187,9 @@ static byte* nullable removePadding(byte* bytes) {
 }
 
 #pragma clang diagnostic push
-#pragma ide diagnostic ignored "ConstantFunctionResult" // SAT thinks this function always return null, but it really doesn't
+#pragma ide diagnostic ignored "ConstantFunctionResult" // SAT thinks this Function always return null, but it really doesn't
 
-byte* nullable crDecrypt(byte* bytes) {
+byte* nullable cryptoDecrypt(byte* bytes) {
     byte* decrypted = decrypt(bytes,
         this->cryptDetails.paddedSize + (int) crypto_secretbox_MACBYTES + (int) crypto_secretbox_NONCEBYTES);
     if (!decrypted) return NULL;
@@ -198,4 +198,4 @@ byte* nullable crDecrypt(byte* bytes) {
 
 #pragma clang diagnostic pop
 
-void crClean() { SDL_free(this); }
+void cryptoClean() { SDL_free(this); }

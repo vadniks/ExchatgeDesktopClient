@@ -2,8 +2,8 @@
 #include "lifecycle.h"
 
 int main() {
-    if (!lcInit()) return 1;
-    lcLoop();
-    lcClean();
+    if (!lifecycleInit()) return 1;
+    lifecycleLoop();
+    lifecycleClean();
     return 0;
 }

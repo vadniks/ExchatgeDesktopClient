@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "defs.h"
 
-bool ntInit();
-void ntListen();
-void ntSend(byte* message, unsigned size);
-void ntClean();
+bool netInit();
+void netListen();
+void netSend(byte* message, unsigned size);
+void netClean();

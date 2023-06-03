@@ -13,7 +13,7 @@
 #   define staticAssert(x)
 #endif
 
-typedef void* (*function)(void*);
+typedef void* (*Function)(void*);
 typedef unsigned char byte;
 
 extern const char* APP_TITLE;

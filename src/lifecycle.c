@@ -16,7 +16,7 @@ THIS(
     SDL_Thread* netThread;
 )
 
-static void updateSynchronized(function action, SDL_cond* cond, SDL_mutex* lock) {
+static void updateSynchronized(Function action, SDL_cond* cond, SDL_mutex* lock) {
     SDL_LockMutex(lock);
     action(NULL);
     SDL_CondWait(cond, lock);
@@ -25,7 +25,7 @@ static void updateSynchronized(function action, SDL_cond* cond, SDL_mutex* lock)
 
 static int netThread(__attribute_maybe_unused__ void* _) {
     while (this->running)
-        updateSynchronized((function) &ntListen, this->netUpdateCond, this->netUpdateLock);
+        updateSynchronized((Function) &netListen, this->netUpdateCond, this->netUpdateLock);
     return 0;
 }
 
@@ -44,8 +44,8 @@ static unsigned uiUpdate(
     return this->running ? UI_UPDATE_PERIOD : 0;
 }
 
-bool lcInit() {
-    if (!ntInit()) return false;
+bool lifecycleInit() {
+    if (!netInit()) return false;
     rdInit();
 
     this = SDL_malloc(sizeof *this);
@@ -77,25 +77,25 @@ static bool processEvents() {
     return false;
 }
 
-void lcLoop() {
+void lifecycleLoop() {
     while (this->running) {
         if (processEvents()) {
             this->running = false;
-            lcClean();
+            lifecycleClean();
             break;
         }
 
-        updateSynchronized((function) &rdDraw, this->uiUpdateCond, this->uiUpdateLock);
+        updateSynchronized((Function) &rdDraw, this->uiUpdateCond, this->uiUpdateLock);
     }
 }
 
-void lcClean() {
+void lifecycleClean() {
     if (!this) return;
 
     SDL_RemoveTimer(this->uiUpdateTimerId);
 
     rdClean();
-    ntClean();
+    netClean();
 
     SDL_DestroyCond(this->uiUpdateCond);
     SDL_DestroyMutex(this->uiUpdateLock);

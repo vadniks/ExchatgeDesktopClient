@@ -7,12 +7,12 @@
 typedef struct {
     unsigned blockSize;
     unsigned unpaddedSize;
-} CrCryptDetails;
+} CryptoCryptDetails;
 
-byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails);
-unsigned crPublicKeySize();
-unsigned crEncryptedSize();
-unsigned crPaddedSize();
-byte* nullable crEncrypt(byte* bytes); // returns mac (tag) + encrypted bytes + nonce
-byte* nullable crDecrypt(byte* bytes); // consumes what is returned by encrypt
-void crClean();
+byte* nullable cryptoInit(byte* serverPublicKey, CryptoCryptDetails* cryptDetails);
+unsigned cryptoPublicKeySize();
+unsigned cryptoEncryptedSize();
+unsigned cryptoPaddedSize();
+byte* nullable cryptoEncrypt(byte* bytes); // returns mac (tag) + encrypted bytes + nonce
+byte* nullable cryptoDecrypt(byte* bytes); // consumes what is returned by encrypt
+void cryptoClean();
