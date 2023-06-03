@@ -82,7 +82,6 @@ static bool processEvents() {
 
 static void stopApp() {
     this->running = false;
-    SDL_CondSignal(this->uiUpdateCond);
     SDL_CondSignal(this->netUpdateCond);
 }
 
