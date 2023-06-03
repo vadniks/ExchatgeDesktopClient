@@ -60,11 +60,10 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     SDL_free(cryptDetails);
 
     const unsigned msgSize = this->cryptDetails.unpaddedSize; // TODO: test only
-    const unsigned paddedUnencryptedSize = this->cryptDetails.paddedSize;
-    const unsigned paddedEncryptedSize = paddedUnencryptedSize + (int) crypto_secretbox_MACBYTES + (int) crypto_secretbox_NONCEBYTES; // 1096
+    const unsigned paddedEncryptedSize = crEncryptedSize(); // 1096
 
     byte* msg = SDL_calloc(msgSize, sizeof(char));
-    for (unsigned i = 0; i < msgSize; msg[i] = ++i);
+    for (unsigned i = 0; i < msgSize; msg[i++] = 0);
 
     printf("message:\n");
     for (unsigned i = 0; i < msgSize; printf("%u ", msg[i++]));
@@ -89,6 +88,7 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
 }
 
 unsigned crPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
+unsigned crEncryptedSize() { return this->cryptDetails.paddedSize + crypto_secretbox_MACBYTES + crypto_secretbox_NONCEBYTES; }
 
 static byte* nullable addPadding(byte* bytes) {
     byte* padded = SDL_malloc(this->cryptDetails.paddedSize);
@@ -180,12 +180,16 @@ static byte* nullable removePadding(byte* bytes) {
     return unpadded;
 }
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "ConstantFunctionResult" // TODO: why SAT thinks this function always return null but it really doesn't?
+
 byte* nullable crDecrypt(byte* bytes) {
-    byte* decrypted = decrypt(bytes, this->cryptDetails.paddedSize + (int) crypto_secretbox_MACBYTES + (int) crypto_secretbox_NONCEBYTES);
+    byte* decrypted = decrypt(bytes,
+        this->cryptDetails.paddedSize + (int) crypto_secretbox_MACBYTES + (int) crypto_secretbox_NONCEBYTES);
     if (!decrypted) return NULL;
     return removePadding(decrypted);
 }
 
-void crClean() {
-    SDL_free(this);
-}
+#pragma clang diagnostic pop
+
+void crClean() { SDL_free(this); }
