@@ -63,9 +63,8 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     const unsigned paddedUnencryptedSize = this->cryptDetails.paddedSize;
     const unsigned paddedEncryptedSize = paddedUnencryptedSize + (int) crypto_secretbox_MACBYTES + (int) crypto_secretbox_NONCEBYTES; // 1096
 
-    const char* test = "test abc cba 1234567890 0987654321";
     byte* msg = SDL_calloc(msgSize, sizeof(char));
-    SDL_memcpy(msg, test, SDL_strlen(test));
+    SDL_memset(msg, 'a', msgSize);
 
     printf("message:\n");
     for (unsigned i = 0; i < msgSize; printf("%u ", msg[i++]));
