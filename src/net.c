@@ -35,11 +35,30 @@ static void initiateSecuredConnection() {
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
 }
 
+#include <stdio.h> // TODO: test only
+static Message* unpackMessage(byte* buffer);
+static byte* packMessage(Message* msg);
+
 bool ntInit() {
     this = SDL_malloc(sizeof *this);
     this->socket = NULL;
     this->socketSet = NULL;
     SDLNet_Init();
+
+    Message* msg = SDL_malloc(sizeof *msg); // TODO: test only
+    msg->flag = 1234567890;
+    msg->timestamp = 0;
+    msg->size = NET_MESSAGE_BODY_SIZE;
+    msg->index = 0;
+    msg->count = 1;
+    SDL_memset(msg->body, 0, NET_MESSAGE_BODY_SIZE);
+
+    byte* packed = packMessage(msg); // TODO: test only
+    Message* unpacked = unpackMessage(packed);
+    printf("%d %ld %d %d %d\n", unpacked->flag, unpacked->timestamp, unpacked->size, unpacked->index, unpacked->count);
+    for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", unpacked->body[i++]));
+    printf("\n");
+    SDL_free(unpacked); // TODO: works incorrectly
 
     IPaddress address;
     SDLNet_ResolveHost(&address, NET_HOST, NET_PORT);

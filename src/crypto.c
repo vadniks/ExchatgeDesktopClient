@@ -2,7 +2,6 @@
 #include <sdl/SDL.h>
 #include <sodium/sodium.h>
 #include "crypto.h"
-#include <stdio.h> // TODO: test only
 
 staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
