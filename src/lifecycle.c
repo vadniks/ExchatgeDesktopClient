@@ -80,11 +80,17 @@ static bool processEvents() {
     return false;
 }
 
+static void stopApp() {
+    this->running = false;
+    SDL_CondSignal(this->uiUpdateCond);
+    SDL_CondSignal(this->netUpdateCond);
+}
+
 void lifecycleLoop() {
     while (this->running) {
 
         if (processEvents()) {
-            this->running = false;
+            stopApp();
             lifecycleClean();
             break;
         }
