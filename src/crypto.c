@@ -129,11 +129,16 @@ static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
     return result;
 }
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "ConstantFunctionResult" // SAT thinks this function always return null, but it really doesn't
+
 byte* nullable crEncrypt(byte* bytes) {
     byte* padded = addPadding(bytes);
     if (!padded) return NULL;
     return encrypt(padded, this->cryptDetails.paddedSize);
 }
+
+#pragma clang diagnostic pop
 
 static byte* nullable decrypt(byte* bytes, unsigned bytesSize) {
     const unsigned decryptedSize = bytesSize - crypto_secretbox_MACBYTES - crypto_secretbox_NONCEBYTES;
@@ -179,7 +184,7 @@ static byte* nullable removePadding(byte* bytes) {
 }
 
 #pragma clang diagnostic push
-#pragma ide diagnostic ignored "ConstantFunctionResult" // TODO: why SAT thinks this function always return null but it really doesn't?
+#pragma ide diagnostic ignored "ConstantFunctionResult" // SAT thinks this function always return null, but it really doesn't
 
 byte* nullable crDecrypt(byte* bytes) {
     byte* decrypted = decrypt(bytes,
