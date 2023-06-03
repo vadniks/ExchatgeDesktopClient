@@ -75,9 +75,10 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     for (int i = 0; i < encryptedMsgSize; printf("%u ", encrypted[i++]));
     printf("\nb\n");
 
-    byte* decrypted = crDecrypt(encrypted); // TODO: now this doesn't work...
+    byte* decrypted = decrypt(encrypted, encryptedMsgSize);
     if (!decrypted) return false;
 
+    printf("%s\n", decrypted); // TODO: it finally works
     for (int i = 0; i < msgSize; printf("%u ", decrypted[i++]));
     SDL_free(decrypted);
     printf("\n");
@@ -115,10 +116,6 @@ static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
     byte* nonceStart = encrypted + encryptedSize - crypto_secretbox_NONCEBYTES;
     randombytes_buf(nonceStart, crypto_secretbox_NONCEBYTES);
 
-    printf("encrypt nonce: ");  // TODO: test only
-    for (unsigned i = 0; i < crypto_secretbox_NONCEBYTES; printf("%u ", nonceStart[i++]));
-    printf("\n");
-
     byte* result = crypto_secretbox_easy(
         encrypted,
         bytes,
@@ -142,10 +139,6 @@ static byte* nullable decrypt(byte* bytes, unsigned bytesSize) {
     const unsigned decryptedSize = bytesSize - crypto_secretbox_MACBYTES - crypto_secretbox_NONCEBYTES;
     byte* decrypted = SDL_calloc(decryptedSize, sizeof(char));
     const unsigned encryptedAndTagSize = bytesSize - crypto_secretbox_NONCEBYTES;
-
-    printf("decrypt nonce: ");  // TODO: test only
-    for (unsigned i = 0; i < crypto_secretbox_NONCEBYTES; printf("%u ", (bytes + encryptedAndTagSize)[i++])); // TODO: wrong nonce start position
-    printf("\n");
 
     byte* result = crypto_secretbox_open_easy(
         decrypted,
@@ -187,7 +180,6 @@ static byte* nullable removePadding(byte* bytes) {
 
 byte* nullable crDecrypt(byte* bytes) {
     byte* decrypted = decrypt(bytes, NET_RECEIVE_BUFFER_SIZE);
-    return decrypted;
     if (!decrypted) return NULL;
     return removePadding(decrypted);
 }
