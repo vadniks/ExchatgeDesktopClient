@@ -18,6 +18,8 @@ THIS(
 
 static byte* nullable encrypt(byte* bytes, unsigned bytesSize); // TODO: test only
 static byte* nullable decrypt(byte* bytes, unsigned bytesSize);
+static byte* nullable addPadding(byte* bytes);
+static byte* nullable removePadding(byte* bytes);
 
 byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     if (sodium_init() < 0) {
@@ -58,29 +60,41 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     SDL_free(cryptDetails);
 
     const int msgSize = 1048; // TODO: test only
-    const int encryptedMsgSize = msgSize + 16 + 24; // mac + nonce, without padding for now
+    const int paddedUnencryptedSize = 1056;
+    const int paddedEncryptedSize = paddedUnencryptedSize + (int) crypto_secretbox_MACBYTES + (int) crypto_secretbox_NONCEBYTES; // 1096
 
     const char* test = "test";
     byte* msg = SDL_calloc(msgSize, sizeof(char));
     SDL_memcpy(msg, test, 4);
 
-    printf("aa\n");
+    printf("message:\n");
     for (int i = 0; i < msgSize; printf("%u ", msg[i++]));
     printf("\n");
 
-    byte* encrypted = encrypt(msg, msgSize);
+    byte* padded = addPadding(msg);
+    printf("padded message:\n");
+    for (int i = 0; i < paddedUnencryptedSize; printf("%u ", padded[i++]));
+    printf("\n");
+
+    byte* encrypted = encrypt(padded, paddedUnencryptedSize);
     if (!encrypted) return false;
 
-    printf("a\n");
-    for (int i = 0; i < encryptedMsgSize; printf("%u ", encrypted[i++]));
-    printf("\nb\n");
+    printf("encrypted padded message:\n");
+    for (int i = 0; i < paddedEncryptedSize; printf("%u ", encrypted[i++]));
+    printf("\n");
 
-    byte* decrypted = decrypt(encrypted, encryptedMsgSize);
+    byte* decrypted = decrypt(encrypted, paddedEncryptedSize);
     if (!decrypted) return false;
 
-    printf("%s\n", decrypted); // TODO: it finally works
-    for (int i = 0; i < msgSize; printf("%u ", decrypted[i++]));
-    SDL_free(decrypted);
+    printf("decrypted padded message:\n");
+    for (int i = 0; i < paddedUnencryptedSize; printf("%u ", decrypted[i++]));
+    printf("\n");
+
+    printf("unpadded messgae:\n");
+    byte* unpadded = removePadding(decrypted);
+    for (int i = 0; i < msgSize; printf("%u ", unpadded[i++]));
+    printf("\nsource message: %s\n", unpadded); // TODO: Yey! This shit finally started to work!
+    SDL_free(unpadded);
     printf("\n");
 
     return this->clientPublicKey;
