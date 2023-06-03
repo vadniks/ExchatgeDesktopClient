@@ -17,6 +17,8 @@ typedef struct {
     unsigned paddedSize;
 } CryptoCryptDetailsInternal;
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite the SAT says
 THIS(
     byte serverPublicKey[crypto_kx_PUBLICKEYBYTES];
     byte clientPublicKey[crypto_kx_PUBLICKEYBYTES];
@@ -25,6 +27,7 @@ THIS(
     byte clientSendKey[crypto_kx_SESSIONKEYBYTES];
     CryptoCryptDetailsInternal cryptDetails;
 )
+#pragma clang diagnostic pop
 
 byte* nullable cryptoInit(byte* serverPublicKey, CryptoCryptDetails* cryptDetails) {
     assert(cryptDetails->blockSize > 0 && cryptDetails->unpaddedSize > 0);

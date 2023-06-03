@@ -5,6 +5,8 @@
 #include "net.h"
 #include "lifecycle.h"
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite the SAT says
 THIS(
     volatile bool running;
     SDL_cond* uiUpdateCond;
@@ -15,6 +17,7 @@ THIS(
     SDL_mutex* netUpdateLock;
     SDL_Thread* netThread;
 )
+#pragma clang diagnostic pop
 
 static void updateSynchronized(Function action, SDL_cond* cond, SDL_mutex* lock) {
     SDL_LockMutex(lock);
