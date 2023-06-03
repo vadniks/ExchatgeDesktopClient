@@ -17,12 +17,12 @@ THIS( // TODO: check client's authentication by token
 )
 
 static const int PORT = 8080;
-static const int MESSAGE_HEAD_SIZE = sizeof(int) * 4 + sizeof(long);
-static const int MESSAGE_BODY_SIZE = 1 << 10; // 1024
-static const int MESSAGE_SIZE = MESSAGE_HEAD_SIZE + MESSAGE_BODY_SIZE;
+static const unsigned MESSAGE_HEAD_SIZE = sizeof(int) * 4 + sizeof(long);
+static const unsigned MESSAGE_BODY_SIZE = 1 << 10; // 1024
+static const unsigned MESSAGE_SIZE = MESSAGE_HEAD_SIZE + MESSAGE_BODY_SIZE;
+static const unsigned PADDING_BLOCK_SIZE = 16;
 static const int FLAG_UNAUTHENTICATED = 0x7ffffffe;
 static const int FLAG_FINISH = 0x7fffffff;
-static const int PADDING_BLOCK_SIZE = 16;
 
 typedef struct {
     // begin head
