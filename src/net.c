@@ -39,7 +39,7 @@ static void initiateSecuredConnection() {
 static Message* unpackMessage(byte* buffer);
 static byte* packMessage(Message* msg);
 
-bool ntInit() {
+bool ntInit() { // TODO: add compression
     this = SDL_malloc(sizeof *this);
     this->socket = NULL;
     this->socketSet = NULL;
@@ -51,12 +51,27 @@ bool ntInit() {
     msg->size = NET_MESSAGE_BODY_SIZE;
     msg->index = 0;
     msg->count = 1;
-    SDL_memset(msg->body, 0, NET_MESSAGE_BODY_SIZE);
+
+    SDL_memset(msg->body, 255, NET_MESSAGE_BODY_SIZE);
+    for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", msg->body[i++]));
+    printf("\n");
 
     byte* packed = packMessage(msg); // TODO: test only
     for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", packed[i++]));
     printf("\n");
-    Message* unpacked = unpackMessage(packed);
+
+    CrCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails); // TODO: test only
+    cryptDetails->blockSize = CRYPTO_PADDING_BLOCK_SIZE;
+    cryptDetails->unpaddedSize = NET_MESSAGE_SIZE;
+    crInit(NULL, cryptDetails);
+
+    byte* encrypted = crEncrypt(packed);
+    for (unsigned i = 0; i < crEncryptedSize(); printf("%u ", encrypted[i++]));
+    printf("\n");
+
+    byte* decrypted = crDecrypt(encrypted);
+
+    Message* unpacked = unpackMessage(decrypted); // TODO: test only
     printf("%d %ld %d %d %d\n", unpacked->flag, unpacked->timestamp, unpacked->size, unpacked->index, unpacked->count);
     for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", unpacked->body[i++]));
     printf("\n");
@@ -88,7 +103,7 @@ static bool isDataAvailable() {
 
 static Message* unpackMessage(byte* buffer) {
     Message* msg = SDL_malloc(sizeof *msg);
-    unsigned intSize = sizeof(int), longSize = sizeof(long);
+    const unsigned intSize = sizeof(int), longSize = sizeof(long);
 
     SDL_memcpy(&(msg->flag), buffer, intSize);
     SDL_memcpy(&(msg->timestamp), buffer + intSize, longSize);
@@ -103,13 +118,14 @@ static Message* unpackMessage(byte* buffer) {
 
 static byte* packMessage(Message* msg) {
     byte* buffer = SDL_calloc(NET_MESSAGE_SIZE, sizeof(char));
-    unsigned intSize = sizeof(int), longSize = sizeof(long);
+    const unsigned intSize = sizeof(int), longSize = sizeof(long);
 
     SDL_memcpy(buffer, &(msg->flag), intSize);
     SDL_memcpy(buffer + intSize, &(msg->timestamp), longSize);
     SDL_memcpy(buffer + intSize + longSize, &(msg->size), intSize);
     SDL_memcpy(buffer + intSize * 2 + longSize, &(msg->index), intSize);
     SDL_memcpy(buffer + intSize * 3 + longSize, &(msg->count), intSize);
+    SDL_memcpy(buffer + NET_MESSAGE_HEAD_SIZE, &(msg->body), NET_MESSAGE_BODY_SIZE);
 
     SDL_free(msg);
     return buffer;

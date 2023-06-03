@@ -49,8 +49,11 @@ byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails) {
         this->clientPublicKey,
         this->clientSecretKey,
         this->serverPublicKey
-    ) != 0)
+    ) != 0) {
+        SDL_free(cryptDetails);
+        SDL_free(this);
         return NULL;
+    }
 
     printf("rx: "); // TODO: test only
     for (unsigned i = 0; i < crPublicKeySize(); i++) printf("%d ", this->clientReceiveKey[i]);

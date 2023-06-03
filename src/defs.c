@@ -13,5 +13,6 @@ const int NET_MESSAGE_HEAD_SIZE = sizeof(int) * 4 + sizeof(long);
 const int NET_MESSAGE_SIZE = NET_MESSAGE_HEAD_SIZE + NET_MESSAGE_BODY_SIZE;
 const int NET_FLAG_UNAUTHENTICATED = 0x7ffffffe;
 const int NET_FLAG_FINISH = 0x7fffffff;
+const int CRYPTO_PADDING_BLOCK_SIZE = 16;
 
 staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8);

@@ -2,8 +2,8 @@
 #pragma once
 
 #define THIS(x) \
-    typedef struct { x } this_t; \
-    static this_t* this = NULL;
+    typedef struct { x } This; \
+    static This* this = NULL;
 
 #ifdef __clang__
 #   define nullable _Nullable
@@ -30,6 +30,7 @@ extern const int NET_MESSAGE_HEAD_SIZE;
 extern const int NET_MESSAGE_SIZE;
 extern const int NET_FLAG_UNAUTHENTICATED;
 extern const int NET_FLAG_FINISH;
+extern const int CRYPTO_PADDING_BLOCK_SIZE;
 
 typedef struct {
     // begin head
