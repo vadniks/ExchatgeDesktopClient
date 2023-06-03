@@ -55,12 +55,6 @@ byte* nullable cryptoInit(byte* serverPublicKey, CryptoCryptDetails* cryptDetail
         return NULL;
     }
 
-    printf("rx: "); // TODO: test only
-    for (unsigned i = 0; i < cryptoPublicKeySize(); i++) printf("%d ", this->clientReceiveKey[i]);
-    printf("tx: ");
-    for (unsigned i = 0; i < cryptoPublicKeySize(); i++) printf("%d ", this->clientSendKey[i]);
-    printf("\n");
-
     return this->clientPublicKey;
 }
 
