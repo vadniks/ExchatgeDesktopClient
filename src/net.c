@@ -54,7 +54,7 @@ bool ntInit() { // TODO: add compression
 
     const char* test = "Test"; // TODO: test only
     SDL_memcpy(msg->body, test, 4);
-    for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", msg->body[i++])); // TODO: and how do I supposed to port all these thing to Go?
+    for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", msg->body[i++])); // TODO: and how am I supposed to port all these thing to Go?
     printf("\n");
 
     byte* packed = packMessage(msg); // TODO: test only
