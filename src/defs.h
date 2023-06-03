@@ -19,8 +19,6 @@ typedef unsigned char byte;
 extern const char* APP_TITLE;
 extern const char* NET_HOST;
 
-#define NET_MESSAGE_BODY_SIZE (1 << 10) // 1024
-
 extern const int APP_WIDTH;
 extern const int APP_HEIGHT;
 extern const int UI_UPDATE_PERIOD;

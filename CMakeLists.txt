@@ -10,6 +10,7 @@ add_compile_options("-Wextra")
 add_compile_options("-Wno-nullability-completeness")
 add_compile_options("-Wno-unknown-pragmas")
 add_compile_options("-fms-extensions")
+#add_compile_options("-std=gnu11")
 
 add_compile_options("-O3")
 #add_link_options("-s")

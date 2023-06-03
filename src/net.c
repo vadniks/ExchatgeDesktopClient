@@ -18,7 +18,8 @@ THIS( // TODO: check client's authentication by token
 
 static const int PORT = 8080;
 static const int MESSAGE_HEAD_SIZE = sizeof(int) * 4 + sizeof(long);
-static const int MESSAGE_SIZE = MESSAGE_HEAD_SIZE + NET_MESSAGE_BODY_SIZE;
+static const int MESSAGE_BODY_SIZE = 1 << 10; // 1024
+static const int MESSAGE_SIZE = MESSAGE_HEAD_SIZE + MESSAGE_BODY_SIZE;
 static const int FLAG_UNAUTHENTICATED = 0x7ffffffe;
 static const int FLAG_FINISH = 0x7fffffff;
 static const int PADDING_BLOCK_SIZE = 16;
@@ -31,7 +32,12 @@ typedef struct {
     unsigned index; // message part index if the whole message cannot fit in boy
     unsigned count; // total count of message parts
     // end head
-    byte body[NET_MESSAGE_BODY_SIZE]; // payload
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-folding-constant" // If this causes compile troubles declare this constant as a macro
+    byte body[MESSAGE_BODY_SIZE]; // payload
+#pragma clang diagnostic pop
+
 } Message;
 
 static void initiateSecuredConnection() {
@@ -66,17 +72,17 @@ bool ntInit() { // TODO: add compression
     Message* msg = SDL_malloc(sizeof *msg); // TODO: test only
     msg->flag = 1234567890;
     msg->timestamp = 0;
-    msg->size = NET_MESSAGE_BODY_SIZE;
+    msg->size = MESSAGE_BODY_SIZE;
     msg->index = 0;
     msg->count = 1;
 
     const char* test = "Test"; // TODO: test only
     SDL_memcpy(msg->body, test, 4);
-    for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", msg->body[i++])); // TODO: and how am I supposed to port all these thing to Go?
+    for (unsigned i = 0; i < MESSAGE_BODY_SIZE; printf("%u ", msg->body[i++])); // TODO: and how am I supposed to port all these thing to Go?
     printf("\n");
 
     byte* packed = packMessage(msg); // TODO: test only
-    for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", packed[i++]));
+    for (unsigned i = 0; i < MESSAGE_BODY_SIZE; printf("%u ", packed[i++]));
     printf("\n");
 
     CrCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails); // TODO: test only
@@ -92,7 +98,7 @@ bool ntInit() { // TODO: add compression
 
     Message* unpacked = unpackMessage(decrypted); // TODO: test only
     printf("%d %ld %d %d %d\n", unpacked->flag, unpacked->timestamp, unpacked->size, unpacked->index, unpacked->count);
-    for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", unpacked->body[i++]));
+    for (unsigned i = 0; i < MESSAGE_BODY_SIZE; printf("%u ", unpacked->body[i++]));
     printf("\n");
     printf("%s\n", unpacked->body);
     SDL_free(unpacked); // TODO: works fine!
@@ -130,7 +136,7 @@ static Message* unpackMessage(byte* buffer) {
     SDL_memcpy(&(msg->size), buffer + intSize + longSize, intSize);
     SDL_memcpy(&(msg->index), buffer + intSize * 2 + longSize, intSize);
     SDL_memcpy(&(msg->count), buffer + intSize * 3 + longSize, intSize);
-    SDL_memcpy(&(msg->body), buffer + MESSAGE_HEAD_SIZE, NET_MESSAGE_BODY_SIZE);
+    SDL_memcpy(&(msg->body), buffer + MESSAGE_HEAD_SIZE, MESSAGE_BODY_SIZE);
 
     SDL_free(buffer);
     return msg;
@@ -145,7 +151,7 @@ static byte* packMessage(Message* msg) {
     SDL_memcpy(buffer + intSize + longSize, &(msg->size), intSize);
     SDL_memcpy(buffer + intSize * 2 + longSize, &(msg->index), intSize);
     SDL_memcpy(buffer + intSize * 3 + longSize, &(msg->count), intSize);
-    SDL_memcpy(buffer + MESSAGE_HEAD_SIZE, &(msg->body), NET_MESSAGE_BODY_SIZE);
+    SDL_memcpy(buffer + MESSAGE_HEAD_SIZE, &(msg->body), MESSAGE_BODY_SIZE);
 
     SDL_free(msg);
     return buffer;
