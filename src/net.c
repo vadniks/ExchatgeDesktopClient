@@ -52,7 +52,7 @@ bool ntInit() { // TODO: add compression
     msg->index = 0;
     msg->count = 1;
 
-    SDL_memset(msg->body, 255, NET_MESSAGE_BODY_SIZE);
+    SDL_memset(msg->body, 255, NET_MESSAGE_BODY_SIZE); // TODO: test only
     for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", msg->body[i++]));
     printf("\n");
 
@@ -65,11 +65,11 @@ bool ntInit() { // TODO: add compression
     cryptDetails->unpaddedSize = NET_MESSAGE_SIZE;
     crInit(NULL, cryptDetails);
 
-    byte* encrypted = crEncrypt(packed);
+    byte* encrypted = crEncrypt(packed); // TODO: test only
     for (unsigned i = 0; i < crEncryptedSize(); printf("%u ", encrypted[i++]));
     printf("\n");
 
-    byte* decrypted = crDecrypt(encrypted);
+    byte* decrypted = crDecrypt(encrypted); // TODO: test only
 
     Message* unpacked = unpackMessage(decrypted); // TODO: test only
     printf("%d %ld %d %d %d\n", unpacked->flag, unpacked->timestamp, unpacked->size, unpacked->index, unpacked->count);
