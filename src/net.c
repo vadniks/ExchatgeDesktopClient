@@ -52,8 +52,9 @@ bool ntInit() { // TODO: add compression
     msg->index = 0;
     msg->count = 1;
 
-    SDL_memset(msg->body, 255, NET_MESSAGE_BODY_SIZE); // TODO: test only
-    for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", msg->body[i++]));
+    const char* test = "Test"; // TODO: test only
+    SDL_memcpy(msg->body, test, 4);
+    for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", msg->body[i++])); // TODO: and how do I supposed to port all these thing to Go?
     printf("\n");
 
     byte* packed = packMessage(msg); // TODO: test only
@@ -75,6 +76,7 @@ bool ntInit() { // TODO: add compression
     printf("%d %ld %d %d %d\n", unpacked->flag, unpacked->timestamp, unpacked->size, unpacked->index, unpacked->count);
     for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", unpacked->body[i++]));
     printf("\n");
+    printf("%s\n", unpacked->body);
     SDL_free(unpacked); // TODO: works fine!
 
     IPaddress address;
