@@ -1,5 +1,6 @@
 
 #include <sdl_net/SDL_net.h>
+#include <assert.h>
 #include "crypto.h"
 #include "net.h"
 
@@ -67,7 +68,9 @@ bool netInit() { // TODO: add compression
     this = SDL_malloc(sizeof *this);
     this->socket = NULL;
     this->socketSet = NULL;
-    SDLNet_Init();
+    assert(!SDLNet_Init());
+
+    // -------------------------------------------------------------------
 
     Message* msg = SDL_malloc(sizeof *msg); // TODO: test only
     msg->flag = 1234567890;
@@ -103,8 +106,10 @@ bool netInit() { // TODO: add compression
     printf("%s\n", unpacked->body);
     SDL_free(unpacked); // TODO: works fine!
 
+    // -------------------------------------------------------------------
+
     IPaddress address;
-    SDLNet_ResolveHost(&address, NET_HOST, PORT);
+    assert(!SDLNet_ResolveHost(&address, NET_HOST, PORT));
 
     this->socket = SDLNet_TCP_OpenClient(&address);
     if (!this->socket) {

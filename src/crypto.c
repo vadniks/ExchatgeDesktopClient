@@ -28,12 +28,7 @@ THIS(
 
 byte* nullable cryptoInit(byte* serverPublicKey, CryptoCryptDetails* cryptDetails) {
     assert(cryptDetails->blockSize > 0 && cryptDetails->unpaddedSize > 0);
-
-    if (sodium_init() < 0) {
-        SDL_free(serverPublicKey);
-        SDL_free(cryptDetails);
-        return NULL;
-    }
+    assert(sodium_init() >= 0);
 
     serverPublicKey = SDL_malloc(crypto_kx_PUBLICKEYBYTES); // TODO: test only
     crypto_kx_keypair(serverPublicKey, (byte[crypto_kx_SECRETKEYBYTES]){});
