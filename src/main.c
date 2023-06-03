@@ -10,7 +10,7 @@ int main() {
     unsigned char buf[2048];
     size_t        buf_unpadded_len = 1088; // TODO: too many sizes... So, message length is 1048, we add padding to it so it's length becomes 1104, finally we encrypt the result, which length becomes 1144
     size_t        buf_padded_len;
-    size_t        block_size = 16;
+    size_t        block_size = 16; // TODO: where is the NONCE?
 
 /* round the length of the buffer to a multiple of `block_size` by appending
  * padding data and put the new, total length into `buf_padded_len` */
