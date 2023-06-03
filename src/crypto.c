@@ -71,31 +71,20 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     for (unsigned i = 0; i < msgSize; printf("%u ", msg[i++]));
     printf("\n");
 
-    byte* padded = addPadding(msg);
-    printf("padded message:\n");
-    for (unsigned i = 0; i < paddedUnencryptedSize; printf("%u ", padded[i++]));
-    printf("\n");
-
-    byte* encrypted = encrypt(padded, paddedUnencryptedSize);
+    byte* encrypted = crEncrypt(msg);
     if (!encrypted) return false;
 
     printf("encrypted padded message:\n");
     for (unsigned i = 0; i < paddedEncryptedSize; printf("%u ", encrypted[i++]));
     printf("\n");
 
-    byte* decrypted = decrypt(encrypted, paddedEncryptedSize);
+    byte* decrypted = crDecrypt(encrypted);
     if (!decrypted) return false;
 
-    printf("decrypted padded message:\n");
-    for (unsigned i = 0; i < paddedUnencryptedSize; printf("%u ", decrypted[i++]));
+    printf("decrypted unpadded message:\n");
+    for (unsigned i = 0; i < msgSize; printf("%u ", decrypted[i++]));
     printf("\n");
-
-    printf("unpadded messgae:\n");
-    byte* unpadded = removePadding(decrypted);
-    for (unsigned i = 0; i < msgSize; printf("%u ", unpadded[i++]));
-    printf("\nsource message: %s\n", unpadded); // TODO: Yey! This shit finally started to work!
-    SDL_free(unpadded);
-    printf("\n");
+    SDL_free(decrypted);
 
     return this->clientPublicKey;
 }
@@ -146,7 +135,7 @@ static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
 byte* nullable crEncrypt(byte* bytes) {
     byte* padded = addPadding(bytes);
     if (!padded) return NULL;
-    return encrypt(bytes, this->cryptDetails.paddedSize);
+    return encrypt(padded, this->cryptDetails.paddedSize);
 }
 
 static byte* nullable decrypt(byte* bytes, unsigned bytesSize) {
@@ -193,7 +182,7 @@ static byte* nullable removePadding(byte* bytes) {
 }
 
 byte* nullable crDecrypt(byte* bytes) {
-    byte* decrypted = decrypt(bytes, NET_RECEIVE_BUFFER_SIZE);
+    byte* decrypted = decrypt(bytes, this->cryptDetails.paddedSize + (int) crypto_secretbox_MACBYTES + (int) crypto_secretbox_NONCEBYTES);
     if (!decrypted) return NULL;
     return removePadding(decrypted);
 }
