@@ -60,53 +60,13 @@ static void initiateSecuredConnection() {
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
 }
 
-#include <stdio.h> // TODO: test only
-static Message* unpackMessage(byte* buffer);
-static byte* packMessage(Message* msg);
+static unsigned receiveBufferSize() { return cryptoEncryptedSize(); }
 
 bool netInit() { // TODO: add compression
     this = SDL_malloc(sizeof *this);
     this->socket = NULL;
     this->socketSet = NULL;
     assert(!SDLNet_Init());
-
-    // -------------------------------------------------------------------
-
-    Message* msg = SDL_malloc(sizeof *msg); // TODO: test only
-    msg->flag = 1234567890;
-    msg->timestamp = 0;
-    msg->size = MESSAGE_BODY_SIZE;
-    msg->index = 0;
-    msg->count = 1;
-
-    const char* test = "Test"; // TODO: test only
-    SDL_memcpy(msg->body, test, 4);
-    for (unsigned i = 0; i < MESSAGE_BODY_SIZE; printf("%u ", msg->body[i++])); // TODO: and how am I supposed to port all these thing to Go?
-    printf("\n");
-
-    byte* packed = packMessage(msg); // TODO: test only
-    for (unsigned i = 0; i < MESSAGE_BODY_SIZE; printf("%u ", packed[i++]));
-    printf("\n");
-
-    CryptoCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails); // TODO: test only
-    cryptDetails->blockSize = PADDING_BLOCK_SIZE;
-    cryptDetails->unpaddedSize = MESSAGE_SIZE;
-    cryptoInit(NULL, cryptDetails);
-
-    byte* encrypted = cryptoEncrypt(packed); // TODO: test only
-    for (unsigned i = 0; i < cryptoEncryptedSize(); printf("%u ", encrypted[i++]));
-    printf("\n");
-
-    byte* decrypted = cryptoDecrypt(encrypted); // TODO: test only
-
-    Message* unpacked = unpackMessage(decrypted); // TODO: test only
-    printf("%d %ld %d %d %d\n", unpacked->flag, unpacked->timestamp, unpacked->size, unpacked->index, unpacked->count);
-    for (unsigned i = 0; i < MESSAGE_BODY_SIZE; printf("%u ", unpacked->body[i++]));
-    printf("\n");
-    printf("%s\n", unpacked->body);
-    SDL_free(unpacked); // TODO: works fine!
-
-    // -------------------------------------------------------------------
 
     IPaddress address;
     assert(!SDLNet_ResolveHost(&address, NET_HOST, PORT));
@@ -162,31 +122,18 @@ static byte* packMessage(Message* msg) {
     return buffer;
 }
 
-static bool test = false; // TODO: test only
-#define NET_RECEIVE_BUFFER_SIZE 1
 void netListen() {
     Message* msg = NULL;
 
     if (isDataAvailable()) {
-        byte* buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
+        byte* buffer = SDL_calloc(receiveBufferSize(), sizeof(char));
 
-        SDLNet_TCP_Recv(this->socket, buffer, NET_RECEIVE_BUFFER_SIZE);
+        SDLNet_TCP_Recv(this->socket, buffer, (int) receiveBufferSize());
         msg = unpackMessage(buffer);
     }
 
     switch (this->state) {
-        case STATE_READY:
-            if (test) break;
-            test = true;
-
-            const char* text = "Hello World!";
-            byte* testMsg = SDL_malloc(12 * sizeof(char));
-            SDL_memcpy(testMsg, text, 12);
-            netSend(testMsg, 12); // TODO: test only
-
-            SDL_Log("hello world sent");
-
-            break; // TODO
+        case STATE_READY: break; // TODO
     }
 
     SDL_free(msg);
@@ -207,7 +154,7 @@ void netSend(byte* message, unsigned size) {
     byte* encryptedBuffer = cryptoEncrypt(buffer);
     if (!encryptedBuffer) return;
 
-    SDLNet_TCP_Send(this->socket, buffer, NET_RECEIVE_BUFFER_SIZE);
+    SDLNet_TCP_Send(this->socket, buffer, (int) receiveBufferSize());
 
     SDL_free(encryptedBuffer);
 }

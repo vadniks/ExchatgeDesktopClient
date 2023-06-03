@@ -33,9 +33,6 @@ byte* nullable cryptoInit(byte* serverPublicKey, CryptoCryptDetails* cryptDetail
     assert(cryptDetails->blockSize > 0 && cryptDetails->unpaddedSize > 0);
     assert(sodium_init() >= 0);
 
-    serverPublicKey = SDL_malloc(crypto_kx_PUBLICKEYBYTES); // TODO: test only
-    crypto_kx_keypair(serverPublicKey, (byte[crypto_kx_SECRETKEYBYTES]){});
-
     this = SDL_malloc(sizeof *this);
     SDL_memcpy(this->serverPublicKey, serverPublicKey, cryptoPublicKeySize());
     SDL_free(serverPublicKey);
@@ -148,7 +145,7 @@ static byte* nullable decrypt(byte* bytes, unsigned bytesSize) {
         bytes,
         encryptedAndTagSize,
         bytes + encryptedAndTagSize,
-        this->clientSendKey // TODO: receive key
+        this->clientReceiveKey
     ) == 0 ? decrypted : NULL;
 
     if (!result) SDL_free(decrypted);
