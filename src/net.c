@@ -54,11 +54,13 @@ bool ntInit() {
     SDL_memset(msg->body, 0, NET_MESSAGE_BODY_SIZE);
 
     byte* packed = packMessage(msg); // TODO: test only
+    for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", packed[i++]));
+    printf("\n");
     Message* unpacked = unpackMessage(packed);
     printf("%d %ld %d %d %d\n", unpacked->flag, unpacked->timestamp, unpacked->size, unpacked->index, unpacked->count);
     for (unsigned i = 0; i < NET_MESSAGE_BODY_SIZE; printf("%u ", unpacked->body[i++]));
     printf("\n");
-    SDL_free(unpacked); // TODO: works incorrectly
+    SDL_free(unpacked); // TODO: works fine!
 
     IPaddress address;
     SDLNet_ResolveHost(&address, NET_HOST, NET_PORT);
@@ -89,18 +91,18 @@ static Message* unpackMessage(byte* buffer) {
     unsigned intSize = sizeof(int), longSize = sizeof(long);
 
     SDL_memcpy(&(msg->flag), buffer, intSize);
-    SDL_memcpy(&(msg->timestamp), buffer, longSize);
-    SDL_memcpy(&(msg->size), buffer, intSize);
-    SDL_memcpy(&(msg->index), buffer, intSize);
-    SDL_memcpy(&(msg->count), buffer, intSize);
+    SDL_memcpy(&(msg->timestamp), buffer + intSize, longSize);
+    SDL_memcpy(&(msg->size), buffer + intSize + longSize, intSize);
+    SDL_memcpy(&(msg->index), buffer + intSize * 2 + longSize, intSize);
+    SDL_memcpy(&(msg->count), buffer + intSize * 3 + longSize, intSize);
     SDL_memcpy(&(msg->body), buffer + NET_MESSAGE_HEAD_SIZE, NET_MESSAGE_BODY_SIZE);
 
     SDL_free(buffer);
     return msg;
 }
-#define NET_RECEIVE_BUFFER_SIZE 1
+
 static byte* packMessage(Message* msg) {
-    byte* buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
+    byte* buffer = SDL_calloc(NET_MESSAGE_SIZE, sizeof(char));
     unsigned intSize = sizeof(int), longSize = sizeof(long);
 
     SDL_memcpy(buffer, &(msg->flag), intSize);
@@ -114,6 +116,7 @@ static byte* packMessage(Message* msg) {
 }
 
 static bool test = false; // TODO: test only
+#define NET_RECEIVE_BUFFER_SIZE 1
 void ntListen() {
     Message* msg = NULL;
 
