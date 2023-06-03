@@ -18,7 +18,7 @@ typedef struct {
 } CryptoCryptDetailsInternal;
 
 #pragma clang diagnostic push
-#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite the SAT says
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
     byte serverPublicKey[crypto_kx_PUBLICKEYBYTES];
     byte clientPublicKey[crypto_kx_PUBLICKEYBYTES];

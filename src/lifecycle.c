@@ -6,7 +6,7 @@
 #include "lifecycle.h"
 
 #pragma clang diagnostic push
-#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite the SAT says
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
     volatile bool running;
     SDL_cond* uiUpdateCond;
