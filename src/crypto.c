@@ -26,11 +26,6 @@ THIS(
     CrCryptDetailsInternal cryptDetails;
 )
 
-//static byte* nullable encrypt(byte* bytes, unsigned bytesSize); // TODO: test only
-//static byte* nullable decrypt(byte* bytes, unsigned bytesSize);
-//static byte* nullable addPadding(byte* bytes);
-//static byte* nullable removePadding(byte* bytes);
-
 byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails) {
     if (sodium_init() < 0) {
         SDL_free(serverPublicKey);

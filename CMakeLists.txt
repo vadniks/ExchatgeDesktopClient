@@ -10,9 +10,8 @@ add_compile_options("-Wextra")
 add_compile_options("-Wno-nullability-completeness")
 add_compile_options("-Wno-unknown-pragmas")
 add_compile_options("-fms-extensions")
-#add_compile_options("-Wno-microsoft-anon-tag")
 
-#add_compile_options("-O3")
+add_compile_options("-O3")
 #add_link_options("-s")
 
 file(GLOB sources CONFIGURE_DEPENDS "src/*.c" "src/*.h" "src/*/*.c" "src/*/*.h")
