@@ -28,7 +28,6 @@ extern const int NET_UPDATE_PERIOD; // TODO: move net related definitions in net
 extern const int NET_PORT;
 extern const int NET_MESSAGE_HEAD_SIZE;
 extern const int NET_MESSAGE_SIZE;
-extern const int NET_RECEIVE_BUFFER_SIZE;
 extern const int NET_FLAG_UNAUTHENTICATED;
 extern const int NET_FLAG_FINISH;
 

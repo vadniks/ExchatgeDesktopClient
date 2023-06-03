@@ -7,7 +7,7 @@
 #include <sodium/sodium.h>
 
 int main() {
-    int n = 32, d = 16, n2;
+    int n = 1048, d = 16, n2;
 
     if (n == 0) n2 = 0;
     else n2 = n + 1;
@@ -19,8 +19,8 @@ int main() {
     div_t r = div(n2, d);
     printf("%d %d | %d\n", r.quot, r.rem, d * (r.quot + (r.rem > 0 ? 1 : 0)));
 
-    unsigned char buf[100];
-    size_t        buf_unpadded_len = 32;
+    unsigned char buf[2048];
+    size_t        buf_unpadded_len = 1048;
     size_t        buf_padded_len;
     size_t        block_size = 16;
 
@@ -36,12 +36,12 @@ int main() {
     }
     printf("%zu\n", buf_padded_len);
 
-//    crCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails); // TODO: test only
-//    cryptDetails->blockSize = 16;
-//    cryptDetails->unpaddedSize = 1048;
-//    cryptDetails->paddedSize = 1056;
-//    crInit(NULL, cryptDetails);
-//    crClean();
+    CrCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails); // TODO: test only
+    cryptDetails->blockSize = 16;
+    cryptDetails->unpaddedSize = 1048;
+    crInit(NULL, cryptDetails);
+    printf("a %u\n", crPaddedSize());
+    crClean();
 
 //    if (!lcInit()) return 1;
 //    lcLoop();

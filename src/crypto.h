@@ -7,12 +7,12 @@
 typedef struct {
     unsigned blockSize;
     unsigned unpaddedSize;
-    unsigned paddedSize;
-} crCryptDetails;
+} CrCryptDetails;
 
-byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails);
+byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails);
 unsigned crPublicKeySize();
 unsigned crEncryptedSize();
+unsigned crPaddedSize();
 byte* nullable crEncrypt(byte* bytes);
 byte* nullable crDecrypt(byte* bytes);
 void crClean();

@@ -24,10 +24,9 @@ static void initiateSecuredConnection() {
     SDLNet_TCP_Recv(this->socket, serverPublicKey, (int) publicKeySize);
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
-    crCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails);
+    CrCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails);
     cryptDetails->blockSize = 16;
     cryptDetails->unpaddedSize = NET_MESSAGE_SIZE;
-    cryptDetails->paddedSize = NET_RECEIVE_BUFFER_SIZE;
 
     byte* clientPublicKey = crInit(serverPublicKey, cryptDetails);
     if (!clientPublicKey) return;
@@ -80,7 +79,7 @@ static Message* unpackMessage(byte* buffer) {
     SDL_free(buffer);
     return msg;
 }
-
+#define NET_RECEIVE_BUFFER_SIZE 1
 static byte* packMessage(Message* msg) {
     byte* buffer = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
     unsigned intSize = sizeof(int), longSize = sizeof(long);

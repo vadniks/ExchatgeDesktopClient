@@ -7,23 +7,33 @@
 staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 
+typedef struct {
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmicrosoft-anon-tag"
+    CrCryptDetails;
+#pragma clang diagnostic pop
+
+    unsigned paddedSize;
+} CrCryptDetailsInternal;
+
 THIS(
     byte serverPublicKey[crypto_kx_PUBLICKEYBYTES];
     byte clientPublicKey[crypto_kx_PUBLICKEYBYTES];
     byte clientSecretKey[crypto_kx_SECRETKEYBYTES];
     byte clientReceiveKey[crypto_kx_SESSIONKEYBYTES];
     byte clientSendKey[crypto_kx_SESSIONKEYBYTES];
-    crCryptDetails cryptDetails;
+    CrCryptDetailsInternal cryptDetails;
 )
 
-static byte* nullable encrypt(byte* bytes, unsigned bytesSize); // TODO: test only
-static byte* nullable decrypt(byte* bytes, unsigned bytesSize);
-static byte* nullable addPadding(byte* bytes);
-static byte* nullable removePadding(byte* bytes);
+//static byte* nullable encrypt(byte* bytes, unsigned bytesSize); // TODO: test only
+//static byte* nullable decrypt(byte* bytes, unsigned bytesSize);
+//static byte* nullable addPadding(byte* bytes);
+//static byte* nullable removePadding(byte* bytes);
 
-byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
+byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails) {
     if (sodium_init() < 0) {
-//        SDL_free(serverPublicKey);
+        SDL_free(serverPublicKey);
         SDL_free(cryptDetails);
         return NULL;
     }
@@ -56,39 +66,47 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
 
     this->cryptDetails.blockSize = cryptDetails->blockSize;
     this->cryptDetails.unpaddedSize = cryptDetails->unpaddedSize;
-    this->cryptDetails.paddedSize = cryptDetails->paddedSize;
+    this->cryptDetails.paddedSize = crPaddedSize();
     SDL_free(cryptDetails);
 
-    const unsigned msgSize = this->cryptDetails.unpaddedSize; // TODO: test only
-    const unsigned paddedEncryptedSize = crEncryptedSize(); // 1096
-
-    byte* msg = SDL_calloc(msgSize, sizeof(char));
-    for (unsigned i = 0; i < msgSize; msg[i++] = 0);
-
-    printf("message:\n");
-    for (unsigned i = 0; i < msgSize; printf("%u ", msg[i++]));
-    printf("\n");
-
-    byte* encrypted = crEncrypt(msg);
-    if (!encrypted) return false;
-
-    printf("encrypted padded message:\n");
-    for (unsigned i = 0; i < paddedEncryptedSize; printf("%u ", encrypted[i++]));
-    printf("\n");
-
-    byte* decrypted = crDecrypt(encrypted);
-    if (!decrypted) return false;
-
-    printf("decrypted unpadded message:\n");
-    for (unsigned i = 0; i < msgSize; printf("%u ", decrypted[i++]));
-    printf("\n");
-    SDL_free(decrypted);
+//    const unsigned msgSize = this->cryptDetails.unpaddedSize; // TODO: test only
+//    const unsigned paddedEncryptedSize = crEncryptedSize();
+//
+//    byte* msg = SDL_calloc(msgSize, sizeof(char));
+//    for (unsigned i = 0; i < msgSize; msg[i++] = 0);
+//
+//    printf("message:\n");
+//    for (unsigned i = 0; i < msgSize; printf("%u ", msg[i++]));
+//    printf("\n");
+//
+//    byte* encrypted = crEncrypt(msg);
+//    if (!encrypted) return false;
+//
+//    printf("encrypted padded message:\n");
+//    for (unsigned i = 0; i < paddedEncryptedSize; printf("%u ", encrypted[i++]));
+//    printf("\n");
+//
+//    byte* decrypted = crDecrypt(encrypted);
+//    if (!decrypted) return false;
+//
+//    printf("decrypted unpadded message:\n");
+//    for (unsigned i = 0; i < msgSize; printf("%u ", decrypted[i++]));
+//    printf("\n");
+//    SDL_free(decrypted);
 
     return this->clientPublicKey;
 }
 
 unsigned crPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
 unsigned crEncryptedSize() { return this->cryptDetails.paddedSize + crypto_secretbox_MACBYTES + crypto_secretbox_NONCEBYTES; }
+
+unsigned crPaddedSize() { // 1096
+    const int dividend = (int) this->cryptDetails.unpaddedSize,
+        divider = (int) this->cryptDetails.blockSize;
+
+    const div_t quotient = div(!dividend ? 0 : dividend + 1, divider);
+    return divider * (quotient.quot + (quotient.rem > 0 ? 1 : 0));
+}
 
 static byte* nullable addPadding(byte* bytes) {
     byte* padded = SDL_malloc(this->cryptDetails.paddedSize);
