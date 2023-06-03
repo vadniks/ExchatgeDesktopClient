@@ -41,6 +41,10 @@ typedef struct {
 
 } Message;
 
+static unsigned receiveBufferSize() { return cryptoEncryptedSize(); }
+
+static byte* packMessage(Message* msg); // TODO: test only
+
 static void initiateSecuredConnection() {
     const unsigned publicKeySize = cryptoPublicKeySize(),
         charSize = sizeof(char);
@@ -58,9 +62,23 @@ static void initiateSecuredConnection() {
 
     SDLNet_TCP_Send(this->socket, clientPublicKey, (int) publicKeySize);
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
-}
 
-static unsigned receiveBufferSize() { return cryptoEncryptedSize(); }
+    Message* msg = SDL_malloc(sizeof *msg); // TODO: test only
+    msg->flag = FLAG_FINISH;
+    msg->timestamp = 0;
+    msg->size = MESSAGE_BODY_SIZE;
+    msg->index = 0;
+    msg->count = 1;
+
+    const char test[] = "Test connection"; // TODO: test only
+    const unsigned testLen = sizeof test / sizeof *test;
+    SDL_memset(msg->body, 0, MESSAGE_BODY_SIZE);
+    SDL_memcpy(msg->body, test, testLen);
+
+    byte* bytes = packMessage(msg); // TODO: test only
+    SDLNet_TCP_Send(this->socket, bytes, (int) MESSAGE_SIZE);
+    SDL_free(bytes);
+}
 
 bool netInit() { // TODO: add compression
     this = SDL_malloc(sizeof *this);
