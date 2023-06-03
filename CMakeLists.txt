@@ -12,7 +12,7 @@ add_compile_options("-Wno-unknown-pragmas")
 add_compile_options("-fms-extensions")
 #add_compile_options("-std=gnu11")
 
-add_compile_options("-O3")
+add_compile_options("-Ofast") # -O3
 #add_link_options("-s")
 
 file(GLOB sources CONFIGURE_DEPENDS "src/*.c" "src/*.h" "src/*/*.c" "src/*/*.h")
