@@ -16,6 +16,24 @@ THIS( // TODO: check client's authentication by token
     int state;
 )
 
+static const int PORT = 8080;
+static const int MESSAGE_HEAD_SIZE = sizeof(int) * 4 + sizeof(long);
+static const int MESSAGE_SIZE = MESSAGE_HEAD_SIZE + NET_MESSAGE_BODY_SIZE;
+static const int FLAG_UNAUTHENTICATED = 0x7ffffffe;
+static const int FLAG_FINISH = 0x7fffffff;
+static const int PADDING_BLOCK_SIZE = 16;
+
+typedef struct {
+    // begin head
+    int flag; // short service description of message
+    unsigned long timestamp; // message created at
+    unsigned size; // actual size of th payload
+    unsigned index; // message part index if the whole message cannot fit in boy
+    unsigned count; // total count of message parts
+    // end head
+    byte body[NET_MESSAGE_BODY_SIZE]; // payload
+} Message;
+
 static void initiateSecuredConnection() {
     const unsigned publicKeySize = crPublicKeySize(),
         charSize = sizeof(char);
@@ -26,7 +44,7 @@ static void initiateSecuredConnection() {
 
     CrCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails);
     cryptDetails->blockSize = 16;
-    cryptDetails->unpaddedSize = NET_MESSAGE_SIZE;
+    cryptDetails->unpaddedSize = MESSAGE_SIZE;
 
     byte* clientPublicKey = crInit(serverPublicKey, cryptDetails);
     if (!clientPublicKey) return;
@@ -62,8 +80,8 @@ bool ntInit() { // TODO: add compression
     printf("\n");
 
     CrCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails); // TODO: test only
-    cryptDetails->blockSize = CRYPTO_PADDING_BLOCK_SIZE;
-    cryptDetails->unpaddedSize = NET_MESSAGE_SIZE;
+    cryptDetails->blockSize = PADDING_BLOCK_SIZE;
+    cryptDetails->unpaddedSize = MESSAGE_SIZE;
     crInit(NULL, cryptDetails);
 
     byte* encrypted = crEncrypt(packed); // TODO: test only
@@ -80,7 +98,7 @@ bool ntInit() { // TODO: add compression
     SDL_free(unpacked); // TODO: works fine!
 
     IPaddress address;
-    SDLNet_ResolveHost(&address, NET_HOST, NET_PORT);
+    SDLNet_ResolveHost(&address, NET_HOST, PORT);
 
     this->socket = SDLNet_TCP_OpenClient(&address);
     if (!this->socket) {
@@ -112,14 +130,14 @@ static Message* unpackMessage(byte* buffer) {
     SDL_memcpy(&(msg->size), buffer + intSize + longSize, intSize);
     SDL_memcpy(&(msg->index), buffer + intSize * 2 + longSize, intSize);
     SDL_memcpy(&(msg->count), buffer + intSize * 3 + longSize, intSize);
-    SDL_memcpy(&(msg->body), buffer + NET_MESSAGE_HEAD_SIZE, NET_MESSAGE_BODY_SIZE);
+    SDL_memcpy(&(msg->body), buffer + MESSAGE_HEAD_SIZE, NET_MESSAGE_BODY_SIZE);
 
     SDL_free(buffer);
     return msg;
 }
 
 static byte* packMessage(Message* msg) {
-    byte* buffer = SDL_calloc(NET_MESSAGE_SIZE, sizeof(char));
+    byte* buffer = SDL_calloc(MESSAGE_SIZE, sizeof(char));
     const unsigned intSize = sizeof(int), longSize = sizeof(long);
 
     SDL_memcpy(buffer, &(msg->flag), intSize);
@@ -127,7 +145,7 @@ static byte* packMessage(Message* msg) {
     SDL_memcpy(buffer + intSize + longSize, &(msg->size), intSize);
     SDL_memcpy(buffer + intSize * 2 + longSize, &(msg->index), intSize);
     SDL_memcpy(buffer + intSize * 3 + longSize, &(msg->count), intSize);
-    SDL_memcpy(buffer + NET_MESSAGE_HEAD_SIZE, &(msg->body), NET_MESSAGE_BODY_SIZE);
+    SDL_memcpy(buffer + MESSAGE_HEAD_SIZE, &(msg->body), NET_MESSAGE_BODY_SIZE);
 
     SDL_free(msg);
     return buffer;
