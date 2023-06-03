@@ -16,6 +16,9 @@ THIS(
     crCryptDetails cryptDetails;
 )
 
+static byte* nullable encrypt(byte* bytes, unsigned bytesSize); // TODO: test only
+static byte* nullable decrypt(byte* bytes, unsigned bytesSize);
+
 byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     if (sodium_init() < 0) {
 //        SDL_free(serverPublicKey);
@@ -54,25 +57,28 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     this->cryptDetails.paddedSize = cryptDetails->paddedSize;
     SDL_free(cryptDetails);
 
-    const char* test = "test"; // TODO: test only
-    byte* msg = SDL_calloc(NET_RECEIVE_BUFFER_SIZE, sizeof(char));
+    const int msgSize = 1048; // TODO: test only
+    const int encryptedMsgSize = msgSize + 16 + 24; // mac + nonce, without padding for now
+
+    const char* test = "test";
+    byte* msg = SDL_calloc(msgSize, sizeof(char));
     SDL_memcpy(msg, test, 4);
 
     printf("aa\n");
-    for (int i = 0; i < NET_RECEIVE_BUFFER_SIZE; printf("%c ", msg[i++] == 0 ? 't' : 'f'));
+    for (int i = 0; i < msgSize; printf("%u ", msg[i++]));
     printf("\n");
 
-    byte* encrypted = crEncrypt(msg);
+    byte* encrypted = encrypt(msg, msgSize);
     if (!encrypted) return false;
 
     printf("a\n");
-    for (int i = 0; i < NET_RECEIVE_BUFFER_SIZE; printf("%c ", encrypted[i++]));
+    for (int i = 0; i < encryptedMsgSize; printf("%u ", encrypted[i++]));
     printf("\nb\n");
 
     byte* decrypted = crDecrypt(encrypted); // TODO: now this doesn't work...
     if (!decrypted) return false;
 
-    for (int i = 0; i < NET_RECEIVE_BUFFER_SIZE; printf("%c ", decrypted[i++]));
+    for (int i = 0; i < msgSize; printf("%u ", decrypted[i++]));
     SDL_free(decrypted);
     printf("\n");
 
@@ -109,6 +115,10 @@ static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
     byte* nonceStart = encrypted + encryptedSize - crypto_secretbox_NONCEBYTES;
     randombytes_buf(nonceStart, crypto_secretbox_NONCEBYTES);
 
+    printf("encrypt nonce: ");  // TODO: test only
+    for (unsigned i = 0; i < crypto_secretbox_NONCEBYTES; printf("%u ", nonceStart[i++]));
+    printf("\n");
+
     byte* result = crypto_secretbox_easy(
         encrypted,
         bytes,
@@ -125,13 +135,17 @@ static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
 byte* nullable crEncrypt(byte* bytes) {
     byte* padded = addPadding(bytes);
     if (!padded) return NULL;
-    return encrypt(padded, this->cryptDetails.paddedSize);
+    return encrypt(bytes, this->cryptDetails.paddedSize);
 }
 
 static byte* nullable decrypt(byte* bytes, unsigned bytesSize) {
     const unsigned decryptedSize = bytesSize - crypto_secretbox_MACBYTES - crypto_secretbox_NONCEBYTES;
     byte* decrypted = SDL_calloc(decryptedSize, sizeof(char));
     const unsigned encryptedAndTagSize = bytesSize - crypto_secretbox_NONCEBYTES;
+
+    printf("decrypt nonce: ");  // TODO: test only
+    for (unsigned i = 0; i < crypto_secretbox_NONCEBYTES; printf("%u ", (bytes + encryptedAndTagSize)[i++])); // TODO: wrong nonce start position
+    printf("\n");
 
     byte* result = crypto_secretbox_open_easy(
         decrypted,
@@ -173,6 +187,7 @@ static byte* nullable removePadding(byte* bytes) {
 
 byte* nullable crDecrypt(byte* bytes) {
     byte* decrypted = decrypt(bytes, NET_RECEIVE_BUFFER_SIZE);
+    return decrypted;
     if (!decrypted) return NULL;
     return removePadding(decrypted);
 }
