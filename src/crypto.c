@@ -164,12 +164,15 @@ static byte* nullable removePadding(byte* bytes) {
     SDL_free(bytes);
 
     unsigned long generatedUnpaddedSize = 0;
-    sodium_unpad(
+    if (sodium_unpad(
         &generatedUnpaddedSize,
         padded,
         this->cryptDetails.paddedSize,
         this->cryptDetails.blockSize
-    );
+    ) != 0) {
+        SDL_free(padded);
+        return NULL;
+    }
 
     if (generatedUnpaddedSize != this->cryptDetails.unpaddedSize) {
         SDL_free(padded);
