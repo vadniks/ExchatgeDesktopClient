@@ -1,6 +1,7 @@
 
 #include <sdl/SDL.h>
 #include <sodium/sodium.h>
+#include <assert.h>
 #include "crypto.h"
 
 staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_secretbox_KEYBYTES);
@@ -26,6 +27,8 @@ THIS(
 )
 
 byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails) {
+    assert(cryptDetails->blockSize > 0 && cryptDetails->unpaddedSize > 0);
+
     if (sodium_init() < 0) {
         SDL_free(serverPublicKey);
         SDL_free(cryptDetails);
@@ -33,13 +36,16 @@ byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails) {
     }
 
     serverPublicKey = SDL_malloc(crypto_kx_PUBLICKEYBYTES); // TODO: test only
-    byte* serverSecretKey = SDL_malloc(crypto_kx_SECRETKEYBYTES);
-    crypto_kx_keypair(serverPublicKey, serverSecretKey);
-    SDL_free(serverSecretKey);
+    crypto_kx_keypair(serverPublicKey, (byte[crypto_kx_SECRETKEYBYTES]){});
 
     this = SDL_malloc(sizeof *this);
     SDL_memcpy(this->serverPublicKey, serverPublicKey, crPublicKeySize());
     SDL_free(serverPublicKey);
+
+    this->cryptDetails.blockSize = cryptDetails->blockSize;
+    this->cryptDetails.unpaddedSize = cryptDetails->unpaddedSize;
+    this->cryptDetails.paddedSize = crPaddedSize();
+    SDL_free(cryptDetails);
 
     crypto_kx_keypair(this->clientPublicKey, this->clientSecretKey);
 
@@ -50,8 +56,7 @@ byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails) {
         this->clientSecretKey,
         this->serverPublicKey
     ) != 0) {
-        SDL_free(cryptDetails);
-        SDL_free(this);
+        crClean();
         return NULL;
     }
 
@@ -61,41 +66,16 @@ byte* nullable crInit(byte* serverPublicKey, CrCryptDetails* cryptDetails) {
     for (unsigned i = 0; i < crPublicKeySize(); i++) printf("%d ", this->clientSendKey[i]);
     printf("\n");
 
-    this->cryptDetails.blockSize = cryptDetails->blockSize;
-    this->cryptDetails.unpaddedSize = cryptDetails->unpaddedSize;
-    this->cryptDetails.paddedSize = crPaddedSize();
-    SDL_free(cryptDetails);
-
-//    const unsigned msgSize = this->cryptDetails.unpaddedSize; // TODO: test only
-//    const unsigned paddedEncryptedSize = crEncryptedSize();
-//
-//    byte* msg = SDL_calloc(msgSize, sizeof(char));
-//    for (unsigned i = 0; i < msgSize; msg[i++] = 0);
-//
-//    printf("message:\n");
-//    for (unsigned i = 0; i < msgSize; printf("%u ", msg[i++]));
-//    printf("\n");
-//
-//    byte* encrypted = crEncrypt(msg);
-//    if (!encrypted) return false;
-//
-//    printf("encrypted padded message:\n");
-//    for (unsigned i = 0; i < paddedEncryptedSize; printf("%u ", encrypted[i++]));
-//    printf("\n");
-//
-//    byte* decrypted = crDecrypt(encrypted);
-//    if (!decrypted) return false;
-//
-//    printf("decrypted unpadded message:\n");
-//    for (unsigned i = 0; i < msgSize; printf("%u ", decrypted[i++]));
-//    printf("\n");
-//    SDL_free(decrypted);
-
     return this->clientPublicKey;
 }
 
 unsigned crPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
-unsigned crEncryptedSize() { return this->cryptDetails.paddedSize + crypto_secretbox_MACBYTES + crypto_secretbox_NONCEBYTES; }
+
+unsigned crEncryptedSize() {
+    return this->cryptDetails.paddedSize
+        + crypto_secretbox_MACBYTES
+        + crypto_secretbox_NONCEBYTES;
+}
 
 unsigned crPaddedSize() { // 1056
     const int dividend = (int) this->cryptDetails.unpaddedSize,
