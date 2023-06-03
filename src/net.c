@@ -17,9 +17,9 @@ THIS( // TODO: check client's authentication by token
 )
 
 static const int PORT = 8080;
-static const unsigned MESSAGE_HEAD_SIZE = sizeof(int) * 4 + sizeof(long);
+static const unsigned MESSAGE_HEAD_SIZE = sizeof(int) * 4 + sizeof(long); // 24
 static const unsigned MESSAGE_BODY_SIZE = 1 << 10; // 1024
-static const unsigned MESSAGE_SIZE = MESSAGE_HEAD_SIZE + MESSAGE_BODY_SIZE;
+static const unsigned MESSAGE_SIZE = MESSAGE_HEAD_SIZE + MESSAGE_BODY_SIZE; // 1048
 static const unsigned PADDING_BLOCK_SIZE = 16;
 static const int FLAG_UNAUTHENTICATED = 0x7ffffffe;
 static const int FLAG_FINISH = 0x7fffffff;
@@ -49,7 +49,7 @@ static void initiateSecuredConnection() {
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
     CryptoCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails);
-    cryptDetails->blockSize = 16;
+    cryptDetails->blockSize = PADDING_BLOCK_SIZE;
     cryptDetails->unpaddedSize = MESSAGE_SIZE;
 
     byte* clientPublicKey = cryptoInit(serverPublicKey, cryptDetails);
