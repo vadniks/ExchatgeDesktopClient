@@ -123,7 +123,6 @@ static byte* packMessage(Message* msg) {
 }
 
 void netListen() {
-    return;
     Message* msg = NULL;
 
     if (isDataAvailable()) {
