@@ -99,7 +99,7 @@ void lcClean() {
 
     SDL_DestroyCond(this->uiUpdateCond);
     SDL_DestroyMutex(this->uiUpdateLock);
-    SDL_DetachThread(this->netThread);
+    SDL_WaitThread(this->netThread, (int[1]){});
     SDL_DestroyMutex(this->netUpdateLock);
     SDL_DestroyCond(this->netUpdateCond);
 
