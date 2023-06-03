@@ -6,8 +6,8 @@
 
 typedef struct {
     unsigned blockSize;
-    unsigned unpaddedSize; // decrypted & unpadded
-    unsigned paddedSize; // decrypted & padded
+    unsigned unpaddedSize;
+    unsigned paddedSize;
 } crCryptDetails;
 
 byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails);

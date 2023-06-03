@@ -9,7 +9,7 @@
 int main() {
     crCryptDetails* cryptDetails = SDL_malloc(sizeof *cryptDetails); // TODO: test only
     cryptDetails->blockSize = 16;
-    cryptDetails->unpaddedSize = NET_MESSAGE_SIZE; // 1048
+    cryptDetails->unpaddedSize = 1048;
     cryptDetails->paddedSize = 1056;
     crInit(NULL, cryptDetails);
     crClean();

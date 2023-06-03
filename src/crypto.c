@@ -59,40 +59,40 @@ byte* nullable crInit(byte* serverPublicKey, crCryptDetails* cryptDetails) {
     this->cryptDetails.paddedSize = cryptDetails->paddedSize;
     SDL_free(cryptDetails);
 
-    const int msgSize = 1048; // TODO: test only
-    const int paddedUnencryptedSize = 1056;
-    const int paddedEncryptedSize = paddedUnencryptedSize + (int) crypto_secretbox_MACBYTES + (int) crypto_secretbox_NONCEBYTES; // 1096
+    const unsigned msgSize = this->cryptDetails.unpaddedSize; // TODO: test only
+    const unsigned paddedUnencryptedSize = this->cryptDetails.paddedSize;
+    const unsigned paddedEncryptedSize = paddedUnencryptedSize + (int) crypto_secretbox_MACBYTES + (int) crypto_secretbox_NONCEBYTES; // 1096
 
     const char* test = "test";
     byte* msg = SDL_calloc(msgSize, sizeof(char));
     SDL_memcpy(msg, test, 4);
 
     printf("message:\n");
-    for (int i = 0; i < msgSize; printf("%u ", msg[i++]));
+    for (unsigned i = 0; i < msgSize; printf("%u ", msg[i++]));
     printf("\n");
 
     byte* padded = addPadding(msg);
     printf("padded message:\n");
-    for (int i = 0; i < paddedUnencryptedSize; printf("%u ", padded[i++]));
+    for (unsigned i = 0; i < paddedUnencryptedSize; printf("%u ", padded[i++]));
     printf("\n");
 
     byte* encrypted = encrypt(padded, paddedUnencryptedSize);
     if (!encrypted) return false;
 
     printf("encrypted padded message:\n");
-    for (int i = 0; i < paddedEncryptedSize; printf("%u ", encrypted[i++]));
+    for (unsigned i = 0; i < paddedEncryptedSize; printf("%u ", encrypted[i++]));
     printf("\n");
 
     byte* decrypted = decrypt(encrypted, paddedEncryptedSize);
     if (!decrypted) return false;
 
     printf("decrypted padded message:\n");
-    for (int i = 0; i < paddedUnencryptedSize; printf("%u ", decrypted[i++]));
+    for (unsigned i = 0; i < paddedUnencryptedSize; printf("%u ", decrypted[i++]));
     printf("\n");
 
     printf("unpadded messgae:\n");
     byte* unpadded = removePadding(decrypted);
-    for (int i = 0; i < msgSize; printf("%u ", unpadded[i++]));
+    for (unsigned i = 0; i < msgSize; printf("%u ", unpadded[i++]));
     printf("\nsource message: %s\n", unpadded); // TODO: Yey! This shit finally started to work!
     SDL_free(unpadded);
     printf("\n");
