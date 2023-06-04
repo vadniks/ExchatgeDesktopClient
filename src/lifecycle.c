@@ -26,16 +26,13 @@ static void updateSynchronized(Function action, SDL_cond* cond, SDL_mutex* lock)
     SDL_UnlockMutex(lock);
 }
 
-static int netThread(__attribute_maybe_unused__ void* _) {
+static int netThread() {
     while (this->running)
         updateSynchronized((Function) &netListen, this->netUpdateCond, this->netUpdateLock);
     return 0;
 }
 
-static unsigned uiUpdate(
-    __attribute_maybe_unused__ unsigned _,
-    __attribute_maybe_unused__ void* _2
-) {
+static unsigned synchronizeThreadUpdates() {
     SDL_CondSignal(this->uiUpdateCond);
 
     if (this->updateThreadCounter == NET_UPDATE_PERIOD) {
@@ -58,12 +55,12 @@ bool lifecycleInit() {
     this->updateThreadCounter = 1;
     this->netUpdateCond = SDL_CreateCond();
     this->netUpdateLock = SDL_CreateMutex();
-    this->netThread = SDL_CreateThread(&netThread, "netThread", NULL);
+    this->netThread = SDL_CreateThread((int (*)(void*)) &netThread, "netThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
     assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
 
-    this->uiUpdateTimerId = SDL_AddTimer(UI_UPDATE_PERIOD, &uiUpdate, NULL);
+    this->uiUpdateTimerId = SDL_AddTimer(UI_UPDATE_PERIOD, (unsigned (*)(unsigned, void*)) &synchronizeThreadUpdates, NULL);
     return true;
 }
 
