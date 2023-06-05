@@ -26,10 +26,9 @@ static void updateSynchronized(Function action, SDL_cond* cond, SDL_mutex* lock)
     SDL_UnlockMutex(lock);
 }
 
-static int netThread() {
+static void netThread() {
     while (this->running)
         updateSynchronized((Function) &netListen, this->netUpdateCond, this->netUpdateLock);
-    return 0;
 }
 
 static unsigned synchronizeThreadUpdates() {
