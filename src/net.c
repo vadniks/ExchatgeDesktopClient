@@ -84,15 +84,6 @@ static void initiateSecuredConnection() {
     byte* encrypted = cryptoEncrypt(bytes);
     SDLNet_TCP_Send(this->socket, encrypted, (int) this->receiveBufferSize);
     SDL_free(encrypted);
-
-    byte* test2 = SDL_calloc(this->receiveBufferSize, sizeof(char)); // TODO: test only
-    SDLNet_TCP_Recv(this->socket, test2, (int) this->receiveBufferSize);
-    byte* decrypted = cryptoDecrypt(test2);
-    Message* msg2 = unpackMessage(decrypted);
-    SDL_Log("%d | %d %lu %u %u %u", 0x12345678, msg2->flag, msg2->timestamp, msg2->size, msg2->index, msg2->count);
-    for (unsigned i = 0; i < MESSAGE_BODY_SIZE; printf("%u ", msg2->body[i++]));
-    puts("");
-    SDL_free(msg2);
 }
 
 bool netInit() { // TODO: add compression
@@ -162,14 +153,22 @@ void netListen() {
     Message* msg = NULL;
 
     if (isDataAvailable()) {
-        byte* buffer = SDL_calloc(this->receiveBufferSize, sizeof(char));
+        byte* buffer = SDL_calloc(this->receiveBufferSize, sizeof(char)); // TODO: move buffer outside the function to initialize it only once and not on each listen event
 
-        SDLNet_TCP_Recv(this->socket, buffer, (int) this->receiveBufferSize);
-        msg = unpackMessage(buffer);
+        if (SDLNet_TCP_Recv(this->socket, buffer, (int) this->receiveBufferSize) == (int) this->receiveBufferSize) {
+            byte* decrypted = cryptoDecrypt(buffer);
+            msg = unpackMessage(decrypted);
+        }
     }
 
     switch (this->state) {
-        case STATE_READY: break; // TODO
+        case STATE_READY:
+            if (!msg) break;
+
+            printf("%d | %d %lu %u %u %u\n", 0x12345678, msg->flag, msg->timestamp, msg->size, msg->index, msg->count); // TODO: test only
+            for (unsigned i = 0; i < MESSAGE_BODY_SIZE; printf("%u ", msg->body[i++]));
+            puts("");
+            break;
     }
 
     SDL_free(msg);
