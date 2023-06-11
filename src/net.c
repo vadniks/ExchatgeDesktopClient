@@ -41,7 +41,7 @@ typedef struct {
 
 } Message;
 
-static unsigned receiveBufferSize() { return cryptoEncryptedSize(); }
+static inline unsigned receiveBufferSize() { return cryptoEncryptedSize(); }
 
 static byte* packMessage(Message* msg); // TODO: test only
 
