@@ -43,7 +43,7 @@ static unsigned synchronizeThreadUpdates() {
     return this->running ? UI_UPDATE_PERIOD : 0;
 }
 
-void* onMessageReceived(byte message[netMessageSize()]) {
+static void* onMessageReceived(byte message[netMessageSize()]) {
     byte xmessage[netMessageSize() + 1]; // TODO: test only
     SDL_memcpy(xmessage, message, netMessageSize());
     xmessage[netMessageSize()] = '\0';
