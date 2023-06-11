@@ -11,11 +11,15 @@ STATE(SERVER_PUBLIC_KEY_RECEIVED, 1)
 STATE(CLIENT_PUBLIC_KEY_SENT, 2)
 STATE(READY, STATE_CLIENT_PUBLIC_KEY_SENT) // TODO: check client signature on server and check server signature on client
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS( // TODO: check client's authentication by token
     TCPsocket socket;
     SDLNet_SocketSet socketSet;
     int state;
+    unsigned receiveBufferSize;
 )
+#pragma clang diagnostic pop
 
 static const int PORT = 8080;
 static const unsigned MESSAGE_HEAD_SIZE = sizeof(int) * 4 + sizeof(long); // 24
@@ -41,9 +45,9 @@ typedef struct {
 
 } Message;
 
-static inline unsigned receiveBufferSize() { return cryptoEncryptedSize(); }
-
 static byte* packMessage(Message* msg); // TODO: test only
+static Message* unpackMessage(byte* buffer);
+#include <stdio.h>
 
 static void initiateSecuredConnection() {
     const unsigned publicKeySize = cryptoPublicKeySize(),
@@ -59,6 +63,7 @@ static void initiateSecuredConnection() {
 
     byte* clientPublicKey = cryptoInit(serverPublicKey, cryptDetails);
     if (!clientPublicKey) return;
+    this->receiveBufferSize = cryptoEncryptedSize();
 
     SDLNet_TCP_Send(this->socket, clientPublicKey, (int) publicKeySize);
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
@@ -76,8 +81,18 @@ static void initiateSecuredConnection() {
     SDL_memcpy(msg->body, test, testLen);
 
     byte* bytes = packMessage(msg); // TODO: test only
-    SDLNet_TCP_Send(this->socket, bytes, (int) MESSAGE_SIZE);
-    SDL_free(bytes);
+    byte* encrypted = cryptoEncrypt(bytes);
+    SDLNet_TCP_Send(this->socket, encrypted, (int) this->receiveBufferSize);
+    SDL_free(encrypted);
+
+    byte* test2 = SDL_calloc(this->receiveBufferSize, sizeof(char)); // TODO: test only
+    SDLNet_TCP_Recv(this->socket, test2, (int) this->receiveBufferSize);
+    byte* decrypted = cryptoDecrypt(test2);
+    Message* msg2 = unpackMessage(decrypted);
+    SDL_Log("%d | %d %lu %u %u %u", 0x12345678, msg2->flag, msg2->timestamp, msg2->size, msg2->index, msg2->count);
+    for (unsigned i = 0; i < MESSAGE_BODY_SIZE; printf("%u ", msg2->body[i++]));
+    puts("");
+    SDL_free(msg2);
 }
 
 bool netInit() { // TODO: add compression
@@ -147,9 +162,9 @@ void netListen() {
     Message* msg = NULL;
 
     if (isDataAvailable()) {
-        byte* buffer = SDL_calloc(receiveBufferSize(), sizeof(char));
+        byte* buffer = SDL_calloc(this->receiveBufferSize, sizeof(char));
 
-        SDLNet_TCP_Recv(this->socket, buffer, (int) receiveBufferSize());
+        SDLNet_TCP_Recv(this->socket, buffer, (int) this->receiveBufferSize);
         msg = unpackMessage(buffer);
     }
 
@@ -175,7 +190,7 @@ void netSend(byte* message, unsigned size) {
     byte* encryptedBuffer = cryptoEncrypt(buffer);
     if (!encryptedBuffer) return;
 
-    SDLNet_TCP_Send(this->socket, buffer, (int) receiveBufferSize());
+    SDLNet_TCP_Send(this->socket, buffer, (int) this->receiveBufferSize);
 
     SDL_free(encryptedBuffer);
 }
