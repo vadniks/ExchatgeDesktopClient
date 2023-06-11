@@ -180,10 +180,11 @@ void netSend(byte* message, unsigned size) {
     Message* msg = SDL_malloc(sizeof *msg);
     msg->flag = 0;
     msg->timestamp = 0;
-    msg->size = 0;
+    msg->size = size;
     msg->index = 0;
     msg->count = 0;
 
+    SDL_memset(msg->body, 0, MESSAGE_BODY_SIZE);
     SDL_memcpy(&(msg->body), message, size);
     SDL_free(message);
 
@@ -192,7 +193,6 @@ void netSend(byte* message, unsigned size) {
     if (!encryptedBuffer) return;
 
     SDLNet_TCP_Send(this->socket, buffer, (int) this->receiveBufferSize);
-
     SDL_free(encryptedBuffer);
 }
 

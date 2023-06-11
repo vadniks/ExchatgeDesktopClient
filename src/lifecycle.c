@@ -48,7 +48,12 @@ static void* onMessageReceived(byte message[netMessageSize()]) {
     SDL_memcpy(xmessage, message, netMessageSize());
     xmessage[netMessageSize()] = '\0';
 
-    SDL_Log("%c | %s", xmessage[0], xmessage);
+    SDL_Log("%c | %s", xmessage[0], xmessage); // TODO: test only
+
+    byte* test = SDL_calloc(netMessageSize(), sizeof(char)); // TODO: test only
+    SDL_memset(test, 'b', netMessageSize());
+    netSend(test, netMessageSize());
+
     return NULL;
 }
 
