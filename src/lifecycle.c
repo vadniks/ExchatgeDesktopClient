@@ -43,8 +43,17 @@ static unsigned synchronizeThreadUpdates() {
     return this->running ? UI_UPDATE_PERIOD : 0;
 }
 
+void* onMessageReceived(byte message[netMessageSize()]) {
+    byte xmessage[netMessageSize() + 1]; // TODO: test only
+    SDL_memcpy(xmessage, message, netMessageSize());
+    xmessage[netMessageSize()] = '\0';
+
+    SDL_Log("%c | %s", xmessage[0], xmessage);
+    return NULL;
+}
+
 bool lifecycleInit() {
-    if (!netInit()) return false;
+    if (!netInit((Function) &onMessageReceived)) return false;
     rdInit();
 
     this = SDL_malloc(sizeof *this);

@@ -18,6 +18,7 @@ THIS( // TODO: check client's authentication by token
     SDLNet_SocketSet socketSet;
     int state;
     unsigned receiveBufferSize;
+    Function onMessageReceived;
 )
 #pragma clang diagnostic pop
 
@@ -47,7 +48,6 @@ typedef struct {
 
 static byte* packMessage(Message* msg); // TODO: test only
 static Message* unpackMessage(byte* buffer);
-#include <stdio.h>
 
 static void initiateSecuredConnection() {
     const unsigned publicKeySize = cryptoPublicKeySize(),
@@ -86,13 +86,14 @@ static void initiateSecuredConnection() {
     SDL_free(encrypted);
 }
 
-bool netInit() { // TODO: add compression
+bool netInit(Function onMessageReceived) { // TODO: add compression
     unsigned long byteOrderChecker = 0x0123456789abcdefl;
     assert(*((byte*) &byteOrderChecker) == 0xef); // checks whether the app is running on a x64 littleEndian architecture so the byte order won't mess up data marshalling
 
     this = SDL_malloc(sizeof *this);
     this->socket = NULL;
     this->socketSet = NULL;
+    this->onMessageReceived = onMessageReceived;
     assert(!SDLNet_Init());
 
     IPaddress address;
@@ -113,6 +114,11 @@ bool netInit() { // TODO: add compression
     if (!result) netClean();
     return result;
 }
+
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "ConstantFunctionResult"
+unsigned netMessageSize() { return MESSAGE_BODY_SIZE; } // reveals only one constant to the users of this api
+#pragma clang diagnostic pop
 
 static bool isDataAvailable() {
     return SDLNet_CheckSockets(this->socketSet, 0) == 1
@@ -163,11 +169,7 @@ void netListen() {
 
     switch (this->state) {
         case STATE_READY:
-            if (!msg) break;
-
-            printf("%d | %d %lu %u %u %u\n", 0x12345678, msg->flag, msg->timestamp, msg->size, msg->index, msg->count); // TODO: test only
-            for (unsigned i = 0; i < MESSAGE_BODY_SIZE; printf("%u ", msg->body[i++]));
-            puts("");
+            if (msg) this->onMessageReceived(msg->body);
             break;
     }
 
