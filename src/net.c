@@ -81,6 +81,9 @@ static void initiateSecuredConnection() {
 }
 
 bool netInit() { // TODO: add compression
+    unsigned long byteOrderChecker = 0x0123456789abcdefl;
+    assert(*((byte*) &byteOrderChecker) == 0xef); // checks whether the app is running on a x64 littleEndian architecture so the byte order won't mess up data marshalling
+
     this = SDL_malloc(sizeof *this);
     this->socket = NULL;
     this->socketSet = NULL;
