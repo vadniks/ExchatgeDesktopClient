@@ -16,6 +16,7 @@ THIS(
     SDL_cond* netUpdateCond;
     SDL_mutex* netUpdateLock;
     SDL_Thread* netThread;
+    volatile bool netInitialized;
 )
 #pragma clang diagnostic pop
 
@@ -27,7 +28,7 @@ static void updateSynchronized(Function action, SDL_cond* cond, SDL_mutex* lock)
 }
 
 static void netThread() {
-    while (this->running)
+    while (this->netInitialized && this->running)
         updateSynchronized((Function) &netListen, this->netUpdateCond, this->netUpdateLock);
 }
 
@@ -58,7 +59,6 @@ static void* onMessageReceived(byte message[netMessageSize()]) {
 }
 
 bool lifecycleInit() {
-    if (!netInit((Function) &onMessageReceived)) return false;
     rdInit();
 
     this = SDL_malloc(sizeof *this);
@@ -68,6 +68,7 @@ bool lifecycleInit() {
     this->updateThreadCounter = 1;
     this->netUpdateCond = SDL_CreateCond();
     this->netUpdateLock = SDL_CreateMutex();
+    this->netInitialized = netInit((Function) &onMessageReceived);
     this->netThread = SDL_CreateThread((int (*)(void*)) &netThread, "netThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
@@ -114,7 +115,7 @@ void lifecycleClean() {
     SDL_RemoveTimer(this->uiUpdateTimerId);
 
     rdClean();
-    netClean();
+    if (this->netInitialized) netClean();
 
     SDL_DestroyCond(this->uiUpdateCond);
     SDL_DestroyMutex(this->uiUpdateLock);
