@@ -32,7 +32,6 @@ include_directories(libs/nuklear/include)
 target_link_libraries(${PROJECT_NAME} m) # c math lib used by nuklear
 
 include_directories(libs/sodium/include)
-#target_precompile_headers(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/nuklear.h)
 file(GLOB sodium_binaries CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/libs/sodium/bin/*")
 target_link_libraries(${PROJECT_NAME} ${sodium_binaries})
 
