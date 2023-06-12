@@ -93,7 +93,7 @@ static void stopApp() {
     this->running = false;
     SDL_CondSignal(this->netUpdateCond);
 }
-
+#include <time.h> // TODO: test only
 void lifecycleLoop() {
     while (this->running) {
 
@@ -102,8 +102,9 @@ void lifecycleLoop() {
             lifecycleClean();
             break;
         }
-
-        updateSynchronized((Function) &renderDraw, this->uiUpdateCond, this->uiUpdateLock);
+        SDL_Log("%lu", time(NULL)); // TODO: test only
+//        updateSynchronized((Function) &renderDraw, this->uiUpdateCond, this->uiUpdateLock);
+        renderDraw();
     }
 }
 
