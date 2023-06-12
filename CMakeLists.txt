@@ -38,6 +38,14 @@ target_link_libraries(${PROJECT_NAME} ${sodium_binaries})
 
 file(COPY res DESTINATION ${CMAKE_BINARY_DIR})
 
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(SEND_ERROR "Target is not 64 bits")
+endif()
+
+if (NOT CMAKE_C_BYTE_ORDER STREQUAL LITTLE_ENDIAN)
+    message(SEND_ERROR "Target is not little endian")
+endif()
+
 #
 # libs
 #     nuklear
