@@ -9,9 +9,7 @@
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
     volatile bool running;
-    SDL_cond* uiUpdateCond;
-    SDL_mutex* uiUpdateLock;
-    SDL_TimerID uiUpdateTimerId;
+    SDL_TimerID threadsSynchronizerTimerId;
     unsigned updateThreadCounter;
     SDL_cond* netUpdateCond;
     SDL_mutex* netUpdateLock;
@@ -28,13 +26,11 @@ static void updateSynchronized(Function action, SDL_cond* cond, SDL_mutex* lock)
 }
 
 static void netThread() {
-    while (this->netInitialized && this->running)
-        updateSynchronized((Function) &netListen, this->netUpdateCond, this->netUpdateLock);
+    while (this->running)
+        if (this->netInitialized) updateSynchronized((Function) &netListen, this->netUpdateCond, this->netUpdateLock);
 }
 
 static unsigned synchronizeThreadUpdates() {
-    SDL_CondSignal(this->uiUpdateCond);
-
     if (this->updateThreadCounter == NET_UPDATE_PERIOD) {
         this->updateThreadCounter = 1;
         SDL_CondSignal(this->netUpdateCond);
@@ -61,8 +57,6 @@ bool lifecycleInit() {
 
     this = SDL_malloc(sizeof *this);
     this->running = true;
-    this->uiUpdateCond = SDL_CreateCond();
-    this->uiUpdateLock = SDL_CreateMutex();
     this->updateThreadCounter = 1;
     this->netUpdateCond = SDL_CreateCond();
     this->netUpdateLock = SDL_CreateMutex();
@@ -72,7 +66,7 @@ bool lifecycleInit() {
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
     assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
 
-    this->uiUpdateTimerId = SDL_AddTimer(UI_UPDATE_PERIOD, (unsigned (*)(unsigned, void*)) &synchronizeThreadUpdates, NULL);
+    this->threadsSynchronizerTimerId = SDL_AddTimer(UI_UPDATE_PERIOD, (unsigned (*)(unsigned, void*)) &synchronizeThreadUpdates, NULL);
     return true;
 }
 
@@ -93,7 +87,7 @@ static void stopApp() {
     this->running = false;
     SDL_CondSignal(this->netUpdateCond);
 }
-#include <time.h> // TODO: test only
+
 void lifecycleLoop() {
     while (this->running) {
 
@@ -102,8 +96,7 @@ void lifecycleLoop() {
             lifecycleClean();
             break;
         }
-        SDL_Log("%lu", time(NULL)); // TODO: test only
-//        updateSynchronized((Function) &renderDraw, this->uiUpdateCond, this->uiUpdateLock);
+
         renderDraw();
     }
 }
@@ -111,13 +104,11 @@ void lifecycleLoop() {
 void lifecycleClean() {
     if (!this) return;
 
-    SDL_RemoveTimer(this->uiUpdateTimerId);
+    SDL_RemoveTimer(this->threadsSynchronizerTimerId);
 
     renderClean();
     if (this->netInitialized) netClean();
 
-    SDL_DestroyCond(this->uiUpdateCond);
-    SDL_DestroyMutex(this->uiUpdateLock);
     SDL_WaitThread(this->netThread, (int[1]){});
     SDL_DestroyMutex(this->netUpdateLock);
     SDL_DestroyCond(this->netUpdateCond);

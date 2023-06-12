@@ -60,11 +60,8 @@ void renderInit() {
     );
 
     SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1");
-//    SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
-    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
-    this->renderer = SDL_CreateRenderer(this->window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-//    SDL_RenderSetVSync(this->renderer, 1);
+    this->renderer = SDL_CreateRenderer(this->window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
     int renderW, renderH, windowW, windowH;
     float scaleX, scaleY, fontScale;
