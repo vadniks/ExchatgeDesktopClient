@@ -45,7 +45,7 @@ static void setStyle() {
     nk_style_from_table(this->context, table);
 }
 
-void rdInit() {
+void renderInit() {
     this = SDL_malloc(sizeof *this);
     this->width = APP_WIDTH;
     this->height = APP_HEIGHT;
@@ -91,13 +91,13 @@ void rdInit() {
     this->colorf = (struct nk_colorf) { 0.10f, 0.18f, 0.24f, 1.00f };
 }
 
-void rdInputBegan() { nk_input_begin(this->context); }
+void renderInputBegan() { nk_input_begin(this->context); }
 
-void rdProcessEvent(SDL_Event* event) { nk_sdl_handle_event(event); }
+void renderProcessEvent(SDL_Event* event) { nk_sdl_handle_event(event); }
 
-void rdInputEnded() { nk_input_end(this->context); }
+void renderInputEnded() { nk_input_end(this->context); }
 
-void rdDraw() {
+void renderDraw() {
     if (nk_begin(
         this->context,
         "Exchatge",
@@ -126,7 +126,7 @@ void rdDraw() {
     SDL_RenderPresent(this->renderer);
 }
 
-void rdClean() {
+void renderClean() {
     if (!this) return;
 
     nk_sdl_shutdown();

@@ -59,7 +59,7 @@ static void* onMessageReceived(byte message[netMessageSize()]) {
 }
 
 bool lifecycleInit() {
-    rdInit();
+    renderInit();
 
     this = SDL_malloc(sizeof *this);
     this->running = true;
@@ -80,14 +80,14 @@ bool lifecycleInit() {
 
 static bool processEvents() {
     SDL_Event event;
-    rdInputBegan();
+    renderInputBegan();
 
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) return true;
-        rdProcessEvent(&event);
+        renderProcessEvent(&event);
     }
 
-    rdInputEnded();
+    renderInputEnded();
     return false;
 }
 
@@ -105,7 +105,7 @@ void lifecycleLoop() {
             break;
         }
 
-        updateSynchronized((Function) &rdDraw, this->uiUpdateCond, this->uiUpdateLock);
+        updateSynchronized((Function) &renderDraw, this->uiUpdateCond, this->uiUpdateLock);
     }
 }
 
@@ -114,7 +114,7 @@ void lifecycleClean() {
 
     SDL_RemoveTimer(this->uiUpdateTimerId);
 
-    rdClean();
+    renderClean();
     if (this->netInitialized) netClean();
 
     SDL_DestroyCond(this->uiUpdateCond);
