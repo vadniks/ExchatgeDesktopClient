@@ -38,6 +38,8 @@ static const int FLAG_FINISH = 0x7fffffff;
 static const unsigned INT_SIZE = sizeof(int);
 static const unsigned LONG_SIZE = sizeof(long);
 
+#pragma pack(true)
+
 typedef struct {
     int flag; // short service description of message
     unsigned long timestamp; // message created at
@@ -56,6 +58,8 @@ typedef struct {
     byte body[MESSAGE_BODY_SIZE]; // payload
 } Message;
 #pragma clang diagnostic pop
+
+staticAssert(sizeof(Message) == 1056);
 
 static byte* packMessage(const Message* msg); // TODO: test only
 static Message* unpackMessage(const byte* buffer);
