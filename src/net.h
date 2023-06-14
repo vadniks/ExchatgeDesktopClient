@@ -4,8 +4,10 @@
 #include <stdbool.h>
 #include "defs.h"
 
-bool netInit(void (*onMessageReceived)(byte*)); // takes on message processing callback which takes on message body which is deallocated on the callback caller side
+typedef void (*MessageReceivedCallback)(const byte*);
+
+bool netInit(MessageReceivedCallback onMessageReceived); // returns true on success
 unsigned netMessageSize();
 void netListen();
-void netSend(byte* message, unsigned size);
+void netSend(const byte* bytes, unsigned size);
 void netClean();

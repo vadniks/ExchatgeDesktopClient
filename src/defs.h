@@ -16,7 +16,7 @@
 typedef void* (*Function)(void*);
 typedef unsigned char byte;
 
-extern const char* APP_TITLE;
+extern const char* APP_TITLE; // TODO: move constants into their modules
 extern const char* NET_HOST;
 
 extern const unsigned APP_WIDTH;

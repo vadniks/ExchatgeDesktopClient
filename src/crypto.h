@@ -4,15 +4,16 @@
 #include <stdbool.h>
 #include "defs.h"
 
-typedef struct {
-    unsigned blockSize;
-    unsigned unpaddedSize;
-} CryptoCryptDetails;
+extern const unsigned CRYPTO_KEY_SIZE;
 
-byte* nullable cryptoInit(byte* serverPublicKey, CryptoCryptDetails* cryptDetails); // returns client public key
-unsigned cryptoPublicKeySize();
-unsigned cryptoEncryptedSize(); // returns size of mac (16) + encrypted bytes (cryptoDetails.unpaddedSize) + nonce (24) = 1112
-unsigned cryptoPaddedSize(); // returns size of unencrypted padded size (1072)
-byte* nullable cryptoEncrypt(byte* bytes); // returns mac (tag) + encrypted bytes + nonce
-byte* nullable cryptoDecrypt(byte* bytes); // consumes what is returned by encrypt
-void cryptoClean();
+struct Crypto_t; // implementation is hidden
+typedef struct Crypto_t Crypto;
+
+Crypto* nullable cryptoInit();
+bool cryptoExchangeKeys(Crypto* crypto); // returns true on success
+void cryptoSetServerPublicKey(Crypto* crypto, const byte* key);
+void cryptoSetEncryptionKey(Crypto* crypto, const byte* key); // sets permanent key that was generated & exchanged before
+unsigned cryptoEncryptedSize(unsigned unencryptedSize);
+byte* cryptoClientPublicKey(Crypto* crypto);
+byte* nullable cryptoEncrypt(const Crypto* crypto, const byte* bytes, unsigned bytesSize); // returns mac (tag) + encrypted bytes + nonce
+byte* nullable cryptoDecrypt(const Crypto* crypto, const byte* bytes, unsigned bytesSize); // consumes what is returned by encrypt
