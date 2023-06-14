@@ -17,3 +17,4 @@ unsigned cryptoEncryptedSize(unsigned unencryptedSize);
 byte* cryptoClientPublicKey(Crypto* crypto);
 byte* nullable cryptoEncrypt(const Crypto* crypto, const byte* bytes, unsigned bytesSize); // returns mac (tag) + encrypted bytes + nonce
 byte* nullable cryptoDecrypt(const Crypto* crypto, const byte* bytes, unsigned bytesSize); // consumes what is returned by encrypt
+void cryptoDestroy(Crypto* crypto);

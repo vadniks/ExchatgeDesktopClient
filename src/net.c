@@ -70,10 +70,10 @@ static void initiateSecuredConnection() {
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
     this->connectionCrypto = cryptoInit();
-    cryptoSetServerPublicKey(this->connectionCrypto, serverPublicKey);
-    bool successful = cryptoExchangeKeys(this->connectionCrypto);
+    if (!(this->connectionCrypto)) return;
 
-    if (!(this->connectionCrypto) || !successful) return;
+    cryptoSetServerPublicKey(this->connectionCrypto, serverPublicKey);
+    if (cryptoExchangeKeys(this->connectionCrypto)) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
     SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE);
@@ -230,7 +230,7 @@ void netSend(const byte* bytes, unsigned size) {
 void netClean() {
     assert(this);
     SDL_free(this->messageBuffer);
-    SDL_free(this->connectionCrypto);
+    cryptoDestroy(this->connectionCrypto);
     SDLNet_FreeSocketSet(this->socketSet);
     SDLNet_TCP_Close(this->socket);
     SDLNet_Quit();

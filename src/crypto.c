@@ -105,3 +105,8 @@ byte* nullable cryptoDecrypt(const Crypto* crypto, const byte* bytes, unsigned b
     if (!result) SDL_free(decrypted);
     return result;
 }
+
+void cryptoDestroy(Crypto* crypto) {
+    assert(crypto);
+    SDL_free(crypto);
+}
