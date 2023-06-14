@@ -40,15 +40,17 @@ static unsigned synchronizeThreadUpdates() {
     return this->running ? UI_UPDATE_PERIOD : 0;
 }
 
-static void onMessageReceived(byte* message) {
-    byte xmessage[netMessageSize() + 1]; // TODO: test only
-    SDL_memcpy(xmessage, message, netMessageSize());
-    xmessage[netMessageSize()] = '\0';
+static void onMessageReceived(const byte* message) {
+    const unsigned messageSize = netMessageSize(); // TODO: test only
+
+    byte xmessage[messageSize + 1]; // TODO: test only
+    SDL_memcpy(xmessage, message, messageSize);
+    xmessage[messageSize] = '\0';
 
     SDL_Log("%c | %s", xmessage[0], xmessage); // TODO: test only
 
-    byte* test = SDL_calloc(netMessageSize(), sizeof(char)); // TODO: test only
-    SDL_memset(test, 'b', netMessageSize());
+    byte test[messageSize]; // TODO: test only
+    SDL_memset(test, 'b', messageSize);
     netSend(test, netMessageSize());
 }
 
