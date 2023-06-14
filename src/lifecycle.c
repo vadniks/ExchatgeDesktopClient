@@ -27,7 +27,8 @@ static void updateSynchronized(Function action, SDL_cond* cond, SDL_mutex* lock)
 
 static void netThread() {
     while (this->running)
-        if (this->netInitialized) updateSynchronized((Function) &netListen, this->netUpdateCond, this->netUpdateLock);
+        if (this->netInitialized)
+            updateSynchronized((Function) &netListen, this->netUpdateCond, this->netUpdateLock);
 }
 
 static unsigned synchronizeThreadUpdates() {
@@ -68,7 +69,12 @@ bool lifecycleInit() {
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
     assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
 
-    this->threadsSynchronizerTimerId = SDL_AddTimer(UI_UPDATE_PERIOD, (unsigned (*)(unsigned, void*)) &synchronizeThreadUpdates, NULL);
+    this->threadsSynchronizerTimerId = SDL_AddTimer(
+        UI_UPDATE_PERIOD,
+        (unsigned (*)(unsigned, void*)) &synchronizeThreadUpdates,
+        NULL
+    );
+
     return true;
 }
 
