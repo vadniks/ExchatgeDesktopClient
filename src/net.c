@@ -147,11 +147,6 @@ bool netInit(MessageReceivedCallback onMessageReceived) {
 unsigned netMessageSize() { return MESSAGE_BODY_SIZE; } // reveals only one constant to the users of this api
 #pragma clang diagnostic pop
 
-static bool isDataAvailable() {
-    return SDLNet_CheckSockets(this->socketSet, 0) == 1
-        && SDLNet_SocketReady(this->socket) != 0;
-}
-
 static Message* unpackMessage(const byte* buffer) {
     Message* msg = SDL_malloc(sizeof *msg);
 
@@ -185,7 +180,7 @@ static byte* packMessage(const Message* msg) {
 void netListen() {
     Message* msg = NULL;
 
-    if (isDataAvailable()) {
+    if (SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0) {
 
         if (SDLNet_TCP_Recv(this->socket, this->messageBuffer, (int) this->encryptedMessageSize) == (int) this->encryptedMessageSize) {
             byte* decrypted = cryptoDecrypt(this->connectionCrypto, this->messageBuffer, MESSAGE_SIZE);
