@@ -80,14 +80,16 @@ static void initiateSecuredConnection() {
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
 
     Message message = { // TODO: test only
-        FLAG_FINISH,
-        0,
-        MESSAGE_BODY_SIZE,
-        0,
-        1,
-        255,
-        255,
-        {0}
+        {
+            FLAG_FINISH,
+            0,
+            MESSAGE_BODY_SIZE,
+            0,
+            1,
+            255,
+            255
+        },
+        { 0 }
     };
 
     const char test[] = "Test connection"; // TODO: test only
@@ -207,21 +209,21 @@ void netListen() {
 void netSend(const byte* bytes, unsigned size) {
     assert(bytes && size > 0 && size <= MESSAGE_BODY_SIZE);
 
-    Message* message = SDL_malloc(sizeof *message);
-    message->flag = 0;
-    message->timestamp = 0;
-    message->size = size;
-    message->index = 0;
-    message->count = 0;
-    message->from = 255;
-    message->to = 255;
+    Message message = {
+        {
+            0,
+            0,
+            size,
+            0,
+            0,
+            255,
+            255
+        },
+        { 0 }
+    };
+    SDL_memcpy(&(message.body), bytes, size);
 
-    SDL_memset(message->body, 0, MESSAGE_BODY_SIZE);
-    SDL_memcpy(&(message->body), bytes, size);
-
-    byte* packedMessage = packMessage(message);
-    SDL_free(message);
-
+    byte* packedMessage = packMessage(&message);
     byte* encryptedMessage = cryptoEncrypt(this->connectionCrypto, packedMessage, MESSAGE_SIZE);
     SDL_free(packedMessage);
     if (!encryptedMessage) return;
