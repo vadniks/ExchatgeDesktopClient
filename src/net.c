@@ -39,7 +39,6 @@ static const unsigned INT_SIZE = sizeof(int);
 static const unsigned LONG_SIZE = sizeof(long);
 
 typedef struct {
-    // begin head
     int flag; // short service description of message
     unsigned long timestamp; // message created at
     unsigned size; // actual size of th payload
@@ -47,14 +46,16 @@ typedef struct {
     unsigned count; // total count of message parts
     unsigned from; // id of the sender
     unsigned to; // id of the receiver
-    // end head
+} MessageHead;
 
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wgnu-folding-constant" // If this causes compile troubles declare this constant as a macro
+#pragma clang diagnostic ignored "-Wmicrosoft-anon-tag"
+#pragma clang diagnostic ignored "-Wgnu-folding-constant"
+typedef struct {
+    MessageHead;
     byte body[MESSAGE_BODY_SIZE]; // payload
-#pragma clang diagnostic pop
-
 } Message;
+#pragma clang diagnostic pop
 
 static byte* packMessage(const Message* msg); // TODO: test only
 static Message* unpackMessage(const byte* buffer);
