@@ -3,6 +3,8 @@
 #include "defs.h"
 #include "render.h"
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
     unsigned width;
     unsigned height;
@@ -11,6 +13,7 @@ THIS(
     struct nk_context* context;
     struct nk_colorf colorf;
 )
+#pragma clang diagnostic pop
 
 static void setStyle() {
     struct nk_color table[NK_COLOR_COUNT];

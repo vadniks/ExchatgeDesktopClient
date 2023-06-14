@@ -25,22 +25,22 @@ THIS(
     byte clientSecretKey[crypto_kx_SECRETKEYBYTES];
     byte clientReceiveKey[crypto_kx_SESSIONKEYBYTES];
     byte clientSendKey[crypto_kx_SESSIONKEYBYTES];
-    CryptoCryptDetailsInternal cryptDetails;
+    CryptoCryptDetailsInternal cryptoDetails;
 )
 #pragma clang diagnostic pop
 
-byte* nullable cryptoInit(byte* serverPublicKey, CryptoCryptDetails* cryptDetails) {
-    assert(cryptDetails->blockSize > 0 && cryptDetails->unpaddedSize > 0);
+byte* nullable cryptoInit(byte* serverPublicKey, CryptoCryptDetails* cryptoDetails) {
+    assert(cryptoDetails->blockSize > 0 && cryptoDetails->unpaddedSize > 0);
     assert(sodium_init() >= 0);
 
     this = SDL_malloc(sizeof *this);
     SDL_memcpy(this->serverPublicKey, serverPublicKey, cryptoPublicKeySize());
     SDL_free(serverPublicKey);
 
-    this->cryptDetails.blockSize = cryptDetails->blockSize;
-    this->cryptDetails.unpaddedSize = cryptDetails->unpaddedSize;
-    this->cryptDetails.paddedSize = cryptoPaddedSize();
-    SDL_free(cryptDetails);
+    this->cryptoDetails.blockSize = cryptoDetails->blockSize;
+    this->cryptoDetails.unpaddedSize = cryptoDetails->unpaddedSize;
+    this->cryptoDetails.paddedSize = cryptoPaddedSize();
+    SDL_free(cryptoDetails);
 
     crypto_kx_keypair(this->clientPublicKey, this->clientSecretKey);
 
@@ -61,37 +61,37 @@ byte* nullable cryptoInit(byte* serverPublicKey, CryptoCryptDetails* cryptDetail
 unsigned cryptoPublicKeySize() { return crypto_kx_PUBLICKEYBYTES; }
 
 unsigned cryptoEncryptedSize() {
-    return this->cryptDetails.paddedSize
+    return this->cryptoDetails.paddedSize
         + crypto_secretbox_MACBYTES
         + crypto_secretbox_NONCEBYTES;
 }
 
 unsigned cryptoPaddedSize() { // 1056
-    const int dividend = (int) this->cryptDetails.unpaddedSize,
-        divider = (int) this->cryptDetails.blockSize;
+    const int dividend = (int) this->cryptoDetails.unpaddedSize,
+        divider = (int) this->cryptoDetails.blockSize;
 
     const div_t quotient = div(!dividend ? 0 : dividend + 1, divider);
     return divider * (quotient.quot + (quotient.rem > 0 ? 1 : 0));
 }
 
 static byte* nullable addPadding(byte* bytes) {
-    byte* padded = SDL_malloc(this->cryptDetails.paddedSize);
-    SDL_memcpy(padded, bytes, this->cryptDetails.unpaddedSize);
+    byte* padded = SDL_malloc(this->cryptoDetails.paddedSize);
+    SDL_memcpy(padded, bytes, this->cryptoDetails.unpaddedSize);
     SDL_free(bytes);
 
     unsigned long generatedPaddedSize = 0;
     if (sodium_pad(
         &generatedPaddedSize,
         padded,
-        this->cryptDetails.unpaddedSize,
-        this->cryptDetails.blockSize,
-        this->cryptDetails.paddedSize
+        this->cryptoDetails.unpaddedSize,
+        this->cryptoDetails.blockSize,
+        this->cryptoDetails.paddedSize
     ) != 0) {
         SDL_free(padded);
         return NULL;
     }
 
-    if (generatedPaddedSize != (unsigned long) this->cryptDetails.paddedSize) {
+    if (generatedPaddedSize != (unsigned long) this->cryptoDetails.paddedSize) {
         SDL_free(padded);
         return NULL;
     }
@@ -124,7 +124,7 @@ static byte* nullable encrypt(byte* bytes, unsigned bytesSize) {
 byte* nullable cryptoEncrypt(byte* bytes) {
     byte* padded = addPadding(bytes);
     if (!padded) return NULL;
-    return encrypt(padded, this->cryptDetails.paddedSize);
+    return encrypt(padded, this->cryptoDetails.paddedSize);
 }
 
 #pragma clang diagnostic pop
@@ -148,28 +148,28 @@ static byte* nullable decrypt(byte* bytes, unsigned bytesSize) {
 }
 
 static byte* nullable removePadding(byte* bytes) {
-    byte* padded = SDL_malloc(this->cryptDetails.paddedSize);
-    SDL_memcpy(padded, bytes, this->cryptDetails.paddedSize);
+    byte* padded = SDL_malloc(this->cryptoDetails.paddedSize);
+    SDL_memcpy(padded, bytes, this->cryptoDetails.paddedSize);
     SDL_free(bytes);
 
     unsigned long generatedUnpaddedSize = 0;
     if (sodium_unpad(
         &generatedUnpaddedSize,
         padded,
-        this->cryptDetails.paddedSize,
-        this->cryptDetails.blockSize
+        this->cryptoDetails.paddedSize,
+        this->cryptoDetails.blockSize
     ) != 0) {
         SDL_free(padded);
         return NULL;
     }
 
-    if (generatedUnpaddedSize != this->cryptDetails.unpaddedSize) {
+    if (generatedUnpaddedSize != this->cryptoDetails.unpaddedSize) {
         SDL_free(padded);
         return NULL;
     }
 
-    byte* unpadded = SDL_malloc(this->cryptDetails.unpaddedSize);
-    SDL_memcpy(unpadded, padded, this->cryptDetails.unpaddedSize);
+    byte* unpadded = SDL_malloc(this->cryptoDetails.unpaddedSize);
+    SDL_memcpy(unpadded, padded, this->cryptoDetails.unpaddedSize);
     SDL_free(padded);
 
     return unpadded;
@@ -180,7 +180,7 @@ static byte* nullable removePadding(byte* bytes) {
 
 byte* nullable cryptoDecrypt(byte* bytes) {
     byte* decrypted = decrypt(bytes,
-        this->cryptDetails.paddedSize + (int) crypto_secretbox_MACBYTES + (int) crypto_secretbox_NONCEBYTES);
+        this->cryptoDetails.paddedSize + (int) crypto_secretbox_MACBYTES + (int) crypto_secretbox_NONCEBYTES);
     if (!decrypted) return NULL;
     return removePadding(decrypted);
 }
