@@ -1,4 +1,6 @@
 
+#pragma clang diagnostic ignored "-Wgnu-folding-constant"
+
 #include <sdl/SDL.h>
 #include <sodium/sodium.h>
 #include <assert.h>
@@ -12,15 +14,12 @@ const unsigned CRYPTO_KEY_SIZE = crypto_secretbox_KEYBYTES; // 32
 static const unsigned MAC_SIZE = crypto_secretbox_MACBYTES; // 16
 static const unsigned NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wgnu-folding-constant"
 struct Crypto_t {
     byte serverPublicKey[CRYPTO_KEY_SIZE];
     byte clientPublicKey[CRYPTO_KEY_SIZE];
     byte clientSecretKey[CRYPTO_KEY_SIZE];
     byte encryptionKey[CRYPTO_KEY_SIZE];
 };
-#pragma clang diagnostic pop
 
 Crypto* cryptoInit() {
     if (sodium_init() < 0) return NULL;
@@ -59,7 +58,8 @@ void cryptoSetEncryptionKey(Crypto* crypto, const byte* key) {
     SDL_memcpy(crypto->encryptionKey, key, CRYPTO_KEY_SIZE);
 }
 
-unsigned cryptoEncryptedSize(unsigned unencryptedSize) { return MAC_SIZE + unencryptedSize + NONCE_SIZE; }
+unsigned cryptoEncryptedSize(unsigned unencryptedSize)
+{ return MAC_SIZE + unencryptedSize + NONCE_SIZE; }
 
 byte* cryptoClientPublicKey(Crypto* crypto) {
     assert(crypto);

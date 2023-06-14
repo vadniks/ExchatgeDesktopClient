@@ -3,6 +3,9 @@
 // TODO: check client signature on server and check server signature on client
 // TODO: add compression
 
+#pragma clang diagnostic ignored "-Wgnu-folding-constant"
+#pragma clang diagnostic ignored "-Wmicrosoft-anon-tag"
+
 #include <sdl_net/SDL_net.h>
 #include <assert.h>
 #include "crypto.h"
@@ -15,6 +18,16 @@ STATE(SERVER_PUBLIC_KEY_RECEIVED, 1)
 STATE(CLIENT_PUBLIC_KEY_SENT, 2)
 STATE(READY, STATE_CLIENT_PUBLIC_KEY_SENT)
 
+static const int PORT = 8080;
+static const unsigned MESSAGE_HEAD_SIZE = sizeof(int) * 6 + sizeof(long); // 32
+static const unsigned MESSAGE_BODY_SIZE = 1 << 10; // 1024
+static const unsigned MESSAGE_SIZE = MESSAGE_HEAD_SIZE + MESSAGE_BODY_SIZE; // 1056
+static const unsigned PADDING_BLOCK_SIZE = 16;
+static const int FLAG_UNAUTHENTICATED = 0x7ffffffe;
+static const int FLAG_FINISH = 0x7fffffff;
+static const unsigned INT_SIZE = sizeof(int);
+static const unsigned LONG_SIZE = sizeof(long);
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
@@ -25,18 +38,9 @@ THIS(
     MessageReceivedCallback onMessageReceived;
     Crypto* connectionCrypto; // client-server level encryption - different for each connection
 //    Crypto* conversationCrypto; // TODO: conversation level encryption - extra encryption layer - different for each conversation but permanent for all participants of a conversation
+    byte* messageBuffer;
 )
 #pragma clang diagnostic pop
-
-static const int PORT = 8080;
-static const unsigned MESSAGE_HEAD_SIZE = sizeof(int) * 6 + sizeof(long); // 32
-static const unsigned MESSAGE_BODY_SIZE = 1 << 10; // 1024
-static const unsigned MESSAGE_SIZE = MESSAGE_HEAD_SIZE + MESSAGE_BODY_SIZE; // 1056
-static const unsigned PADDING_BLOCK_SIZE = 16;
-static const int FLAG_UNAUTHENTICATED = 0x7ffffffe;
-static const int FLAG_FINISH = 0x7fffffff;
-static const unsigned INT_SIZE = sizeof(int);
-static const unsigned LONG_SIZE = sizeof(long);
 
 #pragma pack(true)
 
@@ -50,14 +54,10 @@ typedef struct {
     unsigned to; // id of the receiver
 } MessageHead;
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmicrosoft-anon-tag"
-#pragma clang diagnostic ignored "-Wgnu-folding-constant"
 typedef struct {
     MessageHead;
     byte body[MESSAGE_BODY_SIZE]; // payload
 } Message;
-#pragma clang diagnostic pop
 
 staticAssert(sizeof(Message) == 1056);
 
@@ -116,6 +116,7 @@ bool netInit(MessageReceivedCallback onMessageReceived) {
     this->socketSet = NULL;
     this->onMessageReceived = onMessageReceived;
     this->connectionCrypto = NULL;
+    this->messageBuffer = NULL;
     assert(!SDLNet_Init());
 
     IPaddress address;
@@ -132,6 +133,7 @@ bool netInit(MessageReceivedCallback onMessageReceived) {
     assert(SDLNet_TCP_AddSocket(this->socketSet, this->socket) == 1);
 
     initiateSecuredConnection();
+    this->messageBuffer = SDL_malloc(this->encryptedMessageSize);
 
     if (this->state != STATE_READY) {
         netClean();
@@ -184,12 +186,10 @@ void netListen() {
     Message* msg = NULL;
 
     if (isDataAvailable()) {
-        byte* buffer = SDL_calloc(this->encryptedMessageSize, sizeof(char)); // TODO: move buffer outside the function to initialize it only once and not on each listen event
 
-        if (SDLNet_TCP_Recv(this->socket, buffer, (int) this->encryptedMessageSize) == (int) this->encryptedMessageSize) {
-            byte* decrypted = cryptoDecrypt(this->connectionCrypto, buffer, MESSAGE_SIZE);
+        if (SDLNet_TCP_Recv(this->socket, this->messageBuffer, (int) this->encryptedMessageSize) == (int) this->encryptedMessageSize) {
+            byte* decrypted = cryptoDecrypt(this->connectionCrypto, this->messageBuffer, MESSAGE_SIZE);
             assert(decrypted);
-            SDL_free(buffer);
 
             msg = unpackMessage(decrypted);
             SDL_free(decrypted);
@@ -234,6 +234,7 @@ void netSend(const byte* bytes, unsigned size) {
 
 void netClean() {
     assert(this);
+    SDL_free(this->messageBuffer);
     SDL_free(this->connectionCrypto);
     SDLNet_FreeSocketSet(this->socketSet);
     SDLNet_TCP_Close(this->socket);
