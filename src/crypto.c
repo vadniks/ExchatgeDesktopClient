@@ -24,16 +24,14 @@ Crypto* cryptoInit(void) {
 
     Crypto* crypto = SDL_malloc(sizeof *crypto);
     SDL_memset(crypto->serverPublicKey, 0, CRYPTO_KEY_SIZE);
-    SDL_memset(crypto->clientPublicKey, 0, CRYPTO_KEY_SIZE);
-    SDL_memset(crypto->clientSecretKey, 0, CRYPTO_KEY_SIZE);
     SDL_memset(crypto->encryptionKey, 0, CRYPTO_KEY_SIZE);
+    crypto_kx_keypair(crypto->clientPublicKey, crypto->clientSecretKey);
 
     return crypto;
 }
 
 bool cryptoExchangeKeys(Crypto* crypto) {
     assert(crypto);
-    crypto_kx_keypair(crypto->clientPublicKey, crypto->clientSecretKey);
 
     int result = crypto_kx_client_session_keys(
         crypto->encryptionKey,
