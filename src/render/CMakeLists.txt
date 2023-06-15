@@ -2,8 +2,6 @@
 add_library(${LIB_RENDER_NAME} render.c)
 target_include_directories(${LIB_RENDER_NAME} PUBLIC ..)
 
-add_compile_options("-fvisibility=hidden")
-
 # unnecessary inclusion of SDL library as it's included in the parent build script
 include_directories(libs/sdl/include)
 file(GLOB sdl_binaries CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/libs/sdl/bin/*")
