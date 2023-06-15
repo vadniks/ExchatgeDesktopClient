@@ -62,16 +62,20 @@ staticAssert(sizeof(Message) == 1056);
 
 static byte* packMessage(const Message* msg); // TODO: test only
 static Message* unpackMessage(const byte* buffer);
-
+#include <stdio.h>
 static void initiateSecuredConnection(void) {
     byte serverPublicKey[CRYPTO_KEY_SIZE];
     SDLNet_TCP_Recv(this->socket, serverPublicKey, (int) CRYPTO_KEY_SIZE);
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
     this->connectionCrypto = cryptoInit();
-    if (!(this->connectionCrypto)) return;
+    assert(this->connectionCrypto);
 
-    if (cryptoExchangeKeys(this->connectionCrypto, serverPublicKey)) return;
+    puts(""); // TODO: test only
+    for (unsigned i = 0; i < CRYPTO_KEY_SIZE; printf("%u ", serverPublicKey[i++]));
+    puts("");
+
+    if (!cryptoExchangeKeys(this->connectionCrypto, serverPublicKey)) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
     SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE);
