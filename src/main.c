@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "lifecycle.h"
 
-int main() {
+int main(void) {
     if (!lifecycleInit()) return EXIT_FAILURE;
     lifecycleLoop();
     lifecycleClean();

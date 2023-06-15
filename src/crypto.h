@@ -9,7 +9,7 @@ extern const unsigned CRYPTO_KEY_SIZE;
 struct Crypto_t; // implementation is hidden
 typedef struct Crypto_t Crypto;
 
-Crypto* nullable cryptoInit();
+Crypto* nullable cryptoInit(void);
 bool cryptoExchangeKeys(Crypto* crypto); // returns true on success
 void cryptoSetServerPublicKey(Crypto* crypto, const byte* key);
 void cryptoSetEncryptionKey(Crypto* crypto, const byte* key); // sets permanent key that was generated & exchanged before

@@ -7,9 +7,14 @@ set(CMAKE_C_STANDARD 11)
 
 add_compile_options("-Wall")
 add_compile_options("-Wextra")
+add_compile_options("-Wpedantic")
 add_compile_options("-Wno-nullability-completeness")
+add_compile_options("-Wno-nullability-extension")
 add_compile_options("-Wno-unknown-pragmas")
 add_compile_options("-fms-extensions")
+add_compile_options("-Wno-gnu-folding-constant")
+add_compile_options("-Wno-microsoft-anon-tag")
+add_compile_options("-Wno-gnu-empty-initializer")
 #add_compile_options("-std=gnu11")
 
 add_compile_options("-Ofast") # -O3

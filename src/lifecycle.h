@@ -3,6 +3,6 @@
 
 #include <stdbool.h>
 
-bool lifecycleInit();
-void lifecycleLoop();
-void lifecycleClean();
+bool lifecycleInit(void);
+void lifecycleLoop(void);
+void lifecycleClean(void);

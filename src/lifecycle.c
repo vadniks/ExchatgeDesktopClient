@@ -25,13 +25,13 @@ static void updateSynchronized(Function action, SDL_cond* cond, SDL_mutex* lock)
     SDL_UnlockMutex(lock);
 }
 
-static void netThread() {
+static void netThread(void) {
     while (this->running)
         if (this->netInitialized)
             updateSynchronized((Function) &netListen, this->netUpdateCond, this->netUpdateLock);
 }
 
-static unsigned synchronizeThreadUpdates() {
+static unsigned synchronizeThreadUpdates(void) {
     if (this->updateThreadCounter == NET_UPDATE_PERIOD) {
         this->updateThreadCounter = 1;
         SDL_CondSignal(this->netUpdateCond);
@@ -55,7 +55,7 @@ static void onMessageReceived(const byte* message) {
     netSend(test, netMessageSize());
 }
 
-bool lifecycleInit() {
+bool lifecycleInit(void) {
     renderInit();
 
     this = SDL_malloc(sizeof *this);
@@ -78,7 +78,7 @@ bool lifecycleInit() {
     return true;
 }
 
-static bool processEvents() {
+static bool processEvents(void) {
     SDL_Event event;
     renderInputBegan();
 
@@ -91,12 +91,12 @@ static bool processEvents() {
     return false;
 }
 
-static void stopApp() {
+static void stopApp(void) {
     this->running = false;
     SDL_CondSignal(this->netUpdateCond);
 }
 
-void lifecycleLoop() {
+void lifecycleLoop(void) {
     while (this->running) {
 
         if (processEvents()) {
@@ -109,7 +109,7 @@ void lifecycleLoop() {
     }
 }
 
-void lifecycleClean() {
+void lifecycleClean(void) {
     if (!this) return;
 
     SDL_RemoveTimer(this->threadsSynchronizerTimerId);

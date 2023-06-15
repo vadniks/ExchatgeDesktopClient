@@ -15,7 +15,7 @@ THIS(
 )
 #pragma clang diagnostic pop
 
-static void setStyle() {
+static void setStyle(void) {
     struct nk_color table[NK_COLOR_COUNT];
     table[NK_COLOR_TEXT] = nk_rgba(210, 210, 210, 255);
     table[NK_COLOR_WINDOW] = nk_rgba(57, 67, 71, 215);
@@ -48,7 +48,7 @@ static void setStyle() {
     nk_style_from_table(this->context, table);
 }
 
-void renderInit() {
+void renderInit(void) {
     this = SDL_malloc(sizeof *this);
     this->width = APP_WIDTH;
     this->height = APP_HEIGHT;
@@ -95,13 +95,11 @@ void renderInit() {
     this->colorf = (struct nk_colorf) { 0.10f, 0.18f, 0.24f, 1.00f };
 }
 
-void renderInputBegan() { nk_input_begin(this->context); }
-
+void renderInputBegan(void) { nk_input_begin(this->context); }
 void renderProcessEvent(SDL_Event* event) { nk_sdl_handle_event(event); }
+void renderInputEnded(void) { nk_input_end(this->context); }
 
-void renderInputEnded() { nk_input_end(this->context); }
-
-void renderDraw() {
+void renderDraw(void) {
     if (nk_begin(
         this->context,
         "Exchatge",
@@ -130,7 +128,7 @@ void renderDraw() {
     SDL_RenderPresent(this->renderer);
 }
 
-void renderClean() {
+void renderClean(void) {
     if (!this) return;
 
     nk_sdl_shutdown();

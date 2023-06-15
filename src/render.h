@@ -3,9 +3,9 @@
 
 #include <sdl/SDL.h>
 
-void renderInit();
-void renderInputBegan();
+void renderInit(void);
+void renderInputBegan(void);
 void renderProcessEvent(SDL_Event* event);
-void renderInputEnded();
-void renderDraw();
-void renderClean();
+void renderInputEnded(void);
+void renderDraw(void);
+void renderClean(void);

@@ -3,9 +3,6 @@
 // TODO: check client signature on server and check server signature on client
 // TODO: add compression
 
-#pragma clang diagnostic ignored "-Wgnu-folding-constant"
-#pragma clang diagnostic ignored "-Wmicrosoft-anon-tag"
-
 #include <sdl_net/SDL_net.h>
 #include <assert.h>
 #include "crypto.h"
@@ -64,7 +61,7 @@ staticAssert(sizeof(Message) == 1056);
 static byte* packMessage(const Message* msg); // TODO: test only
 static Message* unpackMessage(const byte* buffer);
 
-static void initiateSecuredConnection() {
+static void initiateSecuredConnection(void) {
     byte serverPublicKey[CRYPTO_KEY_SIZE];
     SDLNet_TCP_Recv(this->socket, serverPublicKey, (int) CRYPTO_KEY_SIZE);
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
@@ -144,7 +141,7 @@ bool netInit(MessageReceivedCallback onMessageReceived) {
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "ConstantFunctionResult"
-unsigned netMessageSize() { return MESSAGE_BODY_SIZE; } // reveals only one constant to the users of this api
+unsigned netMessageSize(void) { return MESSAGE_BODY_SIZE; } // reveals only one constant to the users of this api
 #pragma clang diagnostic pop
 
 static Message* unpackMessage(const byte* buffer) {
@@ -177,7 +174,7 @@ static byte* packMessage(const Message* msg) {
     return buffer;
 }
 
-void netListen() {
+void netListen(void) {
     Message* msg = NULL;
 
     if (SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0) {
@@ -227,7 +224,7 @@ void netSend(const byte* bytes, unsigned size) {
     SDL_free(encryptedMessage);
 }
 
-void netClean() {
+void netClean(void) {
     assert(this);
     SDL_free(this->messageBuffer);
     cryptoDestroy(this->connectionCrypto);

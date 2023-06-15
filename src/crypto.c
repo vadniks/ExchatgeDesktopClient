@@ -1,6 +1,4 @@
 
-#pragma clang diagnostic ignored "-Wgnu-folding-constant"
-
 #include <sdl/SDL.h>
 #include <sodium/sodium.h>
 #include <assert.h>
@@ -21,7 +19,7 @@ struct Crypto_t {
     byte encryptionKey[CRYPTO_KEY_SIZE];
 };
 
-Crypto* cryptoInit() {
+Crypto* cryptoInit(void) {
     if (sodium_init() < 0) return NULL;
 
     Crypto* crypto = SDL_malloc(sizeof *crypto);
