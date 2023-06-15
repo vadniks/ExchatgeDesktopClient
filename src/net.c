@@ -8,7 +8,7 @@
 #include "crypto.h"
 #include "net.h"
 
-staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8);
+staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8 && sizeof(void*) == 8);
 
 #define STATE(x, y) static const int STATE_ ## x = y;
 
