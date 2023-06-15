@@ -71,10 +71,6 @@ static void initiateSecuredConnection(void) {
     this->connectionCrypto = cryptoInit();
     assert(this->connectionCrypto);
 
-    puts(""); // TODO: test only
-    for (unsigned i = 0; i < CRYPTO_KEY_SIZE; printf("%u ", serverPublicKey[i++]));
-    puts("");
-
     if (!cryptoExchangeKeys(this->connectionCrypto, serverPublicKey)) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
