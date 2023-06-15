@@ -1,5 +1,5 @@
 
-//#include "nuklear.h" - cmake automatically includes precompiled version of this header
+//#include "nuklearDefs.h" - cmake automatically includes precompiled version of this header
 #include "../defs.h"
 #include "render.h"
 
