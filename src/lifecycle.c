@@ -5,6 +5,9 @@
 #include "net.h"
 #include "lifecycle.h"
 
+static const unsigned UI_UPDATE_PERIOD = 1000 / 60;
+static const unsigned NET_UPDATE_PERIOD = 60 / 15;
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(

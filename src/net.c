@@ -8,6 +8,8 @@
 #include "crypto.h"
 #include "net.h"
 
+staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8);
+
 #define STATE(x, y) static const int STATE_ ## x = y;
 
 STATE(DISCONNECTED, 0)
@@ -15,6 +17,7 @@ STATE(SERVER_PUBLIC_KEY_RECEIVED, 1)
 STATE(CLIENT_PUBLIC_KEY_SENT, 2)
 STATE(READY, STATE_CLIENT_PUBLIC_KEY_SENT)
 
+static const char* HOST = "127.0.0.1";
 static const int PORT = 8080;
 static const unsigned MESSAGE_HEAD_SIZE = sizeof(int) * 6 + sizeof(long); // 32
 static const unsigned MESSAGE_BODY_SIZE = 1 << 10; // 1024
@@ -117,7 +120,7 @@ bool netInit(MessageReceivedCallback onMessageReceived) {
     assert(!SDLNet_Init());
 
     IPaddress address;
-    assert(!SDLNet_ResolveHost(&address, NET_HOST, PORT));
+    assert(!SDLNet_ResolveHost(&address, HOST, PORT));
 
     this->socket = SDLNet_TCP_OpenClient(&address);
     if (!this->socket) {

@@ -3,6 +3,10 @@
 #include "../defs.h"
 #include "render.h"
 
+static const char* WINDOW_TITLE = "Exchatge";
+static const unsigned WINDOW_WIDTH = 9 * 50;
+static const unsigned WINDOW_HEIGHT = 16 * 50;
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
@@ -50,11 +54,11 @@ static void setStyle(void) {
 
 void renderInit(void) {
     this = SDL_malloc(sizeof *this);
-    this->width = APP_WIDTH;
-    this->height = APP_HEIGHT;
+    this->width = WINDOW_WIDTH;
+    this->height = WINDOW_HEIGHT;
 
     this->window = SDL_CreateWindow(
-        APP_TITLE,
+        WINDOW_TITLE,
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         (int) this->width,

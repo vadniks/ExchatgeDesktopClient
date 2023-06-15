@@ -15,11 +15,3 @@
 
 typedef void* (*Function)(void*);
 typedef unsigned char byte;
-
-extern const char* APP_TITLE; // TODO: move constants into their modules
-extern const char* NET_HOST;
-
-extern const unsigned APP_WIDTH;
-extern const unsigned APP_HEIGHT;
-extern const unsigned UI_UPDATE_PERIOD;
-extern const unsigned NET_UPDATE_PERIOD;
