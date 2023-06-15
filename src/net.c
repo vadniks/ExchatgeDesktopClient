@@ -62,7 +62,7 @@ staticAssert(sizeof(Message) == 1056);
 
 static byte* packMessage(const Message* msg); // TODO: test only
 static Message* unpackMessage(const byte* buffer);
-#include <stdio.h>
+
 static void initiateSecuredConnection(void) {
     byte serverPublicKey[CRYPTO_KEY_SIZE];
     SDLNet_TCP_Recv(this->socket, serverPublicKey, (int) CRYPTO_KEY_SIZE);

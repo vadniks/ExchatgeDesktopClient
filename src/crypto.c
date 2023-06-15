@@ -44,10 +44,6 @@ bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
         crypto->serverPublicKey
     );
 
-    puts("ek"); // TODO: test only
-    for (unsigned i = 0; i < CRYPTO_KEY_SIZE; printf("%u ", crypto->encryptionKey[i++]));
-    puts("");
-
     return !result;
 }
 
