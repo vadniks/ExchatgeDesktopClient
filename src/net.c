@@ -22,7 +22,6 @@ static const int PORT = 8080;
 static const unsigned MESSAGE_HEAD_SIZE = sizeof(int) * 6 + sizeof(long); // 32
 static const unsigned MESSAGE_BODY_SIZE = 1 << 10; // 1024
 static const unsigned MESSAGE_SIZE = MESSAGE_HEAD_SIZE + MESSAGE_BODY_SIZE; // 1056
-static const unsigned PADDING_BLOCK_SIZE = 16;
 static const int FLAG_UNAUTHENTICATED = 0x7ffffffe;
 static const int FLAG_FINISH = 0x7fffffff;
 static const unsigned INT_SIZE = sizeof(int);
@@ -72,8 +71,7 @@ static void initiateSecuredConnection(void) {
     this->connectionCrypto = cryptoInit();
     if (!(this->connectionCrypto)) return;
 
-    cryptoSetServerPublicKey(this->connectionCrypto, serverPublicKey);
-    if (cryptoExchangeKeys(this->connectionCrypto)) return;
+    if (cryptoExchangeKeys(this->connectionCrypto, serverPublicKey)) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
     SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE);

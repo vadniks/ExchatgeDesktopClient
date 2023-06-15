@@ -10,8 +10,7 @@ struct Crypto_t; // implementation is hidden
 typedef struct Crypto_t Crypto;
 
 Crypto* nullable cryptoInit(void);
-bool cryptoExchangeKeys(Crypto* crypto); // returns true on success
-void cryptoSetServerPublicKey(Crypto* crypto, const byte* key);
+bool cryptoExchangeKeys(Crypto* crypto, const byte* key); // returns true on success
 void cryptoSetEncryptionKey(Crypto* crypto, const byte* key); // sets permanent key that was generated & exchanged before
 unsigned cryptoEncryptedSize(unsigned unencryptedSize);
 byte* cryptoClientPublicKey(Crypto* crypto); // don't deallocate result

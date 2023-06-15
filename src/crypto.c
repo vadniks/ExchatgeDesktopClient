@@ -30,8 +30,9 @@ Crypto* cryptoInit(void) {
     return crypto;
 }
 
-bool cryptoExchangeKeys(Crypto* crypto) {
+bool cryptoExchangeKeys(Crypto* crypto, const byte* key) {
     assert(crypto);
+    SDL_memcpy(crypto->serverPublicKey, key, CRYPTO_KEY_SIZE);
 
     int result = crypto_kx_client_session_keys(
         crypto->encryptionKey,
@@ -42,11 +43,6 @@ bool cryptoExchangeKeys(Crypto* crypto) {
     );
 
     return !result;
-}
-
-void cryptoSetServerPublicKey(Crypto* crypto, const byte* key) {
-    assert(crypto);
-    SDL_memcpy(crypto->serverPublicKey, key, CRYPTO_KEY_SIZE);
 }
 
 void cryptoSetEncryptionKey(Crypto* crypto, const byte* key) {
