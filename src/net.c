@@ -226,11 +226,14 @@ void netSend(const byte* bytes, unsigned size) {
 
 void netClean(void) {
     assert(this);
+
     SDL_free(this->messageBuffer);
-    cryptoDestroy(this->connectionCrypto);
+    if (this->connectionCrypto) cryptoDestroy(this->connectionCrypto);
+
     SDLNet_FreeSocketSet(this->socketSet);
     SDLNet_TCP_Close(this->socket);
     SDLNet_Quit();
+
     SDL_free(this);
     this = NULL;
 }

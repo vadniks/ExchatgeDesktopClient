@@ -1,6 +1,6 @@
 
-#include "nuklear.h"
-#include "defs.h"
+//#include "nuklear.h" - cmake automatically includes precompiled version of this header
+#include "../defs.h"
 #include "render.h"
 
 #pragma clang diagnostic push
