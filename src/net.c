@@ -181,7 +181,7 @@ void netListen(void) {
     if (SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0) {
 
         if (SDLNet_TCP_Recv(this->socket, this->messageBuffer, (int) this->encryptedMessageSize) == (int) this->encryptedMessageSize) {
-            byte* decrypted = cryptoDecrypt(this->connectionCrypto, this->messageBuffer, MESSAGE_SIZE);
+            byte* decrypted = cryptoDecrypt(this->connectionCrypto, this->messageBuffer, this->encryptedMessageSize);
             assert(decrypted);
 
             msg = unpackMessage(decrypted);
