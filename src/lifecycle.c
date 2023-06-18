@@ -47,7 +47,7 @@ static unsigned synchronizeThreadUpdates(void) {
 static void onMessageReceived(const byte* message) {} // TODO
 
 static void onLogInResult(bool successful) {
-    SDL_Log("Logging in %s", successful ? "succeeded" : "failed");
+    SDL_Log("Logging in %s", successful ? "succeeded" : "failed"); // TODO: test only
     if (!successful) this->netInitialized = false;
 }
 
@@ -70,6 +70,8 @@ bool lifecycleInit(void) {
         (unsigned (*)(unsigned, void*)) &synchronizeThreadUpdates,
         NULL
     );
+
+    if (this->netInitialized) netLogIn();
 
     return true;
 }

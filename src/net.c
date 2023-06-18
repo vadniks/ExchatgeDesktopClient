@@ -230,12 +230,16 @@ void netListen(void) {
         }
     }
 
-    if (message) switch (this->state) {
+    if (!message) goto cleanup;
+    assert(checkServerToken(message->token));
+
+    switch (this->state) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
 
             if (message->flag == FLAG_LOGGED_IN) {
                 this->state = STATE_AUTHENTICATED;
                 this->onLogInResult(false);
+                SDL_memcpy(&(this->userId), message->body, INT_SIZE);
             } else {
                 this->state = STATE_FINISHED_WITH_ERROR;
                 this->onLogInResult(false);
@@ -246,6 +250,7 @@ void netListen(void) {
             break;
     }
 
+    cleanup:
     SDL_free(message);
 }
 
