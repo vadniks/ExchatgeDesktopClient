@@ -236,6 +236,7 @@ void netListen(void) {
         } else {
             this->onDisconnected(); // TODO: send finish message to server on normal cleanup (when client normally shutdowns)
             netClean();
+            return;
         }
     }
 
