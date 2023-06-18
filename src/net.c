@@ -55,7 +55,7 @@ STATIC_CONST_UNSIGNED TO_SERVER = 0x7ffffffe;
 STATIC_CONST_UNSIGNED USERNAME_SIZE = 16;
 STATIC_CONST_UNSIGNED UNHASHED_PASSWORD_SIZE = 16;
 
-STATIC_CONST_UNSIGNED FROM_ANONYMOUS = 0x00000000;
+STATIC_CONST_UNSIGNED FROM_ANONYMOUS = 0xffffffff;
 STATIC_CONST_UNSIGNED FROM_SERVER = 0x7fffffff;
 
 #pragma clang diagnostic push
@@ -181,7 +181,7 @@ bool netInit(
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "ConstantFunctionResult"
-unsigned netMessageSize(void) { return MESSAGE_BODY_SIZE; } // reveals only one constant to the users of this api
+unsigned netMessageBodySize(void) { return MESSAGE_BODY_SIZE; } // reveals only one constant to the users of this api
 #pragma clang diagnostic pop
 
 static Message* unpackMessage(const byte* buffer) {
@@ -227,8 +227,8 @@ void netListen(void) {
 
             message = unpackMessage(decrypted);
             SDL_free(decrypted);
-        }
-    }
+        } else { SDL_Log("nl not recv"); } // TODO: test only
+    } else { SDL_Log("nl not check"); }
 
     if (!message) goto cleanup;
     if (message->from == FROM_SERVER) { assert(checkServerToken(message->token)); /*TODO: test only*/SDL_Log("signed verified"); }
@@ -238,9 +238,9 @@ void netListen(void) {
 
             if (message->flag == FLAG_LOGGED_IN) {
                 this->state = STATE_AUTHENTICATED;
-                this->onLogInResult(true);
                 this->userId = message->to;
-                SDL_Log("%u", this->userId); // TODO: test only
+                this->onLogInResult(true);
+                SDL_Log("id %u %u", message->to, this->userId); // TODO: test only
             } else {
                 this->state = STATE_FINISHED_WITH_ERROR;
                 this->onLogInResult(false);
@@ -257,6 +257,7 @@ void netListen(void) {
 
 void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     assert(body && size > 0 && size <= MESSAGE_BODY_SIZE);
+    SDL_Log("aaa %u %d", this->userId, flag);
 
     Message message = {
         {

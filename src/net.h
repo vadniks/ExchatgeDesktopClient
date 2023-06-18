@@ -13,7 +13,7 @@ bool netInit(
 ); // returns true on success
 
 void netLogIn(const char* username, const char* password);
-unsigned netMessageSize(void);
+unsigned netMessageBodySize(void);
 void netListen(void);
 void netSend(int flag, const byte* body, unsigned size, unsigned xTo);
 void netClean(void);
