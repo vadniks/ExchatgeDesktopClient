@@ -10,7 +10,8 @@
 
 staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8 && sizeof(void*) == 8);
 
-#define STATE(x, y) static const int STATE_ ## x = y;
+#define STATE(x, y)  STATIC_CONST_UNSIGNED STATE_ ## x = y;
+#define FLAG(x, y) STATIC_CONST_INT FLAG_ ## x = y;
 
 STATE(DISCONNECTED, 0)
 STATE(SERVER_PUBLIC_KEY_RECEIVED, 1)
@@ -18,26 +19,53 @@ STATE(CLIENT_PUBLIC_KEY_SENT, 2)
 STATE(READY, STATE_CLIENT_PUBLIC_KEY_SENT)
 
 static const char* HOST = "127.0.0.1";
-static const int PORT = 8080;
-static const unsigned MESSAGE_HEAD_SIZE = sizeof(int) * 6 + sizeof(long); // 32
-static const unsigned MESSAGE_BODY_SIZE = 1 << 10; // 1024
-static const unsigned MESSAGE_SIZE = MESSAGE_HEAD_SIZE + MESSAGE_BODY_SIZE; // 1056
-static const int FLAG_UNAUTHENTICATED = 0x7ffffffe;
-static const int FLAG_FINISH = 0x7fffffff;
-static const unsigned INT_SIZE = sizeof(int);
-static const unsigned LONG_SIZE = sizeof(long);
+STATIC_CONST_UNSIGNED PORT = 8080;
+
+STATIC_CONST_UNSIGNED INT_SIZE = sizeof(int);
+STATIC_CONST_UNSIGNED LONG_SIZE = sizeof(long);
+
+STATIC_CONST_UNSIGNED MESSAGE_SIZE = 1 << 10; // 1024
+STATIC_CONST_UNSIGNED TOKEN_TRAILING_SIZE = 16;
+STATIC_CONST_UNSIGNED TOKEN_UNSIGNED_VALUE_SIZE = 2 * INT_SIZE; // 8
+STATIC_CONST_UNSIGNED TOKEN_SIZE = TOKEN_UNSIGNED_VALUE_SIZE + 40 + TOKEN_TRAILING_SIZE; // 64
+STATIC_CONST_UNSIGNED MESSAGE_HEAD_SIZE = INT_SIZE * 6 + LONG_SIZE + TOKEN_SIZE; // 96
+STATIC_CONST_UNSIGNED MESSAGE_BODY_SIZE = MESSAGE_SIZE - MESSAGE_HEAD_SIZE; // 928
+
+FLAG(PROCEED, 0x00000000)
+FLAG(FINISH, 0x00000001)
+FLAG(FINISH_WITH_ERROR, 0x00000002)
+FLAG(FINISH_TO_RECONNECT, 0x00000003)
+FLAG(LOG_IN, 0x00000004)
+FLAG(LOGGED_IN, 0x00000005)
+FLAG(REGISTER, 0x00000006)
+FLAG(REGISTERED, 0x00000007)
+FLAG(SUCCESS, 0x00000008)
+FLAG(ERROR, 0x00000009)
+FLAG(UNAUTHENTICATED, 0x0000000a)
+FLAG(FETCH_ALL, 0x0000000c)
+FLAG(SHUTDOWN, 0x7fffffff)
+
+STATIC_CONST_UNSIGNED TO_ANONYMOUS = 0x7fffffff;
+
+STATIC_CONST_UNSIGNED USERNAME_SIZE = 16;
+STATIC_CONST_UNSIGNED UNHASHED_PASSWORD_SIZE = 16;
+
+STATIC_CONST_UNSIGNED FROM_ANONYMOUS = 0x00000000;
+STATIC_CONST_UNSIGNED FROM_SERVER = 0x7fffffff;
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
     TCPsocket socket;
     SDLNet_SocketSet socketSet;
-    int state;
+    unsigned state;
     unsigned encryptedMessageSize;
     MessageReceivedCallback onMessageReceived;
     Crypto* connectionCrypto; // client-server level encryption - different for each connection
 //    Crypto* conversationCrypto; // TODO: conversation level encryption - extra encryption layer - different for each conversation but permanent for all participants of a conversation
     byte* messageBuffer;
+    byte tokenAnonymous[TOKEN_SIZE];
+    byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // unencrypted but clients don't know how token is generated
 )
 #pragma clang diagnostic pop
 
@@ -51,6 +79,7 @@ typedef struct {
     unsigned count; // total count of message parts
     unsigned from; // id of the sender
     unsigned to; // id of the receiver
+    byte token[TOKEN_SIZE];
 } MessageHead;
 
 typedef struct {
@@ -58,7 +87,7 @@ typedef struct {
     byte body[MESSAGE_BODY_SIZE]; // payload
 } Message;
 
-staticAssert(sizeof(Message) == 1056);
+staticAssert(sizeof(MessageHead) == 96 && sizeof(Message) == 1024 && sizeof(Message) - sizeof(MessageHead) == 928);
 
 static byte* packMessage(const Message* msg); // TODO: test only
 static Message* unpackMessage(const byte* buffer);
@@ -85,7 +114,8 @@ static void initiateSecuredConnection(void) {
             0,
             1,
             255,
-            255
+            255,
+            { 0 }
         },
         { 0 }
     };
@@ -115,6 +145,8 @@ bool netInit(MessageReceivedCallback onMessageReceived) {
     this->onMessageReceived = onMessageReceived;
     this->connectionCrypto = NULL;
     this->messageBuffer = NULL;
+    SDL_memset(this->tokenAnonymous, 0, TOKEN_SIZE);
+    SDL_memset(this->tokenServerUnsignedValue, (1 << 8) - 1, TOKEN_UNSIGNED_VALUE_SIZE);
     assert(!SDLNet_Init());
 
     IPaddress address;
@@ -210,7 +242,8 @@ void netSend(const byte* bytes, unsigned size) {
             0,
             0,
             255,
-            255
+            255,
+            { 0 }
         },
         { 0 }
     };

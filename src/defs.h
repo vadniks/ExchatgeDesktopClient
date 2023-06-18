@@ -13,5 +13,8 @@
 #   define staticAssert(x)
 #endif
 
+#define STATIC_CONST_INT static const int
+#define STATIC_CONST_UNSIGNED static const unsigned
+
 typedef void* (*Function)(void*);
 typedef unsigned char byte;
