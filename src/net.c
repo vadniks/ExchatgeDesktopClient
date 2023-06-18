@@ -104,6 +104,9 @@ static void initiateSecuredConnection(void) {
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
 }
 
+static bool checkServerToken(const byte* token)
+{ return cryptoCheckServerSignedBytes(token, this->tokenServerUnsignedValue, TOKEN_UNSIGNED_VALUE_SIZE); }
+
 static void logIn(void) { // TODO: store both username & password encrypted inside a client
     // TODO
 }

@@ -108,7 +108,7 @@ byte* nullable cryptoDecrypt(const Crypto* crypto, const byte* bytes, unsigned b
     return result;
 }
 
-bool checkServerSignedBytes(const byte* signature, const byte* unsignedBytes, unsigned unsignedSize) {
+bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedBytes, unsigned unsignedSize) {
     assert(unsignedSize > 0);
 
     const unsigned combinedSize = SIGNATURE_SIZE + unsignedSize;
