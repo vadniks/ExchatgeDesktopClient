@@ -12,7 +12,7 @@ bool netInit(
     NotifierCallback onLogInResult
 ); // returns true on success
 
-void netLogIn(void);
+void netLogIn(const char* username, const char* password);
 unsigned netMessageSize(void);
 void netListen(void);
 void netSend(int flag, const byte* body, unsigned size, unsigned xTo);

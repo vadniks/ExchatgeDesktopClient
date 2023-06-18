@@ -48,7 +48,7 @@ static void onMessageReceived(const byte* message) {} // TODO
 
 static void onLogInResult(bool successful) {
     SDL_Log("Logging in %s", successful ? "succeeded" : "failed"); // TODO: test only
-    if (!successful) this->netInitialized = false;
+    if (!successful) this->netInitialized = false; // TODO: authentication works!
 }
 
 bool lifecycleInit(void) {
@@ -71,7 +71,8 @@ bool lifecycleInit(void) {
         NULL
     );
 
-    if (this->netInitialized) netLogIn();
+    char test[16] = {'u', 's', 'e', 'r', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // TODO: test only
+    if (this->netInitialized) netLogIn(test, test); // TODO: fill username & password buffers with zeroes or random bytes after logging in
 
     return true;
 }

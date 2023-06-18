@@ -128,8 +128,8 @@ static unsigned long currentTimeMillis(void) {
     return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
 }
 
-void netLogIn(void) { // TODO: store both username & password encrypted inside a client
-    byte* credentials = makeCredentials("user1", "user1");
+void netLogIn(const char* username, const char* password) { // TODO: store both username & password encrypted inside a client
+    byte* credentials = makeCredentials(username, password);
     netSend(FLAG_LOG_IN, credentials, USERNAME_SIZE + UNHASHED_PASSWORD_SIZE, TO_SERVER);
 }
 
@@ -238,7 +238,7 @@ void netListen(void) {
 
             if (message->flag == FLAG_LOGGED_IN) {
                 this->state = STATE_AUTHENTICATED;
-                this->onLogInResult(false);
+                this->onLogInResult(true);
                 SDL_memcpy(&(this->userId), message->body, INT_SIZE);
             } else {
                 this->state = STATE_FINISHED_WITH_ERROR;
