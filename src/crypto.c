@@ -7,11 +7,13 @@
 staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SESSIONKEYBYTES == crypto_secretbox_KEYBYTES);
+staticAssert(crypto_sign_BYTES == 64);
 
 const unsigned CRYPTO_KEY_SIZE = crypto_secretbox_KEYBYTES; // 32
 STATIC_CONST_UNSIGNED MAC_SIZE = crypto_secretbox_MACBYTES; // 16
 STATIC_CONST_UNSIGNED NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
 STATIC_CONST_UNSIGNED SERVER_SIGN_PUBLIC_KEY_SIZE = CRYPTO_KEY_SIZE;
+STATIC_CONST_UNSIGNED SIGNATURE_SIZE = crypto_sign_BYTES; // 64
 
 static const byte serverSignPublicKey[SERVER_SIGN_PUBLIC_KEY_SIZE] = {
     255, 23, 21, 243, 148, 177, 186, 0, 73, 34, 173, 130, 234, 251, 83, 130,
@@ -104,6 +106,32 @@ byte* nullable cryptoDecrypt(const Crypto* crypto, const byte* bytes, unsigned b
 
     if (!result) SDL_free(decrypted);
     return result;
+}
+
+bool checkServerSignedBytes(const byte* signature, const byte* unsignedBytes, unsigned unsignedSize) {
+    assert(unsignedSize > 0);
+
+    const unsigned combinedSize = SIGNATURE_SIZE + unsignedSize;
+    byte combined[combinedSize];
+    SDL_memcpy(combined, signature, SIGNATURE_SIZE);
+    SDL_memcpy(combined + SIGNATURE_SIZE, unsignedBytes, unsignedSize);
+
+    byte generatedUnsigned[combinedSize];
+    unsigned long long generatedUnsignedSize;
+
+    if (crypto_sign_open(
+        generatedUnsigned,
+        &generatedUnsignedSize,
+        combined, combinedSize,
+        serverSignPublicKey
+    ) != 0)
+        return false;
+
+    assert(
+        unsignedSize == (unsigned) generatedUnsignedSize &&
+        !SDL_memcmp(unsignedBytes, generatedUnsigned, unsignedSize)
+    );
+    return true;
 }
 
 void cryptoDestroy(Crypto* crypto) {
