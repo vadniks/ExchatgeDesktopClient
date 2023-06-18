@@ -232,9 +232,11 @@ void netListen(void) {
 
     if (message) switch (this->state) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
-            if (message->flag == FLAG_LOGGED_IN)
+            if (message->flag == FLAG_LOGGED_IN) {
                 this->state = STATE_AUTHENTICATED;
-            else {
+                SDL_Log("logged in"); // TODO: test only
+            } else {
+                SDL_Log("not logged in"); // TODO: test only
                 this->state = STATE_FINISHED_WITH_ERROR;
                 this->onLogInFailed();
                 SDL_free(message);
