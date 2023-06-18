@@ -97,7 +97,7 @@ typedef struct {
 
 staticAssert(sizeof(MessageHead) == 96 && sizeof(Message) == 1024 && sizeof(Message) - sizeof(MessageHead) == 928);
 
-static void initiateSecuredConnection(void) {
+static void initiateSecuredConnection(void) { // TODO: make server send its signature alongside with its public key so clients can check server's signature before establishing connection
     byte serverPublicKey[CRYPTO_KEY_SIZE];
     SDLNet_TCP_Recv(this->socket, serverPublicKey, (int) CRYPTO_KEY_SIZE);
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
@@ -227,11 +227,11 @@ void netListen(void) {
 
             message = unpackMessage(decrypted);
             SDL_free(decrypted);
-        } else { SDL_Log("nl not recv"); } // TODO: test only
-    } else { SDL_Log("nl not check"); }
+        } else { /*TODO: disconnected*/ }
+    }
 
     if (!message) goto cleanup;
-    if (message->from == FROM_SERVER) { assert(checkServerToken(message->token)); /*TODO: test only*/SDL_Log("signed verified"); }
+    if (message->from == FROM_SERVER) { assert(checkServerToken(message->token)); }
 
     switch (this->state) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
@@ -239,10 +239,9 @@ void netListen(void) {
             if (message->flag == FLAG_LOGGED_IN) {
                 this->state = STATE_AUTHENTICATED;
                 this->userId = message->to;
-                SDL_memcpy(this->token, message->body, TOKEN_SIZE - 17); // TODO: token works!
+                SDL_memcpy(this->token, message->body, TOKEN_SIZE);
 
                 this->onLogInResult(true);
-                SDL_Log("id %u %u", message->to, this->userId); // TODO: test only
             } else {
                 this->state = STATE_FINISHED_WITH_ERROR;
                 this->onLogInResult(false);
@@ -259,7 +258,6 @@ void netListen(void) {
 
 void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     assert(body && size > 0 && size <= MESSAGE_BODY_SIZE);
-    SDL_Log("aaa %u %d", this->userId, flag);
 
     Message message = {
         {
