@@ -231,7 +231,7 @@ void netListen(void) {
     }
 
     if (!message) goto cleanup;
-    assert(checkServerToken(message->token));
+    if (message->from == FROM_SERVER) { assert(checkServerToken(message->token)); /*TODO: test only*/SDL_Log("signed verified"); }
 
     switch (this->state) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
@@ -239,7 +239,8 @@ void netListen(void) {
             if (message->flag == FLAG_LOGGED_IN) {
                 this->state = STATE_AUTHENTICATED;
                 this->onLogInResult(true);
-                SDL_memcpy(&(this->userId), message->body, INT_SIZE);
+                this->userId = message->to;
+                SDL_Log("%u", this->userId); // TODO: test only
             } else {
                 this->state = STATE_FINISHED_WITH_ERROR;
                 this->onLogInResult(false);
