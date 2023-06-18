@@ -47,8 +47,7 @@ static unsigned synchronizeThreadUpdates(void) {
 static void onMessageReceived(const byte* message) {} // TODO
 
 static void onLogInResult(bool successful) {
-    SDL_Log("Logging in %s", successful ? "succeeded" : "failed"); // TODO: test only
-    if (!successful) this->netInitialized = false;
+    SDL_Log("logging in %s", successful ? "succeeded" : "failed"); // TODO: test only
 
     byte* body = SDL_calloc(netMessageBodySize(), sizeof(char));
     if (successful) netSend(0x7fffffff, body, netMessageBodySize(), 0x7ffffffe);
