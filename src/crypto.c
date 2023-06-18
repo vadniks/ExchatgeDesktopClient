@@ -9,8 +9,11 @@ staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SESSIONKEYBYTES == crypto_secretbox_KEYBYTES);
 
 const unsigned CRYPTO_KEY_SIZE = crypto_secretbox_KEYBYTES; // 32
-static const unsigned MAC_SIZE = crypto_secretbox_MACBYTES; // 16
-static const unsigned NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
+STATIC_CONST_UNSIGNED MAC_SIZE = crypto_secretbox_MACBYTES; // 16
+STATIC_CONST_UNSIGNED NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
+STATIC_CONST_UNSIGNED SERVER_SIGN_PUBLIC_KEY_SIZE = CRYPTO_KEY_SIZE;
+
+static const byte serverSignPublicKey[SERVER_SIGN_PUBLIC_KEY_SIZE] = {255, 23, 21, 243, 148, 177, 186, 0, 73, 34, 173, 130, 234, 251, 83, 130, 138, 54, 215, 5, 170, 139, 175, 148, 71, 215, 74, 172, 27, 225, 26, 249};
 
 struct Crypto_t {
     byte serverPublicKey[CRYPTO_KEY_SIZE];

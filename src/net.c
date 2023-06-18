@@ -89,9 +89,6 @@ typedef struct {
 
 staticAssert(sizeof(MessageHead) == 96 && sizeof(Message) == 1024 && sizeof(Message) - sizeof(MessageHead) == 928);
 
-static byte* packMessage(const Message* msg); // TODO: test only
-static Message* unpackMessage(const byte* buffer);
-
 static void initiateSecuredConnection(void) {
     byte serverPublicKey[CRYPTO_KEY_SIZE];
     SDLNet_TCP_Recv(this->socket, serverPublicKey, (int) CRYPTO_KEY_SIZE);
@@ -105,32 +102,10 @@ static void initiateSecuredConnection(void) {
 
     SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE);
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
+}
 
-    Message message = { // TODO: test only
-        {
-            FLAG_FINISH,
-            0,
-            MESSAGE_BODY_SIZE,
-            0,
-            1,
-            255,
-            255,
-            { 0 }
-        },
-        { 0 }
-    };
-
-    const char test[] = "Test connection"; // TODO: test only
-    const unsigned testLen = sizeof test / sizeof *test;
-    SDL_memset(message.body, 0, MESSAGE_BODY_SIZE);
-    SDL_memcpy(message.body, test, testLen);
-
-    byte* bytes = packMessage(&message); // TODO: test only
-    byte* encrypted = cryptoEncrypt(this->connectionCrypto, bytes, MESSAGE_SIZE); // TODO: test only
-    SDL_free(bytes);
-
-    SDLNet_TCP_Send(this->socket, encrypted, (int) this->encryptedMessageSize); // TODO: test only
-    SDL_free(encrypted);
+static void logIn(void) { // TODO: store both username & password encrypted inside a client
+    // TODO
 }
 
 bool netInit(MessageReceivedCallback onMessageReceived) {
@@ -187,6 +162,7 @@ static Message* unpackMessage(const byte* buffer) {
     SDL_memcpy(&(msg->count), buffer + INT_SIZE * 3 + LONG_SIZE, INT_SIZE);
     SDL_memcpy(&(msg->from), buffer + INT_SIZE * 4 + LONG_SIZE, INT_SIZE);
     SDL_memcpy(&(msg->to), buffer + INT_SIZE * 5 + LONG_SIZE, INT_SIZE);
+    SDL_memcpy(&(msg->token), buffer + INT_SIZE * 6 + LONG_SIZE, TOKEN_SIZE);
     SDL_memcpy(&(msg->body), buffer + MESSAGE_HEAD_SIZE, MESSAGE_BODY_SIZE);
 
     return msg;
@@ -202,6 +178,7 @@ static byte* packMessage(const Message* msg) {
     SDL_memcpy(buffer + INT_SIZE * 3 + LONG_SIZE, &(msg->count), INT_SIZE);
     SDL_memcpy(buffer + INT_SIZE * 4 + LONG_SIZE, &(msg->from), INT_SIZE);
     SDL_memcpy(buffer + INT_SIZE * 5 + LONG_SIZE, &(msg->to), INT_SIZE);
+    SDL_memcpy(buffer + INT_SIZE * 5 + LONG_SIZE, &(msg->token), TOKEN_SIZE);
     SDL_memcpy(buffer + MESSAGE_HEAD_SIZE, &(msg->body), MESSAGE_BODY_SIZE);
 
     return buffer;
@@ -223,7 +200,6 @@ void netListen(void) {
 
     switch (this->state) {
         case STATE_READY:
-            if (msg) SDL_Log("%u %lu %u %u %u %u %u\n", msg->flag, msg->timestamp, msg->size, msg->index, msg->count, msg->from, msg->to); // TODO: test only
             if (msg) this->onMessageReceived(msg->body);
             break;
     }
@@ -243,7 +219,7 @@ void netSend(const byte* bytes, unsigned size) {
             0,
             255,
             255,
-            { 0 }
+            { 0 } // TODO
         },
         { 0 }
     };
