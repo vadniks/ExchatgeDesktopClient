@@ -5,6 +5,7 @@
 
 #include <sdl_net/SDL_net.h>
 #include <assert.h>
+#include <time.h>
 #include "crypto.h"
 #include "net.h"
 
@@ -64,8 +65,10 @@ THIS(
     Crypto* connectionCrypto; // client-server level encryption - different for each connection
 //    Crypto* conversationCrypto; // TODO: conversation level encryption - extra encryption layer - different for each conversation but permanent for all participants of a conversation
     byte* messageBuffer;
-    byte tokenAnonymous[TOKEN_SIZE];
-    byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // unencrypted but clients don't know how token is generated
+    byte tokenAnonymous[TOKEN_SIZE]; // constant
+    byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // constant, unencrypted but clients don't know how token is generated
+    byte token[TOKEN_SIZE];
+    unsigned userId;
 )
 #pragma clang diagnostic pop
 
@@ -108,7 +111,7 @@ static bool checkServerToken(const byte* token)
 { return cryptoCheckServerSignedBytes(token, this->tokenServerUnsignedValue, TOKEN_UNSIGNED_VALUE_SIZE); }
 
 static void logIn(void) { // TODO: store both username & password encrypted inside a client
-    // TODO
+
 }
 
 bool netInit(MessageReceivedCallback onMessageReceived) {
@@ -125,6 +128,9 @@ bool netInit(MessageReceivedCallback onMessageReceived) {
     this->messageBuffer = NULL;
     SDL_memset(this->tokenAnonymous, 0, TOKEN_SIZE);
     SDL_memset(this->tokenServerUnsignedValue, (1 << 8) - 1, TOKEN_UNSIGNED_VALUE_SIZE);
+    SDL_memcpy(this->token, this->tokenAnonymous, TOKEN_SIZE); // until user is authenticated hist token is anonymous
+    this->userId = 0;
+
     assert(!SDLNet_Init());
 
     IPaddress address;
@@ -210,23 +216,30 @@ void netListen(void) {
     SDL_free(msg);
 }
 
-void netSend(const byte* bytes, unsigned size) {
+static unsigned long currentTimeMillis(void) {
+    struct timespec timespec;
+    assert(!clock_gettime(CLOCK_REALTIME, &timespec));
+    return timespec.tv_sec * (unsigned) 1e6f + timespec.tv_nsec / (unsigned) 1e3f;
+}
+
+void netSend(const byte* bytes, unsigned size, unsigned xTo) {
     assert(bytes && size > 0 && size <= MESSAGE_BODY_SIZE);
 
     Message message = {
         {
-            0,
-            0,
+            FLAG_PROCEED,
+            currentTimeMillis(),
             size,
             0,
-            0,
-            255,
-            255,
-            { 0 } // TODO
+            1,
+            this->userId,
+            xTo,
+            { 0 }
         },
         { 0 }
     };
     SDL_memcpy(&(message.body), bytes, size);
+    SDL_memcpy(&(message.token), this->token, TOKEN_SIZE);
 
     byte* packedMessage = packMessage(&message);
     byte* encryptedMessage = cryptoEncrypt(this->connectionCrypto, packedMessage, MESSAGE_SIZE);

@@ -9,5 +9,5 @@ typedef void (*MessageReceivedCallback)(const byte*); // don't deallocate parame
 bool netInit(MessageReceivedCallback onMessageReceived); // returns true on success
 unsigned netMessageSize(void);
 void netListen(void);
-void netSend(const byte* bytes, unsigned size);
+void netSend(const byte* bytes, unsigned size, unsigned xTo);
 void netClean(void);

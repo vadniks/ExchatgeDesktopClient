@@ -55,7 +55,7 @@ static void onMessageReceived(const byte* message) {
 
     byte test[messageSize]; // TODO: test only
     SDL_memset(test, 'b', messageSize);
-    netSend(test, netMessageSize());
+    netSend(test, netMessageSize(), 2);
 }
 
 bool lifecycleInit(void) {
