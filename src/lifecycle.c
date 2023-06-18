@@ -46,7 +46,7 @@ static unsigned synchronizeThreadUpdates(void) {
 
 static void onMessageReceived(const byte* message) {} // TODO
 
-static void onLogInFailed(bool successful) {
+static void onLogInResult(bool successful) {
     SDL_Log("Logging in %s", successful ? "succeeded" : "failed");
     if (!successful) this->netInitialized = false;
 }
@@ -59,7 +59,7 @@ bool lifecycleInit(void) {
     this->updateThreadCounter = 1;
     this->netUpdateCond = SDL_CreateCond();
     this->netUpdateLock = SDL_CreateMutex();
-    this->netInitialized = netInit(&onMessageReceived, &onLogInFailed);
+    this->netInitialized = netInit(&onMessageReceived, &onLogInResult);
     this->netThread = SDL_CreateThread((int (*)(void*)) &netThread, "netThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
