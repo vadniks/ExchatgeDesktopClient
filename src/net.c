@@ -63,16 +63,16 @@ STATIC_CONST_UNSIGNED FROM_SERVER = 0x7fffffff;
 THIS(
     TCPsocket socket;
     SDLNet_SocketSet socketSet;
-    volatile unsigned state; // unnecessary volatile keyword (works without it), but this field gets changed in different thread
+    unsigned state;
     unsigned encryptedMessageSize; // constant
     MessageReceivedCallback onMessageReceived;
     Crypto* connectionCrypto; // client-server level encryption - different for each connection
 //    Crypto* conversationCrypto; // TODO: conversation level encryption - extra encryption layer - different for each conversation but permanent for all participants of a conversation
-    volatile byte* messageBuffer;
+    byte* messageBuffer;
     byte tokenAnonymous[TOKEN_SIZE]; // constant
     byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // constant, unencrypted but clients don't know how token is generated
-    volatile byte token[TOKEN_SIZE];
-    volatile unsigned userId;
+    byte token[TOKEN_SIZE];
+    unsigned userId;
     NotifierCallback onLogInResult;
     ServiceCallback onErrorReceived;
     Callback onDisconnected;
