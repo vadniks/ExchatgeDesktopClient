@@ -234,7 +234,7 @@ void netListen(void) {
             message = unpackMessage(decrypted);
             SDL_free(decrypted);
         } else {
-            this->onDisconnected();
+            this->onDisconnected(); // TODO: send finish message to server on normal cleanup (when client normally shutdowns)
             netClean();
         }
     }
