@@ -239,6 +239,8 @@ void netListen(void) {
             if (message->flag == FLAG_LOGGED_IN) {
                 this->state = STATE_AUTHENTICATED;
                 this->userId = message->to;
+                SDL_memcpy(this->token, message->body, TOKEN_SIZE - 17); // TODO: token works!
+
                 this->onLogInResult(true);
                 SDL_Log("id %u %u", message->to, this->userId); // TODO: test only
             } else {
