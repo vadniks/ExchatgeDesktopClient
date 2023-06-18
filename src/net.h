@@ -13,7 +13,7 @@ bool netInit(
     MessageReceivedCallback onMessageReceived,
     NotifierCallback onLogInResult,
     ServiceCallback onErrorReceived,
-    Callback onDisconnected // cleanup is performed after this callback ends, so module needs to be reinitialized to keep working with it
+    Callback onDisconnected // cleanup is performed after this callback ends, so module needs to be reinitialized to continue working with it
 ); // returns true on success
 
 void netLogIn(const char* username, const char* password);
