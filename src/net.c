@@ -50,6 +50,7 @@ FLAG(FETCH_ALL, 0x0000000c)
 FLAG(SHUTDOWN, 0x7fffffff)
 
 STATIC_CONST_UNSIGNED TO_ANONYMOUS = 0x7fffffff;
+STATIC_CONST_UNSIGNED TO_SERVER = 0x7ffffffe;
 
 STATIC_CONST_UNSIGNED USERNAME_SIZE = 16;
 STATIC_CONST_UNSIGNED UNHASHED_PASSWORD_SIZE = 16;
@@ -72,6 +73,7 @@ THIS(
     byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // constant, unencrypted but clients don't know how token is generated
     byte token[TOKEN_SIZE];
     unsigned userId;
+    NotifierCallback onLogInFailed;
 )
 #pragma clang diagnostic pop
 
@@ -113,16 +115,28 @@ static void initiateSecuredConnection(void) {
 static bool checkServerToken(const byte* token)
 { return cryptoCheckServerSignedBytes(token, this->tokenServerUnsignedValue, TOKEN_UNSIGNED_VALUE_SIZE); }
 
-static void insertCredentials(Message* message, const char* username, const char* password) {
-    SDL_memcpy(message->body, username, USERNAME_SIZE);
-    SDL_memcpy(&(message->body[USERNAME_SIZE]), password, USERNAME_SIZE);
+static byte* makeCredentials(const char* username, const char* password) {
+    byte* credentials = SDL_malloc(USERNAME_SIZE + UNHASHED_PASSWORD_SIZE);
+    SDL_memcpy(credentials, username, USERNAME_SIZE);
+    SDL_memcpy(&(credentials[USERNAME_SIZE]), password, UNHASHED_PASSWORD_SIZE);
+    return credentials;
+}
+
+static unsigned long currentTimeMillis(void) {
+    struct timespec timespec;
+    assert(!clock_gettime(CLOCK_REALTIME, &timespec));
+    return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
 }
 
 static void logIn(void) { // TODO: store both username & password encrypted inside a client
-
+    byte* credentials = makeCredentials("user1", "user1");
+    netSend(FLAG_LOG_IN, credentials, USERNAME_SIZE + UNHASHED_PASSWORD_SIZE, TO_SERVER);
 }
 
-bool netInit(MessageReceivedCallback onMessageReceived) {
+bool netInit(
+    MessageReceivedCallback onMessageReceived,
+    NotifierCallback onLogInFailed
+) {
     assert(!this && onMessageReceived);
 
     unsigned long byteOrderChecker = 0x0123456789abcdefl;
@@ -137,7 +151,8 @@ bool netInit(MessageReceivedCallback onMessageReceived) {
     SDL_memset(this->tokenAnonymous, 0, TOKEN_SIZE);
     SDL_memset(this->tokenServerUnsignedValue, (1 << 8) - 1, TOKEN_UNSIGNED_VALUE_SIZE);
     SDL_memcpy(this->token, this->tokenAnonymous, TOKEN_SIZE); // until user is authenticated hist token is anonymous
-    this->userId = 0;
+    this->userId = FROM_ANONYMOUS;
+    this->onLogInFailed = onLogInFailed;
 
     assert(!SDLNet_Init());
 
@@ -202,7 +217,7 @@ static byte* packMessage(const Message* msg) {
 }
 
 void netListen(void) {
-    Message* msg = NULL;
+    Message* message = NULL;
 
     if (SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0) {
 
@@ -210,32 +225,37 @@ void netListen(void) {
             byte* decrypted = cryptoDecrypt(this->connectionCrypto, this->messageBuffer, this->encryptedMessageSize);
             assert(decrypted);
 
-            msg = unpackMessage(decrypted);
+            message = unpackMessage(decrypted);
             SDL_free(decrypted);
         }
     }
 
-    switch (this->state) {
+    if (message) switch (this->state) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
-            if (msg) this->onMessageReceived(msg->body);
+            if (message->flag == FLAG_LOGGED_IN)
+                this->state = STATE_AUTHENTICATED;
+            else {
+                this->state = STATE_FINISHED_WITH_ERROR;
+                this->onLogInFailed();
+                SDL_free(message);
+                netClean();
+                return;
+            }
+            break;
+        case STATE_AUTHENTICATED:
+            this->onMessageReceived(message->body);
             break;
     }
 
-    SDL_free(msg);
+    SDL_free(message);
 }
 
-static unsigned long currentTimeMillis(void) {
-    struct timespec timespec;
-    assert(!clock_gettime(CLOCK_REALTIME, &timespec));
-    return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
-}
-
-void netSend(const byte* bytes, unsigned size, unsigned xTo) {
-    assert(bytes && size > 0 && size <= MESSAGE_BODY_SIZE);
+void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
+    assert(body && size > 0 && size <= MESSAGE_BODY_SIZE);
 
     Message message = {
         {
-            FLAG_PROCEED,
+            flag,
             currentTimeMillis(),
             size,
             0,
@@ -246,7 +266,7 @@ void netSend(const byte* bytes, unsigned size, unsigned xTo) {
         },
         { 0 }
     };
-    SDL_memcpy(&(message.body), bytes, size);
+    SDL_memcpy(&(message.body), body, size);
     SDL_memcpy(&(message.token), this->token, TOKEN_SIZE);
 
     byte* packedMessage = packMessage(&message);

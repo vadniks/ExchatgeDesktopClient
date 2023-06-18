@@ -44,19 +44,8 @@ static unsigned synchronizeThreadUpdates(void) {
     return this->running ? UI_UPDATE_PERIOD : 0;
 }
 
-static void onMessageReceived(const byte* message) {
-    const unsigned messageSize = netMessageSize(); // TODO: test only
-
-    byte xmessage[messageSize + 1]; // TODO: test only
-    SDL_memcpy(xmessage, message, messageSize);
-    xmessage[messageSize] = '\0';
-
-    SDL_Log("%c | %s", xmessage[0], xmessage); // TODO: test only
-
-    byte test[messageSize]; // TODO: test only
-    SDL_memset(test, 'b', messageSize);
-    netSend(test, netMessageSize(), 2);
-}
+static void onMessageReceived(const byte* message) {} // TODO
+static void onLogInFailed() { this->netInitialized = false; }
 
 bool lifecycleInit(void) {
     renderInit();
@@ -66,7 +55,7 @@ bool lifecycleInit(void) {
     this->updateThreadCounter = 1;
     this->netUpdateCond = SDL_CreateCond();
     this->netUpdateLock = SDL_CreateMutex();
-    this->netInitialized = netInit(&onMessageReceived);
+    this->netInitialized = netInit(&onMessageReceived, &onLogInFailed);
     this->netThread = SDL_CreateThread((int (*)(void*)) &netThread, "netThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
