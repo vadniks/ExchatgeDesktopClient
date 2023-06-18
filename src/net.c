@@ -227,7 +227,7 @@ void netListen(void) {
 static unsigned long currentTimeMillis(void) {
     struct timespec timespec;
     assert(!clock_gettime(CLOCK_REALTIME, &timespec));
-    return timespec.tv_sec * (unsigned) 1e6f + timespec.tv_nsec / (unsigned) 1e3f;
+    return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
 }
 
 void netSend(const byte* bytes, unsigned size, unsigned xTo) {
