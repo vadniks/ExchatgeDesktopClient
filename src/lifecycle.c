@@ -45,7 +45,11 @@ static unsigned synchronizeThreadUpdates(void) {
 }
 
 static void onMessageReceived(const byte* message) {} // TODO
-static void onLogInFailed() { this->netInitialized = false; }
+
+static void onLogInFailed(bool successful) {
+    SDL_Log("Logging in %s", successful ? "succeeded" : "failed");
+    if (!successful) this->netInitialized = false;
+}
 
 bool lifecycleInit(void) {
     renderInit();

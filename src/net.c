@@ -73,7 +73,7 @@ THIS(
     byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // constant, unencrypted but clients don't know how token is generated
     byte token[TOKEN_SIZE];
     unsigned userId;
-    NotifierCallback onLogInFailed;
+    NotifierCallback onLogInResult;
 )
 #pragma clang diagnostic pop
 
@@ -128,14 +128,14 @@ static unsigned long currentTimeMillis(void) {
     return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
 }
 
-static void logIn(void) { // TODO: store both username & password encrypted inside a client
+void netLogIn(void) { // TODO: store both username & password encrypted inside a client
     byte* credentials = makeCredentials("user1", "user1");
     netSend(FLAG_LOG_IN, credentials, USERNAME_SIZE + UNHASHED_PASSWORD_SIZE, TO_SERVER);
 }
 
 bool netInit(
     MessageReceivedCallback onMessageReceived,
-    NotifierCallback onLogInFailed
+    NotifierCallback onLogInResult
 ) {
     assert(!this && onMessageReceived);
 
@@ -152,7 +152,7 @@ bool netInit(
     SDL_memset(this->tokenServerUnsignedValue, (1 << 8) - 1, TOKEN_UNSIGNED_VALUE_SIZE);
     SDL_memcpy(this->token, this->tokenAnonymous, TOKEN_SIZE); // until user is authenticated hist token is anonymous
     this->userId = FROM_ANONYMOUS;
-    this->onLogInFailed = onLogInFailed;
+    this->onLogInResult = onLogInResult;
 
     assert(!SDLNet_Init());
 
@@ -232,16 +232,13 @@ void netListen(void) {
 
     if (message) switch (this->state) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
+
             if (message->flag == FLAG_LOGGED_IN) {
                 this->state = STATE_AUTHENTICATED;
-                SDL_Log("logged in"); // TODO: test only
+                this->onLogInResult(false);
             } else {
-                SDL_Log("not logged in"); // TODO: test only
                 this->state = STATE_FINISHED_WITH_ERROR;
-                this->onLogInFailed();
-                SDL_free(message);
-                netClean();
-                return;
+                this->onLogInResult(false);
             }
             break;
         case STATE_AUTHENTICATED:
