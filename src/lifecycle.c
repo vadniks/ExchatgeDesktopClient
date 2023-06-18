@@ -54,6 +54,14 @@ static void onLogInResult(bool successful) {
     if (successful) netSend(0x7fffffff, body, netMessageBodySize(), 0x7ffffffe);
 }
 
+static void onErrorReceived(int flag) {
+    SDL_Log("error received %d", flag);
+}
+
+static void onDisconnected(void) {
+    SDL_Log("disconnected");
+}
+
 bool lifecycleInit(void) {
     renderInit();
 
@@ -62,7 +70,7 @@ bool lifecycleInit(void) {
     this->updateThreadCounter = 1;
     this->netUpdateCond = SDL_CreateCond();
     this->netUpdateLock = SDL_CreateMutex();
-    this->netInitialized = netInit(&onMessageReceived, &onLogInResult);
+    this->netInitialized = netInit(&onMessageReceived, &onLogInResult, &onErrorReceived, &onDisconnected);
     this->netThread = SDL_CreateThread((int (*)(void*)) &netThread, "netThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");

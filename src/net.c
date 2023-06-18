@@ -74,6 +74,8 @@ THIS(
     byte token[TOKEN_SIZE];
     unsigned userId;
     NotifierCallback onLogInResult;
+    ServiceCallback onErrorReceived;
+    Callback onDisconnected;
 )
 #pragma clang diagnostic pop
 
@@ -135,11 +137,13 @@ void netLogIn(const char* username, const char* password) { // TODO: store both 
 
 bool netInit(
     MessageReceivedCallback onMessageReceived,
-    NotifierCallback onLogInResult
+    NotifierCallback onLogInResult,
+    ServiceCallback onErrorReceived,
+    Callback onDisconnected
 ) {
     assert(!this && onMessageReceived);
 
-    unsigned long byteOrderChecker = 0x0123456789abcdefl;
+    unsigned long byteOrderChecker = 0x0123456789abcdeful; // just for notice - u & l at the end stand for unsigned long, they're not hexits (digit for hex analogue), leading 0 & x defines hex numbering system
     assert(*((byte*) &byteOrderChecker) == 0xef); // checks whether the app is running on a x64 littleEndian architecture so the byte order won't mess up data marshalling
 
     this = SDL_malloc(sizeof *this);
@@ -153,6 +157,8 @@ bool netInit(
     SDL_memcpy(this->token, this->tokenAnonymous, TOKEN_SIZE); // until user is authenticated hist token is anonymous
     this->userId = FROM_ANONYMOUS;
     this->onLogInResult = onLogInResult;
+    this->onErrorReceived = onErrorReceived;
+    this->onDisconnected = onDisconnected;
 
     assert(!SDLNet_Init());
 
@@ -227,11 +233,21 @@ void netListen(void) {
 
             message = unpackMessage(decrypted);
             SDL_free(decrypted);
-        } else { /*TODO: disconnected*/ }
+        } else {
+            this->onDisconnected();
+            netClean();
+        }
     }
 
     if (!message) goto cleanup;
-    if (message->from == FROM_SERVER) { assert(checkServerToken(message->token)); }
+
+    if (message->from == FROM_SERVER) { // TODO: subdivide this function
+        assert(checkServerToken(message->token));
+
+        int flag = message->flag;
+        if (flag == FLAG_ERROR || flag == FLAG_UNAUTHENTICATED || flag == FLAG_FINISH_WITH_ERROR)
+            this->onErrorReceived(flag);
+    }
 
     switch (this->state) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
