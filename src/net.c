@@ -17,7 +17,10 @@ staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8 && sizeo
 STATE(DISCONNECTED, 0)
 STATE(SERVER_PUBLIC_KEY_RECEIVED, 1)
 STATE(CLIENT_PUBLIC_KEY_SENT, 2)
-STATE(READY, STATE_CLIENT_PUBLIC_KEY_SENT)
+STATE(SECURE_CONNECTION_ESTABLISHED, STATE_CLIENT_PUBLIC_KEY_SENT)
+STATE(AUTHENTICATED, 3)
+STATE(FINISHED, 4)
+STATE(FINISHED_WITH_ERROR, 5)
 
 static const char* HOST = "127.0.0.1";
 STATIC_CONST_UNSIGNED PORT = 8080;
@@ -110,6 +113,11 @@ static void initiateSecuredConnection(void) {
 static bool checkServerToken(const byte* token)
 { return cryptoCheckServerSignedBytes(token, this->tokenServerUnsignedValue, TOKEN_UNSIGNED_VALUE_SIZE); }
 
+static void insertCredentials(Message* message, const char* username, const char* password) {
+    SDL_memcpy(message->body, username, USERNAME_SIZE);
+    SDL_memcpy(&(message->body[USERNAME_SIZE]), password, USERNAME_SIZE);
+}
+
 static void logIn(void) { // TODO: store both username & password encrypted inside a client
 
 }
@@ -149,7 +157,7 @@ bool netInit(MessageReceivedCallback onMessageReceived) {
     initiateSecuredConnection();
     this->messageBuffer = SDL_malloc(this->encryptedMessageSize);
 
-    if (this->state != STATE_READY) {
+    if (this->state != STATE_SECURE_CONNECTION_ESTABLISHED) {
         netClean();
         return false;
     } else
@@ -208,7 +216,7 @@ void netListen(void) {
     }
 
     switch (this->state) {
-        case STATE_READY:
+        case STATE_SECURE_CONNECTION_ESTABLISHED:
             if (msg) this->onMessageReceived(msg->body);
             break;
     }
