@@ -52,6 +52,7 @@ static void onLogInResult(bool successful) {
 
     byte* body = SDL_calloc(netMessageBodySize(), sizeof(char));
     if (successful) netSend(0x7fffffff, body, netMessageBodySize(), 0x7ffffffe);
+    SDL_free(body);
 }
 
 static void onErrorReceived(int flag) {
@@ -84,8 +85,8 @@ bool lifecycleInit(void) {
     );
 
 //    char test[16] = {'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // TODO: test only
-    char test[16] = {'u', 's', 'e', 'r', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-//    char test[16] = {'u', 's', 'e', 'r', '3', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+//    char test[16] = {'u', 's', 'e', 'r', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    char test[16] = {'u', 's', 'e', 'r', '3', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     if (this->netInitialized) netLogIn(test, test); // TODO: fill username & password buffers with zeroes or random bytes after logging in
 
