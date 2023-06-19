@@ -5,6 +5,7 @@
 #include "defs.h"
 
 extern const unsigned CRYPTO_KEY_SIZE;
+extern const unsigned CRYPTO_SIGNATURE_SIZE;
 
 struct Crypto_t; // implementation is hidden
 typedef struct Crypto_t Crypto;
@@ -13,7 +14,7 @@ Crypto* nullable cryptoInit(void);
 bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey); // returns true on success
 void cryptoSetEncryptionKey(Crypto* crypto, const byte* key); // sets permanent key that was generated & exchanged before
 unsigned cryptoEncryptedSize(unsigned unencryptedSize);
-byte* cryptoClientPublicKey(Crypto* crypto); // don't deallocate result
+const byte* cryptoClientPublicKey(const Crypto* crypto);
 byte* nullable cryptoEncrypt(const Crypto* crypto, const byte* bytes, unsigned bytesSize); // returns mac (tag) + encrypted bytes + nonce
 byte* nullable cryptoDecrypt(const Crypto* crypto, const byte* bytes, unsigned bytesSize); // consumes what is returned by encrypt
 bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedBytes, unsigned unsignedSize);

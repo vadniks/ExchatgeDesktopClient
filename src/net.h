@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "defs.h"
 
-typedef void (*MessageReceivedCallback)(const byte*); // don't deallocate parameter
+typedef void (*MessageReceivedCallback)(const byte*);
 typedef void (*NotifierCallback)(bool); // true on success
 typedef void (*ServiceCallback)(int); // receives message's flag
 typedef void (*Callback)(void); // just a callback

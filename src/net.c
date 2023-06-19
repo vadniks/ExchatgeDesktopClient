@@ -99,15 +99,18 @@ typedef struct {
 
 staticAssert(sizeof(MessageHead) == 96 && sizeof(Message) == 1024 && sizeof(Message) - sizeof(MessageHead) == 928);
 
-static void initiateSecuredConnection(void) { // TODO: make server send its signature alongside with its public key so clients can check server's signature before establishing connection
-    byte serverPublicKey[CRYPTO_KEY_SIZE];
-    SDLNet_TCP_Recv(this->socket, serverPublicKey, (int) CRYPTO_KEY_SIZE);
+static void initiateSecuredConnection(void) {
+    const unsigned signedPublicKeySize = CRYPTO_SIGNATURE_SIZE + CRYPTO_KEY_SIZE;
+    byte serverSignedPublicKey[signedPublicKeySize];
+
+    SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize);
+    assert(cryptoCheckServerSignedBytes(serverSignedPublicKey, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE, CRYPTO_KEY_SIZE));
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
     this->connectionCrypto = cryptoInit();
     assert(this->connectionCrypto);
 
-    if (!cryptoExchangeKeys(this->connectionCrypto, serverPublicKey)) return;
+    if (!cryptoExchangeKeys(this->connectionCrypto, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE)) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
     SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE);

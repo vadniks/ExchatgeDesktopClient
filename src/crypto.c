@@ -10,10 +10,10 @@ staticAssert(crypto_kx_SESSIONKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_sign_BYTES == 64);
 
 const unsigned CRYPTO_KEY_SIZE = crypto_secretbox_KEYBYTES; // 32
+const unsigned CRYPTO_SIGNATURE_SIZE = crypto_sign_BYTES; // 64
 STATIC_CONST_UNSIGNED MAC_SIZE = crypto_secretbox_MACBYTES; // 16
 STATIC_CONST_UNSIGNED NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
 STATIC_CONST_UNSIGNED SERVER_SIGN_PUBLIC_KEY_SIZE = CRYPTO_KEY_SIZE;
-STATIC_CONST_UNSIGNED SIGNATURE_SIZE = crypto_sign_BYTES; // 64
 
 static const byte serverSignPublicKey[SERVER_SIGN_PUBLIC_KEY_SIZE] = {
     255, 23, 21, 243, 148, 177, 186, 0, 73, 34, 173, 130, 234, 251, 83, 130,
@@ -63,7 +63,7 @@ void cryptoSetEncryptionKey(Crypto* crypto, const byte* key) {
 unsigned cryptoEncryptedSize(unsigned unencryptedSize)
 { return MAC_SIZE + unencryptedSize + NONCE_SIZE; }
 
-byte* cryptoClientPublicKey(Crypto* crypto) {
+const byte* cryptoClientPublicKey(const Crypto* crypto) {
     assert(crypto);
     return crypto->clientPublicKey;
 }
@@ -111,10 +111,10 @@ byte* nullable cryptoDecrypt(const Crypto* crypto, const byte* bytes, unsigned b
 bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedBytes, unsigned unsignedSize) {
     assert(unsignedSize > 0);
 
-    const unsigned combinedSize = SIGNATURE_SIZE + unsignedSize;
+    const unsigned combinedSize = CRYPTO_SIGNATURE_SIZE + unsignedSize;
     byte combined[combinedSize];
-    SDL_memcpy(combined, signature, SIGNATURE_SIZE);
-    SDL_memcpy(combined + SIGNATURE_SIZE, unsignedBytes, unsignedSize);
+    SDL_memcpy(combined, signature, CRYPTO_SIGNATURE_SIZE);
+    SDL_memcpy(combined + CRYPTO_SIGNATURE_SIZE, unsignedBytes, unsignedSize);
 
     byte generatedUnsigned[combinedSize];
     unsigned long long generatedUnsignedSize;
