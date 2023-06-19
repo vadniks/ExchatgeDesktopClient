@@ -12,7 +12,7 @@ typedef void (*Callback)(void); // just a callback
 bool netInit(
     MessageReceivedCallback onMessageReceived,
     NotifierCallback onLogInResult,
-    ServiceCallback onErrorReceived,
+    ServiceCallback onErrorReceived, // not called on login error & register error as there are separated callback for them
     NotifierCallback onRegisterResult,
     Callback onDisconnected // cleanup is performed after this callback ends, so module needs to be reinitialized to continue working with it
 ); // returns true on success

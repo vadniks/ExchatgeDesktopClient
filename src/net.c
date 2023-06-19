@@ -236,7 +236,55 @@ static byte* packMessage(const Message* msg) {
     return buffer;
 }
 
-void netListen(void) { // TODO: subdivide this function
+static void processErrors(const Message* message) {
+    switch (this->lastSentFlag) {
+        case FLAG_LOG_IN:
+            this->state = STATE_FINISHED_WITH_ERROR;
+            (*(this->onLogInResult))(false);
+            break;
+        case FLAG_REGISTER:
+            (*(this->onRegisterResult))(false);
+            break;
+        default:
+            (*(this->onErrorReceived))(message->flag);
+            break;
+    }
+}
+
+static void processServerActions(const Message* message) {
+    switch (message->flag) {
+        case FLAG_LOGGED_IN:
+            this->state = STATE_AUTHENTICATED;
+            this->userId = message->to;
+            SDL_memcpy(this->token, message->body, TOKEN_SIZE);
+
+            (*(this->onLogInResult))(true);
+            break;
+        case FLAG_REGISTERED:
+            (*(this->onRegisterResult))(true);
+            break;
+    }
+}
+
+static void processMessage(const Message* message) {
+    if (message->from == FROM_SERVER) {
+        assert(checkServerToken(message->token));
+
+        const int flag = message->flag;
+        if (flag == FLAG_UNAUTHENTICATED || flag == FLAG_ERROR) processErrors(message);
+    }
+
+    switch (this->state) {
+        case STATE_SECURE_CONNECTION_ESTABLISHED:
+            processServerActions(message);
+            break;
+        case STATE_AUTHENTICATED:
+            (*(this->onMessageReceived))(message->body);
+            break;
+    }
+}
+
+void netListen(void) {
     Message* message = NULL;
 
     if (SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0) {
@@ -254,49 +302,7 @@ void netListen(void) { // TODO: subdivide this function
         }
     }
 
-    if (!message) goto cleanup;
-
-    if (message->from == FROM_SERVER) {
-        assert(checkServerToken(message->token));
-
-        int flag = message->flag;
-        if (flag == FLAG_ERROR || flag == FLAG_UNAUTHENTICATED || flag == FLAG_FINISH_WITH_ERROR)
-            (*(this->onErrorReceived))(flag);
-    }
-
-    switch (this->state) { // TODO: too nested code, subdivide
-        case STATE_SECURE_CONNECTION_ESTABLISHED:
-
-            switch (message->flag) {
-                case FLAG_LOGGED_IN:
-                    this->state = STATE_AUTHENTICATED;
-                    this->userId = message->to;
-                    SDL_memcpy(this->token, message->body, TOKEN_SIZE);
-
-                    (*(this->onLogInResult))(true);
-                    break;
-                case FLAG_REGISTERED:
-                    (*(this->onRegisterResult))(true);
-                    break;
-                default:
-                    switch (this->lastSentFlag) { // TODO: switch^3 - this is too f***in' much!
-                        case FLAG_LOG_IN:
-                            this->state = STATE_FINISHED_WITH_ERROR;
-                            (*(this->onLogInResult))(false);
-                            break;
-                        case FLAG_REGISTER:
-                            (*(this->onRegisterResult))(false);
-                            break;
-                    }
-                    break;
-            }
-            break;
-        case STATE_AUTHENTICATED:
-            (*(this->onMessageReceived))(message->body);
-            break;
-    }
-
-    cleanup:
+    if (message) processMessage(message);
     SDL_free(message);
 }
 
