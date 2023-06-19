@@ -144,7 +144,7 @@ bool netInit(
     ServiceCallback onErrorReceived,
     Callback onDisconnected
 ) {
-    assert(!this && onMessageReceived);
+    assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
     unsigned long byteOrderChecker = 0x0123456789abcdeful; // just for notice - u & l at the end stand for unsigned long, they're not hexits (digit for hex analogue), leading 0 & x defines hex numbering system
     assert(*((byte*) &byteOrderChecker) == 0xef); // checks whether the app is running on a x64 littleEndian architecture so the byte order won't mess up data marshalling
