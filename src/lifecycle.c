@@ -61,10 +61,18 @@ static void onErrorReceived(int flag) {
 static void onRegisterResult(bool successful) {
     SDL_Log("registration %s", successful ? "succeeded" : "failed");
 }
-
+int a = 0; // TODO: test only
 static void onDisconnected(void) {
     this->netInitialized = false;
     SDL_Log("disconnected");
+
+    if (a == 0) { // TODO: test only
+        this->netInitialized = true;
+        this->netInitialized = netInit(&onMessageReceived, &onLogInResult, &onErrorReceived, &onRegisterResult, &onDisconnected);
+        char test[16] = {'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        netLogIn(test, test);
+    }
+    a++;
 }
 
 bool lifecycleInit(void) {
@@ -88,12 +96,15 @@ bool lifecycleInit(void) {
     );
 
 //    char test[16] = {'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // TODO: test only
-    char test[16] = {'u', 's', 'e', 'r', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-//    char test[16] = {'u', 's', 'e', 'r', '3', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+//    char test[16] = {'u', 's', 'e', 'r', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 //    char test[16] = {'n', 'e', 'w', '0', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    if (this->netInitialized) netLogIn(test, test); // TODO: fill username & password buffers with zeroes or random bytes after logging in
-//    if (this->netInitialized) netRegister(test, test);
+    // TODO: fill username & password buffers with zeroes or random bytes after logging in
+
+    if (this->netInitialized) { // TODO: test only
+        char test[16] = {'u', 's', 'e', 'r', '3', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        netLogIn(test, test);
+    }
 
     return true;
 }

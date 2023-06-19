@@ -288,8 +288,9 @@ static void processMessage(const Message* message) {
 }
 
 static void onDisconnected(void) {
-    (*(this->onDisconnected))();
+    Callback callback = this->onDisconnected;
     netClean();
+    (*(callback))();
 }
 
 void netListen(void) {
