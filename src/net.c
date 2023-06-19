@@ -189,12 +189,14 @@ static unsigned long currentTimeMillis(void) {
 }
 
 void netLogIn(const char* username, const char* password) { // TODO: store both username & password encrypted inside a client
+    assert(this);
     byte* credentials = makeCredentials(username, password);
     netSend(FLAG_LOG_IN, credentials, USERNAME_SIZE + UNHASHED_PASSWORD_SIZE, TO_SERVER);
     SDL_free(credentials);
 }
 
 void netRegister(const char* username, const char* password) {
+    assert(this);
     byte* credentials = makeCredentials(username, password);
     netSend(FLAG_REGISTER, credentials, USERNAME_SIZE + UNHASHED_PASSWORD_SIZE, TO_SERVER);
     SDL_free(credentials);
@@ -285,7 +287,13 @@ static void processMessage(const Message* message) {
     }
 }
 
+static void onDisconnected(void) {
+    (*(this->onDisconnected))();
+    netClean();
+}
+
 void netListen(void) {
+    assert(this);
     Message* message = NULL;
 
     if (SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0) {
@@ -296,9 +304,8 @@ void netListen(void) {
 
             message = unpackMessage(decrypted);
             SDL_free(decrypted);
-        } else {
-            (*(this->onDisconnected))(); // TODO: send finish message to server on normal cleanup (when client normally shutdowns)
-            netClean();
+        } else { // TODO: send finish message to server on normal cleanup (when client normally shutdowns)
+            onDisconnected();
             return;
         }
     }
@@ -308,7 +315,7 @@ void netListen(void) {
 }
 
 void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
-    assert(body && size > 0 && size <= MESSAGE_BODY_SIZE);
+    assert(this && size > 0 && size <= MESSAGE_BODY_SIZE);
 
     Message message = {
         {
