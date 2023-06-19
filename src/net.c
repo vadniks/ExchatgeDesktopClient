@@ -46,6 +46,7 @@ FLAG(REGISTERED, 0x00000007)
 FLAG(SUCCESS, 0x00000008)
 FLAG(ERROR, 0x00000009)
 FLAG(UNAUTHENTICATED, 0x0000000a)
+FLAG(ACCESS_DENIED, 0x0000000b)
 FLAG(FETCH_ALL, 0x0000000c)
 FLAG(SHUTDOWN, 0x7fffffff)
 
@@ -271,7 +272,7 @@ static void processMessage(const Message* message) {
         assert(checkServerToken(message->token));
 
         const int flag = message->flag;
-        if (flag == FLAG_UNAUTHENTICATED || flag == FLAG_ERROR) processErrors(message);
+        if (flag == FLAG_UNAUTHENTICATED || flag == FLAG_ERROR || flag == FLAG_ACCESS_DENIED) processErrors(message);
     }
 
     switch (this->state) {
