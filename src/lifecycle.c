@@ -58,6 +58,10 @@ static void onErrorReceived(int flag) {
     SDL_Log("error received %d", flag);
 }
 
+static void onRegisterResult(bool successful) {
+    SDL_Log("registration %s", successful ? "succeeded" : "failed");
+}
+
 static void onDisconnected(void) {
     this->netInitialized = false;
     SDL_Log("disconnected");
@@ -71,7 +75,7 @@ bool lifecycleInit(void) {
     this->updateThreadCounter = 1;
     this->netUpdateCond = SDL_CreateCond();
     this->netUpdateLock = SDL_CreateMutex();
-    this->netInitialized = netInit(&onMessageReceived, &onLogInResult, &onErrorReceived, &onDisconnected);
+    this->netInitialized = netInit(&onMessageReceived, &onLogInResult, &onErrorReceived, &onRegisterResult, &onDisconnected);
     this->netThread = SDL_CreateThread((int (*)(void*)) &netThread, "netThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
@@ -84,10 +88,12 @@ bool lifecycleInit(void) {
     );
 
 //    char test[16] = {'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // TODO: test only
-    char test[16] = {'u', 's', 'e', 'r', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+//    char test[16] = {'u', 's', 'e', 'r', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 //    char test[16] = {'u', 's', 'e', 'r', '3', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    char test[16] = {'n', 'e', 'w', '0', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     if (this->netInitialized) netLogIn(test, test); // TODO: fill username & password buffers with zeroes or random bytes after logging in
+//    if (this->netInitialized) netRegister(test, test);
 
     return true;
 }

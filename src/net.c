@@ -75,7 +75,9 @@ THIS(
     unsigned userId;
     NotifierCallback onLogInResult;
     ServiceCallback onErrorReceived;
+    NotifierCallback onRegisterResult;
     Callback onDisconnected;
+    int lastSentFlag;
 )
 #pragma clang diagnostic pop
 
@@ -117,31 +119,11 @@ static void initiateSecuredConnection(void) {
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
 }
 
-static bool checkServerToken(const byte* token)
-{ return cryptoCheckServerSignedBytes(token, this->tokenServerUnsignedValue, TOKEN_UNSIGNED_VALUE_SIZE); }
-
-static byte* makeCredentials(const char* username, const char* password) {
-    byte* credentials = SDL_malloc(USERNAME_SIZE + UNHASHED_PASSWORD_SIZE);
-    SDL_memcpy(credentials, username, USERNAME_SIZE);
-    SDL_memcpy(&(credentials[USERNAME_SIZE]), password, UNHASHED_PASSWORD_SIZE);
-    return credentials;
-}
-
-static unsigned long currentTimeMillis(void) {
-    struct timespec timespec;
-    assert(!clock_gettime(CLOCK_REALTIME, &timespec));
-    return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
-}
-
-void netLogIn(const char* username, const char* password) { // TODO: store both username & password encrypted inside a client
-    byte* credentials = makeCredentials(username, password);
-    netSend(FLAG_LOG_IN, credentials, USERNAME_SIZE + UNHASHED_PASSWORD_SIZE, TO_SERVER);
-}
-
 bool netInit(
     MessageReceivedCallback onMessageReceived,
     NotifierCallback onLogInResult,
     ServiceCallback onErrorReceived,
+    NotifierCallback onRegisterResult,
     Callback onDisconnected
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
@@ -161,6 +143,7 @@ bool netInit(
     this->userId = FROM_ANONYMOUS;
     this->onLogInResult = onLogInResult;
     this->onErrorReceived = onErrorReceived;
+    this->onRegisterResult = onRegisterResult;
     this->onDisconnected = onDisconnected;
 
     assert(!SDLNet_Init());
@@ -186,6 +169,34 @@ bool netInit(
         return false;
     } else
         return true;
+}
+
+static bool checkServerToken(const byte* token)
+{ return cryptoCheckServerSignedBytes(token, this->tokenServerUnsignedValue, TOKEN_UNSIGNED_VALUE_SIZE); }
+
+static byte* makeCredentials(const char* username, const char* password) {
+    byte* credentials = SDL_malloc(USERNAME_SIZE + UNHASHED_PASSWORD_SIZE);
+    SDL_memcpy(credentials, username, USERNAME_SIZE);
+    SDL_memcpy(&(credentials[USERNAME_SIZE]), password, UNHASHED_PASSWORD_SIZE);
+    return credentials;
+}
+
+static unsigned long currentTimeMillis(void) {
+    struct timespec timespec;
+    assert(!clock_gettime(CLOCK_REALTIME, &timespec));
+    return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
+}
+
+void netLogIn(const char* username, const char* password) { // TODO: store both username & password encrypted inside a client
+    byte* credentials = makeCredentials(username, password);
+    netSend(FLAG_LOG_IN, credentials, USERNAME_SIZE + UNHASHED_PASSWORD_SIZE, TO_SERVER);
+    SDL_free(credentials);
+}
+
+void netRegister(const char* username, const char* password) {
+    byte* credentials = makeCredentials(username, password);
+    netSend(FLAG_REGISTER, credentials, USERNAME_SIZE + UNHASHED_PASSWORD_SIZE, TO_SERVER);
+    SDL_free(credentials);
 }
 
 #pragma clang diagnostic push
@@ -225,7 +236,7 @@ static byte* packMessage(const Message* msg) {
     return buffer;
 }
 
-void netListen(void) {
+void netListen(void) { // TODO: subdivide this function
     Message* message = NULL;
 
     if (SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0) {
@@ -237,7 +248,7 @@ void netListen(void) {
             message = unpackMessage(decrypted);
             SDL_free(decrypted);
         } else {
-            this->onDisconnected(); // TODO: send finish message to server on normal cleanup (when client normally shutdowns)
+            (*(this->onDisconnected))(); // TODO: send finish message to server on normal cleanup (when client normally shutdowns)
             netClean();
             return;
         }
@@ -245,30 +256,43 @@ void netListen(void) {
 
     if (!message) goto cleanup;
 
-    if (message->from == FROM_SERVER) { // TODO: subdivide this function
+    if (message->from == FROM_SERVER) {
         assert(checkServerToken(message->token));
 
         int flag = message->flag;
         if (flag == FLAG_ERROR || flag == FLAG_UNAUTHENTICATED || flag == FLAG_FINISH_WITH_ERROR)
-            this->onErrorReceived(flag);
+            (*(this->onErrorReceived))(flag);
     }
 
-    switch (this->state) {
+    switch (this->state) { // TODO: too nested code, subdivide
         case STATE_SECURE_CONNECTION_ESTABLISHED:
 
-            if (message->flag == FLAG_LOGGED_IN) {
-                this->state = STATE_AUTHENTICATED;
-                this->userId = message->to;
-                SDL_memcpy(this->token, message->body, TOKEN_SIZE);
+            switch (message->flag) {
+                case FLAG_LOGGED_IN:
+                    this->state = STATE_AUTHENTICATED;
+                    this->userId = message->to;
+                    SDL_memcpy(this->token, message->body, TOKEN_SIZE);
 
-                this->onLogInResult(true);
-            } else {
-                this->state = STATE_FINISHED_WITH_ERROR;
-                this->onLogInResult(false);
+                    (*(this->onLogInResult))(true);
+                    break;
+                case FLAG_REGISTERED:
+                    (*(this->onRegisterResult))(true);
+                    break;
+                default:
+                    switch (this->lastSentFlag) { // TODO: switch^3 - this is too f***in' much!
+                        case FLAG_LOG_IN:
+                            this->state = STATE_FINISHED_WITH_ERROR;
+                            (*(this->onLogInResult))(false);
+                            break;
+                        case FLAG_REGISTER:
+                            (*(this->onRegisterResult))(false);
+                            break;
+                    }
+                    break;
             }
             break;
         case STATE_AUTHENTICATED:
-            this->onMessageReceived(message->body);
+            (*(this->onMessageReceived))(message->body);
             break;
     }
 
@@ -300,6 +324,7 @@ void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     SDL_free(packedMessage);
     if (!encryptedMessage) return;
 
+    this->lastSentFlag = flag;
     SDLNet_TCP_Send(this->socket, encryptedMessage, (int) this->encryptedMessageSize);
     SDL_free(encryptedMessage);
 }
