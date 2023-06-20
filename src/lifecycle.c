@@ -91,7 +91,7 @@ static void onUiDelayEnded(SDL_Thread** uiInitialDelayThreadRef) {
     renderShowLogIn(&onCredentialsReceived);
 
     assert(*uiInitialDelayThreadRef);
-    SDL_WaitThread(*uiInitialDelayThreadRef, (int[1]){});
+    SDL_WaitThread(*uiInitialDelayThreadRef, NULL);
     SDL_free(uiInitialDelayThreadRef);
 }
 
@@ -181,7 +181,7 @@ void lifecycleClean(void) {
     renderClean();
     if (this->netInitialized) netClean();
 
-    SDL_WaitThread(this->netThread, (int[1]){});
+    SDL_WaitThread(this->netThread, NULL);
     SDL_DestroyMutex(this->netUpdateLock);
     SDL_DestroyCond(this->netUpdateCond);
 
