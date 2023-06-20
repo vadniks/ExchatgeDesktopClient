@@ -86,21 +86,25 @@ static void onCredentialsReceived(
     SDL_Log("credentials received %s %s %u %u", username, password, usernameSize, passwordSize);
 }
 
-static void onUiDelayEnded(void** thread) {
+static void onUiDelayEnded(SDL_Thread** uiInitialDelayThreadRef) {
     sleep(1);
     renderShowLogIn(&onCredentialsReceived);
-    SDL_WaitThread((SDL_Thread*) *thread, 0);
+
+    assert(*uiInitialDelayThreadRef);
+    SDL_WaitThread(*uiInitialDelayThreadRef, (int[1]){});
+    SDL_free(uiInitialDelayThreadRef);
 }
 
-static void delayUi(void) {
-    void* temp;
-    void** uiInitialDelayThreadRef = &temp;
+static void delayUi(void) { // causes render module to show splash page until logIn page is queried one second later
+    SDL_Thread** uiInitialDelayThreadRef = SDL_malloc(sizeof(SDL_Thread*));
+    *uiInitialDelayThreadRef = NULL;
+
     SDL_Thread* uiInitialDelayThread = SDL_CreateThread(
         (int (*)(void*)) &onUiDelayEnded,
         "uiInitialDelayThread",
         uiInitialDelayThreadRef
     );
-    *uiInitialDelayThreadRef = (void*) &uiInitialDelayThread;
+    *uiInitialDelayThreadRef = uiInitialDelayThread;
 }
 
 bool lifecycleInit(void) {
