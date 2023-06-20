@@ -62,7 +62,7 @@ static void onRegisterResult(bool successful) {
     SDL_Log("registration %s", successful ? "succeeded" : "failed");
 }
 int a = 0; // TODO: test only
-static void onDisconnected(void) {
+static void onDisconnected(void) { // TODO: run netClean() after calling this callback
     this->netInitialized = false;
     SDL_Log("disconnected");
 
@@ -75,8 +75,19 @@ static void onDisconnected(void) {
     a++;
 }
 
+static void onCredentialsReceived(
+    const char* username,
+    const char* password,
+    unsigned usernameSize,
+    unsigned passwordSize
+) {
+    assert(usernameSize <= 16 && passwordSize <= 16); // TODO: expose net module's flags in it's header
+    SDL_Log("credentials received %s %s %u %u", username, password, usernameSize, passwordSize);
+}
+
 bool lifecycleInit(void) {
     renderInit();
+    renderShowLogIn(&onCredentialsReceived);
 
     this = SDL_malloc(sizeof *this);
     this->running = true;
