@@ -5,12 +5,12 @@
     typedef struct { x } This; \
     static This* this = NULL;
 
+#define staticAssert(x) _Static_assert(x, "")
+
 #ifdef __clang__
 #   define nullable _Nullable
-#   define staticAssert(x) _Static_assert(x, "")
 #else
 #   define nullable
-#   define staticAssert(x)
 #endif
 
 #define STATIC_CONST_INT static const int
@@ -18,3 +18,7 @@
 
 typedef void* (*Function)(void*);
 typedef unsigned char byte;
+
+#define min(x, y) (x < y ? x : y)
+
+// min

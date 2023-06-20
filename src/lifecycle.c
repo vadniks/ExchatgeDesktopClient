@@ -1,5 +1,6 @@
 
 #include <assert.h>
+#include <unistd.h>
 #include "render/render.h"
 #include "defs.h"
 #include "net.h"
@@ -85,10 +86,24 @@ static void onCredentialsReceived(
     SDL_Log("credentials received %s %s %u %u", username, password, usernameSize, passwordSize);
 }
 
-bool lifecycleInit(void) {
-    renderInit();
+static void onUiDelayEnded(void** thread) {
+    sleep(1);
     renderShowLogIn(&onCredentialsReceived);
+    SDL_WaitThread((SDL_Thread*) *thread, 0);
+}
 
+static void delayUi(void) {
+    void* temp;
+    void** uiInitialDelayThreadRef = &temp;
+    SDL_Thread* uiInitialDelayThread = SDL_CreateThread(
+        (int (*)(void*)) &onUiDelayEnded,
+        "uiInitialDelayThread",
+        uiInitialDelayThreadRef
+    );
+    *uiInitialDelayThreadRef = (void*) &uiInitialDelayThread;
+}
+
+bool lifecycleInit(void) {
     this = SDL_malloc(sizeof *this);
     this->running = true;
     this->updateThreadCounter = 1;
@@ -99,6 +114,9 @@ bool lifecycleInit(void) {
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
     assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
+
+    renderInit();
+    delayUi();
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(
         UI_UPDATE_PERIOD,

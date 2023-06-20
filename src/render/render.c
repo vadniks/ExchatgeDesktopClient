@@ -104,7 +104,7 @@ void renderInit(void) {
     fontScale = scaleY;
 
     this->context = nk_sdl_init(this->window, this->renderer);
-    struct nk_font_config config = nk_font_config(0);
+    struct nk_font_config config = nk_font_config(10);
 
     struct nk_font_atlas* atlas = NULL;
     nk_sdl_font_stash_begin(&atlas);
@@ -152,6 +152,12 @@ void renderShowUsersList(void) {
     this->state = STATE_USERS_LIST;
 }
 
+static void drawSplashPage(void) {
+    const float height = (float) this->height;
+    nk_layout_row_dynamic(this->context, height - height / 10, 1);
+    nk_label(this->context, WINDOW_TITLE, NK_TEXT_CENTERED);
+}
+
 static void drawLoginPage(bool xRegister) {
     nk_layout_row_dynamic(this->context, 15, 2);
     nk_label(this->context, "Unable to connect", NK_TEXT_CENTERED);
@@ -163,7 +169,7 @@ static void drawLoginPage(bool xRegister) {
 static void drawPage(void) {
     switch (this->state) {
         case STATE_INITIAL:
-            // TODO: splash screen
+            drawSplashPage();
             break;
         case STATE_LOG_IN:
             drawLoginPage(false);
