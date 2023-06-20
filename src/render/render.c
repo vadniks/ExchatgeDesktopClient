@@ -89,6 +89,8 @@ void renderInit(void) {
     this->renderer = SDL_CreateRenderer(this->window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     assert(this->renderer);
 
+    SDL_SetWindowMinimumSize(this->window, (int) WINDOW_MINIMAL_WIDTH, (int) WINDOW_MINIMAL_HEIGHT);
+
     int renderW, renderH, windowW, windowH;
     float scaleX, scaleY, fontScale;
 
@@ -155,7 +157,6 @@ static void drawLoginPage(bool xRegister) {
     nk_label(this->context, "Unable to connect", NK_TEXT_CENTERED);
 
     if (nk_button_label(this->context, "Retry")) {}
-
     nk_spacer(this->context);
 }
 
@@ -177,20 +178,6 @@ static void drawPage(void) {
     }
 }
 
-static void drawWindowTooLittleStub(void) { // 'cause SDL_SetWindowMinimumSize doesn't prevent user from resizing below minimum bounds
-    byte r, g, b, a;
-    SDL_GetRenderDrawColor(this->renderer, &r, &g, &b, &a);
-    SDL_SetRenderDrawColor(this->renderer, 0xff, 0, 0, 0xff);
-
-    SDL_Rect rect = { 0, 0, (int) this->width, (int) this->height };
-    SDL_RenderDrawRect(this->renderer, &rect);
-
-    SDL_RenderDrawLine(this->renderer, 0, 0, (int) this->width, (int) this->height);
-    SDL_RenderDrawLine(this->renderer, 0, (int) this->height, (int) this->width, 0);
-
-    SDL_SetRenderDrawColor(this->renderer, r, g, b, a);
-}
-
 void renderDraw(void) {
     SDL_SetRenderDrawColor(
         this->renderer,
@@ -200,21 +187,17 @@ void renderDraw(void) {
         (int) this->colorf.a * 255
     );
     SDL_RenderClear(this->renderer);
-
     SDL_GetWindowSizeInPixels(this->window, (int*) &(this->width), (int*) &(this->height));
-    if (this->width >= WINDOW_MINIMAL_WIDTH && this->height >= WINDOW_MINIMAL_HEIGHT) {
 
-        if (nk_begin(
-            this->context,
-            "Exchatge",
-            nk_rect(0, 0, (float) this->width, (float) this->height),
-            NK_WINDOW_BORDER
-        )) drawPage();
+    if (nk_begin(
+        this->context,
+        WINDOW_TITLE,
+        nk_rect(0, 0, (float) this->width, (float) this->height),
+        NK_WINDOW_BORDER
+    )) drawPage();
 
-        nk_end(this->context);
-        nk_sdl_render(NK_ANTI_ALIASING_ON);
-    } else
-        drawWindowTooLittleStub();
+    nk_end(this->context);
+    nk_sdl_render(NK_ANTI_ALIASING_ON);
 
     SDL_RenderPresent(this->renderer);
 }
