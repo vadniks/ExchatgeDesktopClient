@@ -193,8 +193,8 @@ void renderShowError(const char* error) {
             break;
         }
     }
-
     assert(foundNullTerminator);
+
     this->showError = true;
 }
 
