@@ -66,7 +66,7 @@ THIS(
     SDLNet_SocketSet socketSet;
     unsigned state;
     unsigned encryptedMessageSize; // constant
-    MessageReceivedCallback onMessageReceived;
+    NetMessageReceivedCallback onMessageReceived;
     Crypto* connectionCrypto; // client-server level encryption - different for each connection
 //    Crypto* conversationCrypto; // TODO: conversation level encryption - extra encryption layer - different for each conversation but permanent for all participants of a conversation
     byte* messageBuffer;
@@ -74,10 +74,10 @@ THIS(
     byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // constant, unencrypted but clients don't know how token is generated
     byte token[TOKEN_SIZE];
     unsigned userId;
-    NotifierCallback onLogInResult;
-    ServiceCallback onErrorReceived;
-    NotifierCallback onRegisterResult;
-    Callback onDisconnected;
+    NetNotifierCallback onLogInResult;
+    NetServiceCallback onErrorReceived;
+    NetNotifierCallback onRegisterResult;
+    NetCallback onDisconnected;
     int lastSentFlag;
 )
 #pragma clang diagnostic pop
@@ -121,11 +121,11 @@ static void initiateSecuredConnection(void) {
 }
 
 bool netInit(
-    MessageReceivedCallback onMessageReceived,
-    NotifierCallback onLogInResult,
-    ServiceCallback onErrorReceived,
-    NotifierCallback onRegisterResult,
-    Callback onDisconnected
+    NetMessageReceivedCallback onMessageReceived,
+    NetNotifierCallback onLogInResult,
+    NetServiceCallback onErrorReceived,
+    NetNotifierCallback onRegisterResult,
+    NetCallback onDisconnected
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
@@ -288,7 +288,7 @@ static void processMessage(const Message* message) {
 }
 
 static void onDisconnected(void) {
-    Callback callback = this->onDisconnected;
+    NetCallback callback = this->onDisconnected;
     netClean();
     (*(callback))();
 }

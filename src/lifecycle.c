@@ -102,6 +102,10 @@ static void delayUi(void) { // causes render module to show splash page until lo
 static void credentialsRandomFiller(char* credentials, unsigned size)
 { cryptoFillWithRandomBytes((byte*) credentials, size); }
 
+static void onLoginRegisterPageQueriedByUser(bool logIn) {
+    SDL_Log("%s", logIn ? "log in page requested" : "register page requested");
+}
+
 bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
     this = SDL_malloc(sizeof *this);
     this->running = true;
@@ -114,7 +118,13 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
     assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
 
-    renderInit(16, /*TODO: constant is in net module, extract it to header*/16, &onCredentialsReceived, &credentialsRandomFiller);
+    renderInit(
+        16,
+        16, // TODO: constant is in net module, extract it to header
+        &onCredentialsReceived,
+        &credentialsRandomFiller,
+        &onLoginRegisterPageQueriedByUser
+    );
     delayUi();
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(

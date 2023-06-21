@@ -34,11 +34,12 @@ THIS(
     volatile unsigned state;
     unsigned usernameSize;
     unsigned passwordSize;
-    CredentialsReceivedCallback onCredentialsReceived;
-    CredentialsRandomFiller credentialsRandomFiller;
+    RenderCredentialsReceivedCallback onCredentialsReceived;
+    RenderCredentialsRandomFiller credentialsRandomFiller;
     unsigned enteredUsernameSize;
     unsigned enteredPasswordSize;
     char* enteredCredentialsBuffer;
+    RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser;
 )
 #pragma clang diagnostic pop
 
@@ -78,8 +79,9 @@ static void setStyle(void) {
 void renderInit(
     unsigned usernameSize,
     unsigned passwordSize,
-    CredentialsReceivedCallback onCredentialsReceived,
-    CredentialsRandomFiller credentialsRandomFiller
+    RenderCredentialsReceivedCallback onCredentialsReceived,
+    RenderCredentialsRandomFiller credentialsRandomFiller,
+    RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser
 ) {
     assert(!this && usernameSize > 0 && passwordSize > 0);
     this = SDL_malloc(sizeof *this);
@@ -93,6 +95,7 @@ void renderInit(
     this->enteredUsernameSize = 0;
     this->enteredPasswordSize = 0;
     this->enteredCredentialsBuffer = SDL_calloc(this->usernameSize + this->passwordSize, sizeof(char));
+    this->onLoginRegisterPageQueriedByUser = onLoginRegisterPageQueriedByUser;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -179,6 +182,18 @@ static void drawSplashPage(void) {
     nk_label(this->context, SUBTITLE, NK_TEXT_CENTERED);
 }
 
+static void onProceedAfterLogInRegisterClicked(bool logIn) {
+    (*(this->onCredentialsReceived))(
+        this->enteredCredentialsBuffer,
+        this->enteredCredentialsBuffer + this->usernameSize,
+        logIn
+    );
+
+    (*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer, this->usernameSize + this->passwordSize);
+    this->enteredUsernameSize = 0;
+    this->enteredPasswordSize = 0;
+}
+
 static void drawLoginPage(bool logIn) {
     nk_layout_row_dynamic(this->context, 0, 1);
     nk_label(this->context, logIn ? LOG_IN : REGISTER, NK_TEXT_CENTERED);
@@ -206,18 +221,9 @@ static void drawLoginPage(bool logIn) {
         nk_filter_default
     );
 
-    nk_layout_row_dynamic(this->context, 0, 1);
-    if (!nk_button_label(this->context, PROCEED)) return;
-
-    (*(this->onCredentialsReceived))(
-        this->enteredCredentialsBuffer,
-        this->enteredCredentialsBuffer + this->usernameSize,
-        logIn
-    );
-
-    (*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer, this->usernameSize + this->passwordSize);
-    this->enteredUsernameSize = 0;
-    this->enteredPasswordSize = 0;
+    nk_layout_row_dynamic(this->context, 0, 2);
+    if (nk_button_label(this->context, PROCEED)) onProceedAfterLogInRegisterClicked(logIn);
+    if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(logIn);
 }
 
 static void drawPage(void) {

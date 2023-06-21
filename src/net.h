@@ -4,17 +4,17 @@
 #include <stdbool.h>
 #include "defs.h"
 
-typedef void (*MessageReceivedCallback)(const byte*);
-typedef void (*NotifierCallback)(bool); // true on success
-typedef void (*ServiceCallback)(int); // receives message's flag
-typedef void (*Callback)(void); // just a callback
+typedef void (*NetMessageReceivedCallback)(const byte*);
+typedef void (*NetNotifierCallback)(bool); // true on success
+typedef void (*NetServiceCallback)(int); // receives message's flag
+typedef void (*NetCallback)(void);
 
 bool netInit(
-    MessageReceivedCallback onMessageReceived,
-    NotifierCallback onLogInResult,
-    ServiceCallback onErrorReceived, // not called on login error & register error as there are separated callback for them
-    NotifierCallback onRegisterResult,
-    Callback onDisconnected // cleanup is performed before this callback starts, so module needs to be reinitialized after this callback ends to continue working with this module
+    NetMessageReceivedCallback onMessageReceived,
+    NetNotifierCallback onLogInResult,
+    NetServiceCallback onErrorReceived, // not called on login error & register error as there are separated callback for them
+    NetNotifierCallback onRegisterResult,
+    NetCallback onDisconnected // cleanup is performed before this callback starts, so module needs to be reinitialized after this callback ends to continue working with this module
 ); // returns true on success
 
 void netLogIn(const char* username, const char* password); // in case of failure the server disconnects client
