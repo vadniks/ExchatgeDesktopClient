@@ -30,7 +30,7 @@ void renderInputEnded(void);
 void renderShowLogIn(void);
 void renderShowRegister(void);
 void renderShowUsersList(void);
-void renderShowError(const char* error); // expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE];
+void renderShowError(const char* error); // expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE] (with null-terminator);
 void renderHideError(void);
 void renderDraw(void);
 void renderClean(void);
