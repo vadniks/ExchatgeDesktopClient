@@ -1,20 +1,25 @@
 
-#include <stdbool.h>
 #include <assert.h>
 //#include "nuklearDefs.h" - cmake automatically includes precompiled version of this header
 #include "../defs.h"
 #include "render.h"
 
-static const char* WINDOW_TITLE = "Exchatge";
-static const unsigned WINDOW_WIDTH = 16 * 50;
-static const unsigned WINDOW_HEIGHT = 9 * 50;
-static const unsigned WINDOW_MINIMAL_WIDTH = WINDOW_WIDTH / 2;
-static const unsigned WINDOW_MINIMAL_HEIGHT = WINDOW_HEIGHT / 2;
+STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
+STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
+STATIC_CONST_UNSIGNED WINDOW_MINIMAL_WIDTH = WINDOW_WIDTH / 2;
+STATIC_CONST_UNSIGNED WINDOW_MINIMAL_HEIGHT = WINDOW_HEIGHT / 2;
 
-static const unsigned STATE_INITIAL = 0;
-static const unsigned STATE_LOG_IN = 1;
-static const unsigned STATE_REGISTER = 2;
-static const unsigned STATE_USERS_LIST = 3;
+STATIC_CONST_UNSIGNED STATE_INITIAL = 0;
+STATIC_CONST_UNSIGNED STATE_LOG_IN = 1;
+STATIC_CONST_UNSIGNED STATE_REGISTER = 2;
+STATIC_CONST_UNSIGNED STATE_USERS_LIST = 3;
+
+STATIC_CONST_STRING TITLE = "Exchatge";
+STATIC_CONST_STRING SUBTITLE = "A secured message exchanger";
+STATIC_CONST_STRING LOG_IN = "Log in";
+STATIC_CONST_STRING USERNAME = "Username";
+STATIC_CONST_STRING PASSWORD = "Password";
+STATIC_CONST_STRING PROCEED = "Proceed";
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
@@ -25,8 +30,11 @@ THIS(
     SDL_Renderer* renderer;
     struct nk_context* context;
     struct nk_colorf colorf;
-    unsigned state;
+    volatile unsigned state;
+    unsigned usernameSize;
+    unsigned passwordSize;
     CredentialsReceivedCallback onCredentialsReceived;
+    CredentialsRandomFiller credentialsRandomFiller;
 )
 #pragma clang diagnostic pop
 
@@ -63,16 +71,24 @@ static void setStyle(void) {
     nk_style_from_table(this->context, table);
 }
 
-void renderInit(void) {
-    assert(!this);
+void renderInit(
+    unsigned usernameSize,
+    unsigned passwordSize,
+    CredentialsReceivedCallback onCredentialsReceived,
+    CredentialsRandomFiller credentialsRandomFiller
+) {
+    assert(!this && usernameSize > 0 && passwordSize > 0);
     this = SDL_malloc(sizeof *this);
     this->width = WINDOW_WIDTH;
     this->height = WINDOW_HEIGHT;
     this->state = STATE_INITIAL;
-    this->onCredentialsReceived = NULL;
+    this->usernameSize = usernameSize;
+    this->passwordSize = passwordSize;
+    this->onCredentialsReceived = onCredentialsReceived;
+    this->credentialsRandomFiller = credentialsRandomFiller;
 
     this->window = SDL_CreateWindow(
-        WINDOW_TITLE,
+        TITLE,
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         (int) this->width,
@@ -135,9 +151,8 @@ void renderInputEnded(void) {
     nk_input_end(this->context);
 }
 
-void renderShowLogIn(CredentialsReceivedCallback onCredentialsReceived) {
+void renderShowLogIn(void) { // TODO: make all showPage functions atomic/synchronized, allowing calling such functions from different threads
     assert(this);
-    this->onCredentialsReceived = onCredentialsReceived;
     this->state = STATE_LOG_IN;
 }
 
@@ -154,16 +169,34 @@ void renderShowUsersList(void) {
 
 static void drawSplashPage(void) {
     const float height = (float) this->height;
-    nk_layout_row_dynamic(this->context, height - height / 10, 1);
-    nk_label(this->context, WINDOW_TITLE, NK_TEXT_CENTERED);
+    nk_layout_row_dynamic(this->context, 0, 1);
+    nk_label(this->context, TITLE, NK_TEXT_CENTERED);
+    nk_label(this->context, SUBTITLE, NK_TEXT_CENTERED);
 }
 
 static void drawLoginPage(bool xRegister) {
-    nk_layout_row_dynamic(this->context, 15, 2);
-    nk_label(this->context, "Unable to connect", NK_TEXT_CENTERED);
+    int enteredUsernameSize = (int) this->usernameSize,
+        enteredPasswordSize = (int) this->passwordSize;
 
-    if (nk_button_label(this->context, "Retry")) {}
-    nk_spacer(this->context);
+    char username[enteredUsernameSize];
+    char password[enteredPasswordSize];
+    SDL_memset(username, 0, enteredUsernameSize);
+    SDL_memset(password, 0, enteredPasswordSize);
+
+    nk_layout_row_dynamic(this->context, 0, 1);
+    nk_label(this->context, LOG_IN, NK_TEXT_CENTERED);
+
+    nk_layout_row_dynamic(this->context, 0, 2);
+    nk_label(this->context, USERNAME, NK_TEXT_ALIGN_LEFT); // TODO: fields don't work properly
+    nk_edit_string(this->context, NK_EDIT_SIMPLE, username, &enteredUsernameSize, (int) this->usernameSize, nk_filter_default);
+    nk_label(this->context, PASSWORD, NK_TEXT_ALIGN_LEFT);
+    nk_edit_string(this->context, NK_EDIT_SIMPLE, password, &enteredPasswordSize, (int) this->passwordSize, nk_filter_default);
+
+    nk_layout_row_dynamic(this->context, 0, 1);
+    if (!nk_button_label(this->context, PROCEED)) return;
+
+    (*(this->onCredentialsReceived))(username, password, !xRegister);
+    (*(this->credentialsRandomFiller))(username, password);
 }
 
 static void drawPage(void) {
@@ -197,7 +230,7 @@ void renderDraw(void) {
 
     if (nk_begin(
         this->context,
-        WINDOW_TITLE,
+        TITLE,
         nk_rect(0, 0, (float) this->width, (float) this->height),
         NK_WINDOW_BORDER
     )) drawPage();

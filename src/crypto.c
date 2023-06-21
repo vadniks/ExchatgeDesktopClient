@@ -134,6 +134,8 @@ bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedByt
     return true;
 }
 
+void cryptoFillWithRandomBytes(byte* filled, unsigned size) { randombytes_buf(filled, size); }
+
 void cryptoDestroy(Crypto* crypto) {
     assert(crypto);
     SDL_free(crypto);

@@ -4,6 +4,7 @@
 #include "render/render.h"
 #include "defs.h"
 #include "net.h"
+#include "crypto.h"
 #include "lifecycle.h"
 
 static const unsigned UI_UPDATE_PERIOD = 1000 / 60;
@@ -79,16 +80,14 @@ static void onDisconnected(void) { // TODO: run netClean() after calling this ca
 static void onCredentialsReceived(
     const char* username,
     const char* password,
-    unsigned usernameSize,
-    unsigned passwordSize
-) {
-    assert(usernameSize <= 16 && passwordSize <= 16); // TODO: expose net module's flags in it's header
-    SDL_Log("credentials received %s %s %u %u", username, password, usernameSize, passwordSize);
+    bool logIn
+) {// TODO: expose net module's flags in it's header
+    SDL_Log("credentials received %s %s %c", username, password, logIn ? 't' : 'f');
 }
 
 static void onUiDelayEnded(void) {
     sleep(1);
-    renderShowLogIn(&onCredentialsReceived);
+    renderShowLogIn();
 }
 
 static void delayUi(void) { // causes render module to show splash page until logIn page is queried one second later
@@ -100,7 +99,12 @@ static void delayUi(void) { // causes render module to show splash page until lo
     SDL_DetachThread(uiInitialDelayThread);
 }
 
-bool lifecycleInit(void) {
+static void credentialsRandomFiller(char* username, char* password) {
+    cryptoFillWithRandomBytes((byte*) username, 16);
+    cryptoFillWithRandomBytes((byte*) password, 16);
+}
+
+bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
     this = SDL_malloc(sizeof *this);
     this->running = true;
     this->updateThreadCounter = 1;
@@ -112,7 +116,7 @@ bool lifecycleInit(void) {
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
     assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
 
-    renderInit();
+    renderInit(16, /*TODO: constant is in net module, extract it to header*/16, &onCredentialsReceived, &credentialsRandomFiller);
     delayUi();
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(
@@ -124,8 +128,6 @@ bool lifecycleInit(void) {
 //    char test[16] = {'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // TODO: test only
 //    char test[16] = {'u', 's', 'e', 'r', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 //    char test[16] = {'n', 'e', 'w', '0', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-    // TODO: fill username & password buffers with zeroes or random bytes after logging in
 
     if (this->netInitialized) { // TODO: test only
         char test[16] = {'u', 's', 'e', 'r', '3', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
