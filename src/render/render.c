@@ -17,6 +17,7 @@ STATIC_CONST_UNSIGNED STATE_USERS_LIST = 3;
 STATIC_CONST_STRING TITLE = "Exchatge";
 STATIC_CONST_STRING SUBTITLE = "A secured message exchanger";
 STATIC_CONST_STRING LOG_IN = "Log in";
+STATIC_CONST_STRING REGISTER = "Register";
 STATIC_CONST_STRING USERNAME = "Username";
 STATIC_CONST_STRING PASSWORD = "Password";
 STATIC_CONST_STRING PROCEED = "Proceed";
@@ -173,12 +174,12 @@ static void drawSplashPage(void) {
     nk_label(this->context, SUBTITLE, NK_TEXT_CENTERED);
 }
 
-static void drawLoginPage(bool xRegister) {
+static void drawLoginPage(bool logIn) {
     static int enteredUsernameSize = 0, enteredPasswordSize = 0; // static variable inside a function initializes on the function's first call and saves the value between multiple calls of this function,
     static char username[16] = {0}, password[16] = {0}; // almost the same behaviour would be if the variable was declared outside the function
 
     nk_layout_row_dynamic(this->context, 0, 1);
-    nk_label(this->context, LOG_IN, NK_TEXT_CENTERED);
+    nk_label(this->context, logIn ? LOG_IN : REGISTER, NK_TEXT_CENTERED);
 
     nk_layout_row_dynamic(this->context, 0, 2);
     nk_label(this->context, USERNAME, NK_TEXT_ALIGN_LEFT);
@@ -189,7 +190,7 @@ static void drawLoginPage(bool xRegister) {
     nk_layout_row_dynamic(this->context, 0, 1);
     if (!nk_button_label(this->context, PROCEED)) return;
 
-    (*(this->onCredentialsReceived))(username, password, !xRegister);
+    (*(this->onCredentialsReceived))(username, password, logIn);
     (*(this->credentialsRandomFiller))(username, password);
 }
 
@@ -199,10 +200,10 @@ static void drawPage(void) {
             drawSplashPage();
             break;
         case STATE_LOG_IN:
-            drawLoginPage(false);
+            drawLoginPage(true);
             break;
         case STATE_REGISTER:
-            drawLoginPage(true);
+            drawLoginPage(false);
             break;
         case STATE_USERS_LIST:
 
