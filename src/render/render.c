@@ -181,7 +181,7 @@ static void drawLoginPage(bool xRegister) {
     nk_label(this->context, LOG_IN, NK_TEXT_CENTERED);
 
     nk_layout_row_dynamic(this->context, 0, 2);
-    nk_label(this->context, USERNAME, NK_TEXT_ALIGN_LEFT); // TODO: fields don't work properly
+    nk_label(this->context, USERNAME, NK_TEXT_ALIGN_LEFT);
     nk_edit_string(this->context, NK_EDIT_SIMPLE, username, &enteredUsernameSize, (int) this->usernameSize, nk_filter_default);
     nk_label(this->context, PASSWORD, NK_TEXT_ALIGN_LEFT);
     nk_edit_string(this->context, NK_EDIT_SIMPLE, password, &enteredPasswordSize, (int) this->passwordSize, nk_filter_default);
