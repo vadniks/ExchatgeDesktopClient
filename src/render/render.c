@@ -175,8 +175,8 @@ static void drawSplashPage(void) {
 }
 
 static void drawLoginPage(bool logIn) {
-    static int enteredUsernameSize = 0, enteredPasswordSize = 0; // static variable inside a function initializes on the function's first call and saves the value between multiple calls of this function,
-    static char username[16] = {0}, password[16] = {0}; // almost the same behaviour would be if the variable was declared outside the function
+    static int enteredUsernameSize = 0, enteredPasswordSize = 0; // static variable inside a function is initialized on the function's first call and saves the variable's value between multiple calls of this function,
+    static char username[16] = {0}, password[16] = {0}; // almost the same behaviour would be if the variable was declared outside the function (it's value would be placed in static memory region at compile time)
 
     nk_layout_row_dynamic(this->context, 0, 1);
     nk_label(this->context, logIn ? LOG_IN : REGISTER, NK_TEXT_CENTERED);
