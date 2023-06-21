@@ -22,7 +22,7 @@ STATIC_CONST_STRING USERNAME = "Username";
 STATIC_CONST_STRING PASSWORD = "Password";
 STATIC_CONST_STRING PROCEED = "Proceed";
 
-const unsigned RENDER_MAX_ERROR_TEXT_SIZE = 64;
+const unsigned RENDER_MAX_MESSAGE_TEXT_SIZE = 64;
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
@@ -42,8 +42,9 @@ THIS(
     unsigned enteredPasswordSize;
     char* enteredCredentialsBuffer;
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser;
-    volatile bool showError;
-    char errorText[RENDER_MAX_ERROR_TEXT_SIZE];
+    volatile bool showMessage;
+    volatile bool isErrorMessage;
+    char messageText[RENDER_MAX_MESSAGE_TEXT_SIZE];
 )
 #pragma clang diagnostic pop
 
@@ -180,15 +181,15 @@ void renderShowUsersList(void) {
     this->state = STATE_USERS_LIST;
 }
 
-void renderShowError(const char* error) {
+void renderShowMessage(const char* message, bool error) {
     assert(this);
-    SDL_memset(this->errorText, 0, RENDER_MAX_ERROR_TEXT_SIZE);
+    SDL_memset(this->messageText, 0, RENDER_MAX_MESSAGE_TEXT_SIZE);
 
     bool foundNullTerminator = false;
-    for (unsigned i = 0; i < RENDER_MAX_ERROR_TEXT_SIZE; i++) {
-        this->errorText[i] = error[i];
+    for (unsigned i = 0; i < RENDER_MAX_MESSAGE_TEXT_SIZE; i++) {
+        this->messageText[i] = message[i];
 
-        if (error[i] == '\0') {
+        if (message[i] == '\0') {
             assert(i > 0);
             foundNullTerminator = true;
             break;
@@ -196,12 +197,13 @@ void renderShowError(const char* error) {
     }
     assert(foundNullTerminator);
 
-    this->showError = true;
+    this->isErrorMessage = error;
+    this->showMessage = true;
 }
 
-void renderHideError(void) {
+void renderHideMessage(void) {
     assert(this);
-    this->showError = false;
+    this->showMessage = false;
 }
 
 static void drawSplashPage(void) {
@@ -258,11 +260,15 @@ static void drawError(void) {
     nk_spacer(this->context);
     nk_layout_row_dynamic(this->context, 0, 1);
 
-    nk_label_colored(
+    if (this->isErrorMessage) nk_label_colored(
         this->context,
-        this->errorText,
+        this->messageText,
         NK_TEXT_ALIGN_CENTERED,
         (struct nk_color) { 0xff, 0, 0, 0xff }
+    ); else nk_label(
+        this->context,
+        this->messageText,
+        NK_TEXT_ALIGN_CENTERED
     );
 }
 
@@ -285,7 +291,7 @@ static void drawPage(void) {
         default: assert(false);
     }
 
-    if (this->showError) drawError();
+    if (this->showMessage) drawError();
 }
 
 void renderDraw(void) {

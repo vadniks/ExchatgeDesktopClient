@@ -87,7 +87,7 @@ static void async(void (*action)(void)) {
 
 static void hideUiErrorDelayed(void) {
     sleep(3);
-    renderHideError();
+    renderHideMessage();
 }
 
 static void onCredentialsReceived(
@@ -110,7 +110,7 @@ static void onCredentialsReceived(
     if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
 
     if (!this->netInitialized) {
-        renderShowError("Unable to connect to the server");
+        renderShowMessage("Unable to connect to the server", true);
         async(&hideUiErrorDelayed);
     }
 }

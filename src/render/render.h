@@ -14,7 +14,7 @@ typedef void (*RenderCredentialsReceivedCallback)( // buffer is filled with rand
 typedef void (*RenderCredentialsRandomFiller)(char* credentials, unsigned size); // Function that fills credentials fields with random data & doesn't deallocates them
 typedef void (*RenderLogInRegisterPageQueriedByUserCallback)(bool logIn);
 
-extern const unsigned RENDER_MAX_ERROR_TEXT_SIZE;
+extern const unsigned RENDER_MAX_MESSAGE_TEXT_SIZE;
 
 void renderInit(
     unsigned usernameSize,
@@ -30,7 +30,7 @@ void renderInputEnded(void);
 void renderShowLogIn(void);
 void renderShowRegister(void);
 void renderShowUsersList(void);
-void renderShowError(const char* error); // expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE] (with null-terminator included);
-void renderHideError(void);
+void renderShowMessage(const char* message, bool error); // shows system message to the user, expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE] (with null-terminator included);
+void renderHideMessage(void);
 void renderDraw(void);
 void renderClean(void);
