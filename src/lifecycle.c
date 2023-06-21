@@ -83,6 +83,16 @@ static void onCredentialsReceived(
     bool logIn
 ) {// TODO: expose net module's flags in it's header
     SDL_Log("credentials received %s %s %c", username, password, logIn ? 't' : 'f');
+
+    if (!this->netInitialized) this->netInitialized = netInit(
+        &onMessageReceived,
+        &onLogInResult,
+        &onErrorReceived,
+        &onRegisterResult,
+        &onDisconnected
+    );
+
+    if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
 }
 
 static void onUiDelayEnded(void) {
@@ -112,15 +122,15 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
     this->updateThreadCounter = 1;
     this->netUpdateCond = SDL_CreateCond();
     this->netUpdateLock = SDL_CreateMutex();
-    this->netInitialized = netInit(&onMessageReceived, &onLogInResult, &onErrorReceived, &onRegisterResult, &onDisconnected);
+    this->netInitialized = false;
     this->netThread = SDL_CreateThread((int (*)(void*)) &netThread, "netThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
     assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
 
     renderInit(
-        16,
-        16, // TODO: constant is in net module, extract it to header
+        USERNAME_SIZE,
+        PASSWORD_SIZE,
         &onCredentialsReceived,
         &credentialsRandomFiller,
         &onLoginRegisterPageQueriedByUser
@@ -136,11 +146,11 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
 //    char test[16] = {'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // TODO: test only
 //    char test[16] = {'u', 's', 'e', 'r', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 //    char test[16] = {'n', 'e', 'w', '0', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-    if (this->netInitialized) { // TODO: test only
-        char test[16] = {'u', 's', 'e', 'r', '3', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-        netLogIn(test, test);
-    }
+//
+//    if (this->netInitialized) { // TODO: test only
+//        char test[16] = {'u', 's', 'e', 'r', '3', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+//        netLogIn(test, test);
+//    }
 
     return true;
 }
