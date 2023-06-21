@@ -23,7 +23,7 @@ void renderInputBegan(void);
 void renderProcessEvent(SDL_Event* event);
 void renderInputEnded(void);
 void renderShowLogIn(void);
-void renderShowRegister(CredentialsReceivedCallback onCredentialsReceived);
+void renderShowRegister(void);
 void renderShowUsersList(void);
 void renderDraw(void);
 void renderClean(void);

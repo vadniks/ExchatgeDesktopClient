@@ -160,14 +160,11 @@ void renderInputEnded(void) {
 
 void renderShowLogIn(void) { // TODO: make all showPage functions atomic/synchronized, allowing calling such functions from different threads
     assert(this);
-    SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize);
     this->state = STATE_LOG_IN;
 }
 
-void renderShowRegister(CredentialsReceivedCallback onCredentialsReceived) {
+void renderShowRegister(void) {
     assert(this);
-    SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize);
-    this->onCredentialsReceived = onCredentialsReceived;
     this->state = STATE_REGISTER;
 }
 
@@ -214,6 +211,9 @@ static void drawLoginPage(bool logIn) {
 
     (*(this->onCredentialsReceived))(this->enteredCredentialsBuffer, this->enteredCredentialsBuffer + this->usernameSize, logIn);
     (*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer);
+
+    this->enteredUsernameSize = 0;
+    this->enteredPasswordSize = 0;
 }
 
 static void drawPage(void) {
