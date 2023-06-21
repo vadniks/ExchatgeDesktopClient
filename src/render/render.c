@@ -36,6 +36,9 @@ THIS(
     unsigned passwordSize;
     CredentialsReceivedCallback onCredentialsReceived;
     CredentialsRandomFiller credentialsRandomFiller;
+    unsigned enteredUsernameSize;
+    unsigned enteredPasswordSize;
+    char* enteredCredentialsBuffer;
 )
 #pragma clang diagnostic pop
 
@@ -87,6 +90,9 @@ void renderInit(
     this->passwordSize = passwordSize;
     this->onCredentialsReceived = onCredentialsReceived;
     this->credentialsRandomFiller = credentialsRandomFiller;
+    this->enteredUsernameSize = 0;
+    this->enteredPasswordSize = 0;
+    this->enteredCredentialsBuffer = SDL_calloc(this->usernameSize + this->passwordSize, sizeof(char));
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -154,11 +160,13 @@ void renderInputEnded(void) {
 
 void renderShowLogIn(void) { // TODO: make all showPage functions atomic/synchronized, allowing calling such functions from different threads
     assert(this);
+    SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize);
     this->state = STATE_LOG_IN;
 }
 
 void renderShowRegister(CredentialsReceivedCallback onCredentialsReceived) {
     assert(this);
+    SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize);
     this->onCredentialsReceived = onCredentialsReceived;
     this->state = STATE_REGISTER;
 }
@@ -175,23 +183,37 @@ static void drawSplashPage(void) {
 }
 
 static void drawLoginPage(bool logIn) {
-    static int enteredUsernameSize = 0, enteredPasswordSize = 0; // static variable inside a function is initialized on the function's first call and saves the variable's value between multiple calls of this function,
-    static char username[16] = {0}, password[16] = {0}; // almost the same behaviour would be if the variable was declared outside the function (it's value would be placed in static memory region at compile time)
-
     nk_layout_row_dynamic(this->context, 0, 1);
     nk_label(this->context, logIn ? LOG_IN : REGISTER, NK_TEXT_CENTERED);
 
     nk_layout_row_dynamic(this->context, 0, 2);
     nk_label(this->context, USERNAME, NK_TEXT_ALIGN_LEFT);
-    nk_edit_string(this->context, NK_EDIT_SIMPLE, username, &enteredUsernameSize, (int) this->usernameSize, nk_filter_default);
+
+    nk_edit_string(
+        this->context,
+        NK_EDIT_SIMPLE,
+        this->enteredCredentialsBuffer,
+        (int*) &(this->enteredUsernameSize),
+        (int) this->usernameSize,
+        nk_filter_default
+    );
+
     nk_label(this->context, PASSWORD, NK_TEXT_ALIGN_LEFT);
-    nk_edit_string(this->context, NK_EDIT_SIMPLE, password, &enteredPasswordSize, (int) this->passwordSize, nk_filter_default);
+
+    nk_edit_string(
+        this->context,
+        NK_EDIT_SIMPLE,
+        this->enteredCredentialsBuffer + this->usernameSize,
+        (int*) &(this->enteredPasswordSize),
+        (int) this->passwordSize,
+        nk_filter_default
+    );
 
     nk_layout_row_dynamic(this->context, 0, 1);
     if (!nk_button_label(this->context, PROCEED)) return;
 
-    (*(this->onCredentialsReceived))(username, password, logIn);
-    (*(this->credentialsRandomFiller))(username, password);
+    (*(this->onCredentialsReceived))(this->enteredCredentialsBuffer, this->enteredCredentialsBuffer + this->usernameSize, logIn);
+    (*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer);
 }
 
 static void drawPage(void) {
@@ -238,6 +260,8 @@ void renderDraw(void) {
 
 void renderClean(void) {
     if (!this) return;
+
+    SDL_free(this->enteredCredentialsBuffer);
 
     nk_sdl_shutdown();
     SDL_DestroyRenderer(this->renderer);
