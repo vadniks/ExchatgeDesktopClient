@@ -168,20 +168,14 @@ void renderShowUsersList(void) {
 }
 
 static void drawSplashPage(void) {
-    const float height = (float) this->height;
     nk_layout_row_dynamic(this->context, 0, 1);
     nk_label(this->context, TITLE, NK_TEXT_CENTERED);
     nk_label(this->context, SUBTITLE, NK_TEXT_CENTERED);
 }
 
 static void drawLoginPage(bool xRegister) {
-    int enteredUsernameSize = (int) this->usernameSize,
-        enteredPasswordSize = (int) this->passwordSize;
-
-    char username[enteredUsernameSize];
-    char password[enteredPasswordSize];
-    SDL_memset(username, 0, enteredUsernameSize);
-    SDL_memset(password, 0, enteredPasswordSize);
+    static int enteredUsernameSize = 0, enteredPasswordSize = 0; // static variable inside a function initializes on the function's first call and saves the value between multiple calls of this function,
+    static char username[16] = {0}, password[16] = {0}; // almost the same behaviour would be if the variable was declared outside the function
 
     nk_layout_row_dynamic(this->context, 0, 1);
     nk_label(this->context, LOG_IN, NK_TEXT_CENTERED);
