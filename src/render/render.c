@@ -22,6 +22,8 @@ STATIC_CONST_STRING USERNAME = "Username";
 STATIC_CONST_STRING PASSWORD = "Password";
 STATIC_CONST_STRING PROCEED = "Proceed";
 
+const unsigned RENDER_MAX_ERROR_TEXT_SIZE = 64;
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
@@ -40,6 +42,8 @@ THIS(
     unsigned enteredPasswordSize;
     char* enteredCredentialsBuffer;
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser;
+    volatile bool showError;
+    char errorText[RENDER_MAX_ERROR_TEXT_SIZE];
 )
 #pragma clang diagnostic pop
 
@@ -176,6 +180,29 @@ void renderShowUsersList(void) {
     this->state = STATE_USERS_LIST;
 }
 
+void renderShowError(const char* error) {
+    assert(this);
+    SDL_memset(this->errorText, 0, RENDER_MAX_ERROR_TEXT_SIZE);
+
+    bool foundNullTerminator = false;
+    for (unsigned i = 0; i < RENDER_MAX_ERROR_TEXT_SIZE; i++) {
+        this->errorText[i] = error[i];
+
+        if (error[i] == '\0') {
+            foundNullTerminator = true;
+            break;
+        }
+    }
+
+    assert(foundNullTerminator);
+    this->showError = true;
+}
+
+void renderHideError(void) {
+    assert(this);
+    this->showError = false;
+}
+
 static void drawSplashPage(void) {
     nk_layout_row_dynamic(this->context, 0, 1);
     nk_label(this->context, TITLE, NK_TEXT_CENTERED);
@@ -226,7 +253,21 @@ static void drawLoginPage(bool logIn) {
     if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(logIn);
 }
 
+static void drawError(void) {
+    nk_spacer(this->context);
+    nk_layout_row_dynamic(this->context, 0, 1);
+
+    nk_label_colored(
+        this->context,
+        this->errorText,
+        NK_TEXT_ALIGN_CENTERED,
+        (struct nk_color) { 0xff, 0, 0, 0xff }
+    );
+}
+
 static void drawPage(void) {
+    nk_spacer(this->context);
+
     switch (this->state) {
         case STATE_INITIAL:
             drawSplashPage();
@@ -242,6 +283,8 @@ static void drawPage(void) {
             break;
         default: assert(false);
     }
+
+    if (this->showError) drawError();
 }
 
 void renderDraw(void) {

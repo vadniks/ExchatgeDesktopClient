@@ -77,6 +77,20 @@ static void onDisconnected(void) { // TODO: run netClean() after calling this ca
     a++;
 }
 
+static void async(void (*action)(void)) {
+    SDL_Thread* thread = SDL_CreateThread(
+        (int (*)(void*)) action,
+        "asyncActionThread",
+        NULL
+    );
+    SDL_DetachThread(thread);
+}
+
+static void onUiErrorEnded(void) {
+    sleep(3);
+    renderHideError();
+}
+
 static void onCredentialsReceived(
     const char* username,
     const char* password,
@@ -92,21 +106,19 @@ static void onCredentialsReceived(
         &onDisconnected
     );
 
+    SDL_Log("%s", this->netInitialized ? "net initialized" : "net isn't initialized"); // TODO: test only
+
     if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
+
+    if (!this->netInitialized) {
+        renderShowError("Unable to connect to the server");
+        async(&onUiErrorEnded);
+    }
 }
 
-static void onUiDelayEnded(void) {
+static void onUiDelayEnded(void) { // causes render module to show splash page until logIn page is queried one second later
     sleep(1);
     renderShowLogIn();
-}
-
-static void delayUi(void) { // causes render module to show splash page until logIn page is queried one second later
-    SDL_Thread* uiInitialDelayThread = SDL_CreateThread(
-        (int (*)(void*)) &onUiDelayEnded,
-        "uiInitialDelayThread",
-        NULL
-    );
-    SDL_DetachThread(uiInitialDelayThread);
 }
 
 static void credentialsRandomFiller(char* credentials, unsigned size)
@@ -135,7 +147,7 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
         &credentialsRandomFiller,
         &onLoginRegisterPageQueriedByUser
     );
-    delayUi();
+    async(&onUiDelayEnded);
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(
         UI_UPDATE_PERIOD,
