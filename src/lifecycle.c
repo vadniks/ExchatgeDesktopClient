@@ -129,8 +129,8 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
     assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
 
     renderInit(
-        USERNAME_SIZE,
-        PASSWORD_SIZE,
+        NET_USERNAME_SIZE,
+        NET_UNHASHED_PASSWORD_SIZE,
         &onCredentialsReceived,
         &credentialsRandomFiller,
         &onLoginRegisterPageQueriedByUser

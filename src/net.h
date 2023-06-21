@@ -9,10 +9,8 @@ typedef void (*NetNotifierCallback)(bool); // true on success
 typedef void (*NetServiceCallback)(int); // receives message's flag
 typedef void (*NetCallback)(void);
 
-typedef enum {
-    USERNAME_SIZE = 16,
-    PASSWORD_SIZE = 16
-} netConsts;
+extern const unsigned NET_USERNAME_SIZE;
+extern const unsigned NET_UNHASHED_PASSWORD_SIZE;
 
 bool netInit(
     NetMessageReceivedCallback onMessageReceived,

@@ -53,7 +53,8 @@ FLAG(SHUTDOWN, 0x7fffffff)
 STATIC_CONST_UNSIGNED TO_ANONYMOUS = 0x7fffffff;
 STATIC_CONST_UNSIGNED TO_SERVER = 0x7ffffffe;
 
-STATIC_CONST_UNSIGNED UNHASHED_PASSWORD_SIZE = PASSWORD_SIZE;
+const unsigned NET_USERNAME_SIZE = 16;
+const unsigned NET_UNHASHED_PASSWORD_SIZE = 16;
 
 STATIC_CONST_UNSIGNED FROM_ANONYMOUS = 0xffffffff;
 STATIC_CONST_UNSIGNED FROM_SERVER = 0x7fffffff;
@@ -175,9 +176,9 @@ static bool checkServerToken(const byte* token)
 { return cryptoCheckServerSignedBytes(token, this->tokenServerUnsignedValue, TOKEN_UNSIGNED_VALUE_SIZE); }
 
 static byte* makeCredentials(const char* username, const char* password) {
-    byte* credentials = SDL_malloc(USERNAME_SIZE + UNHASHED_PASSWORD_SIZE);
-    SDL_memcpy(credentials, username, USERNAME_SIZE);
-    SDL_memcpy(&(credentials[USERNAME_SIZE]), password, UNHASHED_PASSWORD_SIZE);
+    byte* credentials = SDL_malloc(NET_USERNAME_SIZE + NET_UNHASHED_PASSWORD_SIZE);
+    SDL_memcpy(credentials, username, NET_USERNAME_SIZE);
+    SDL_memcpy(&(credentials[NET_USERNAME_SIZE]), password, NET_UNHASHED_PASSWORD_SIZE);
     return credentials;
 }
 
@@ -190,14 +191,14 @@ static unsigned long currentTimeMillis(void) {
 void netLogIn(const char* username, const char* password) { // TODO: store both username & password encrypted inside a client
     assert(this);
     byte* credentials = makeCredentials(username, password);
-    netSend(FLAG_LOG_IN, credentials, USERNAME_SIZE + UNHASHED_PASSWORD_SIZE, TO_SERVER);
+    netSend(FLAG_LOG_IN, credentials, NET_USERNAME_SIZE + NET_UNHASHED_PASSWORD_SIZE, TO_SERVER);
     SDL_free(credentials);
 }
 
 void netRegister(const char* username, const char* password) {
     assert(this);
     byte* credentials = makeCredentials(username, password);
-    netSend(FLAG_REGISTER, credentials, USERNAME_SIZE + UNHASHED_PASSWORD_SIZE, TO_SERVER);
+    netSend(FLAG_REGISTER, credentials, NET_USERNAME_SIZE + NET_UNHASHED_PASSWORD_SIZE, TO_SERVER);
     SDL_free(credentials);
 }
 
