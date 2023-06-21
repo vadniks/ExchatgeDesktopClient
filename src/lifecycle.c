@@ -85,7 +85,7 @@ static void async(void (*action)(void)) {
     ));
 }
 
-static void onUiErrorEnded(void) {
+static void hideUiErrorDelayed(void) {
     sleep(3);
     renderHideError();
 }
@@ -111,11 +111,11 @@ static void onCredentialsReceived(
 
     if (!this->netInitialized) {
         renderShowError("Unable to connect to the server");
-        async(&onUiErrorEnded);
+        async(&hideUiErrorDelayed);
     }
 }
 
-static void onUiDelayEnded(void) { // causes render module to show splash page until logIn page is queried one second later
+static void showLogInUiDelayed(void) { // causes render module to show splash page until logIn page is queried one second later
     sleep(1);
     renderShowLogIn();
 }
@@ -146,7 +146,7 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
         &credentialsRandomFiller,
         &onLoginRegisterPageQueriedByUser
     );
-    async(&onUiDelayEnded);
+    async(&showLogInUiDelayed);
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(
         UI_UPDATE_PERIOD,
