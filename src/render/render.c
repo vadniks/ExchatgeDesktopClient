@@ -209,9 +209,13 @@ static void drawLoginPage(bool logIn) {
     nk_layout_row_dynamic(this->context, 0, 1);
     if (!nk_button_label(this->context, PROCEED)) return;
 
-    (*(this->onCredentialsReceived))(this->enteredCredentialsBuffer, this->enteredCredentialsBuffer + this->usernameSize, logIn);
-    (*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer);
+    (*(this->onCredentialsReceived))(
+        this->enteredCredentialsBuffer,
+        this->enteredCredentialsBuffer + this->usernameSize,
+        logIn
+    );
 
+    (*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer);
     this->enteredUsernameSize = 0;
     this->enteredPasswordSize = 0;
 }
