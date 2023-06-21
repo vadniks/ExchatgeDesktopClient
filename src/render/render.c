@@ -2,6 +2,7 @@
 #include <assert.h>
 //#include "nuklearDefs.h" - cmake automatically includes precompiled version of this header
 #include "../defs.h"
+#include "../queue.h"
 #include "render.h"
 
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
@@ -149,6 +150,13 @@ void renderInit(
     setStyle();
 
     this->colorf = (struct nk_colorf) { 0.10f, 0.18f, 0.24f, 1.00f };
+
+    // TODO: create queue for system messages
+    unsigned ints[5] = {0, 1, 2, 3, 4}; // TODO: test only
+    Queue* queue = queueInit();
+    for (unsigned i = 0; i < 5; i++) queuePush(queue, ints + i);
+    for (unsigned i = 0; i < 5; i++) SDL_Log("queue %u", *((unsigned*) queuePop(queue)));
+    queueDestroy(queue);
 }
 
 void renderInputBegan(void) {

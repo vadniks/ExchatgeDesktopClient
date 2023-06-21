@@ -110,7 +110,7 @@ static void onCredentialsReceived(
     if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
 
     if (!this->netInitialized) {
-        renderShowMessage("Unable to connect to the server", true);
+        renderShowMessage("Unable to connect to the server", true); // TODO: create message queue
         async(&hideUiErrorDelayed);
     }
 }
