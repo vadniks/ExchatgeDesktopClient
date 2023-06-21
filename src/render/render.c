@@ -209,7 +209,7 @@ static void drawSplashPage(void) {
     nk_label(this->context, SUBTITLE, NK_TEXT_CENTERED);
 }
 
-static void onProceedAfterLogInRegisterClicked(bool logIn) {
+static void onProceedClickedAfterLogInRegister(bool logIn) {
     (*(this->onCredentialsReceived))(
         this->enteredCredentialsBuffer,
         this->enteredCredentialsBuffer + this->usernameSize,
@@ -249,8 +249,8 @@ static void drawLoginPage(bool logIn) {
     );
 
     nk_layout_row_dynamic(this->context, 0, 2);
-    if (nk_button_label(this->context, PROCEED)) onProceedAfterLogInRegisterClicked(logIn);
-    if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(logIn);
+    if (nk_button_label(this->context, PROCEED)) onProceedClickedAfterLogInRegister(logIn);
+    if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
 }
 
 static void drawError(void) {
