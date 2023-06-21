@@ -78,12 +78,11 @@ static void onDisconnected(void) { // TODO: run netClean() after calling this ca
 }
 
 static void async(void (*action)(void)) {
-    SDL_Thread* thread = SDL_CreateThread(
+    SDL_DetachThread(SDL_CreateThread(
         (int (*)(void*)) action,
         "asyncActionThread",
         NULL
-    );
-    SDL_DetachThread(thread);
+    ));
 }
 
 static void onUiErrorEnded(void) {
