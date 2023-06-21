@@ -189,6 +189,7 @@ void renderShowError(const char* error) {
         this->errorText[i] = error[i];
 
         if (error[i] == '\0') {
+            assert(i > 0);
             foundNullTerminator = true;
             break;
         }
