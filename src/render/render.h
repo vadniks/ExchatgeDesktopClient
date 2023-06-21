@@ -10,7 +10,7 @@ typedef void (*CredentialsReceivedCallback)(
     bool logIn // true if called from log in page, false if called from register page
 );
 
-typedef void (*CredentialsRandomFiller)(char* credentials); // Function that fills credentials fields with random data & doesn't deallocates them
+typedef void (*CredentialsRandomFiller)(char* credentials, unsigned size); // Function that fills credentials fields with random data & doesn't deallocates them
 
 void renderInit(
     unsigned usernameSize,

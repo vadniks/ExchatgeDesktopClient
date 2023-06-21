@@ -99,8 +99,8 @@ static void delayUi(void) { // causes render module to show splash page until lo
     SDL_DetachThread(uiInitialDelayThread);
 }
 
-static void credentialsRandomFiller(char* credentials)
-{ cryptoFillWithRandomBytes((byte*) credentials, 16 + 16); }
+static void credentialsRandomFiller(char* credentials, unsigned size)
+{ cryptoFillWithRandomBytes((byte*) credentials, size); }
 
 bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
     this = SDL_malloc(sizeof *this);

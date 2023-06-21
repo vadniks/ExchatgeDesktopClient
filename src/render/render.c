@@ -215,7 +215,7 @@ static void drawLoginPage(bool logIn) {
         logIn
     );
 
-    (*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer);
+    (*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer, this->usernameSize + this->passwordSize);
     this->enteredUsernameSize = 0;
     this->enteredPasswordSize = 0;
 }
