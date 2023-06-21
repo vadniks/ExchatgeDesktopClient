@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "../defs.h"
 
-typedef void (*RenderCredentialsReceivedCallback)(
+typedef void (*RenderCredentialsReceivedCallback)( // buffer is filled with random bytes after callback returns
     const char* username,
     const char* password,
     bool logIn // true if called from log in page, false if called from register page
@@ -30,7 +30,7 @@ void renderInputEnded(void);
 void renderShowLogIn(void);
 void renderShowRegister(void);
 void renderShowUsersList(void);
-void renderShowError(const char* error); // expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE] (with null-terminator);
+void renderShowError(const char* error); // expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE] (with null-terminator included);
 void renderHideError(void);
 void renderDraw(void);
 void renderClean(void);
