@@ -320,17 +320,22 @@ static void drawLoginPage(bool logIn) {
     if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
 }
 
-static void drawUserRow(const char* nullable id, const char* nullable name, int mode) { // mode: -1 - stub, 0 - conversation doesn't exist, 1 - exists
-    bool group = false;
-    if (mode == -1) if (nk_group_begin(this->context, EMPTY_TEXT, NK_PANEL_NONE)) group = true;
+static void drawDivider(const char* groupName) {
+    nk_layout_row_dynamic(this->context, 5, 1);
+    if (nk_group_begin(this->context, groupName, 0)) {
+        nk_spacer(this->context);
+        nk_group_end(this->context);
+    }
+}
 
-    nk_layout_row_dynamic(this->context, mode == -1 ? 10 : 0, 3);
+static void drawUserRow(const char* nullable id, const char* nullable name, int mode) { // mode: -1 - stub, 0 - conversation doesn't exist, 1 - exists
+    nk_layout_row_dynamic(this->context, 0, 3);
     nk_label(this->context, id ? id : ID_TEXT, NK_TEXT_ALIGN_LEFT);
     nk_label(this->context, name ? name : NAME_TEXT, NK_TEXT_ALIGN_CENTERED);
 
     if (mode == -1) {
         nk_spacer(this->context);
-        if (group) nk_group_end(this->context);
+        drawDivider(EMPTY_TEXT);
         return;
     }
 
@@ -364,8 +369,9 @@ static void drawUsersList(void) {
         drawUserRow(idString, user->name, user->conversationExists);
 
         if (i < size - 1) {
-            nk_layout_row_dynamic(this->context, 0, 3);
-            nk_spacer(this->context);
+            char groupName[MAX_U32_DEC_DIGITS_COUNT];
+            assert(SDL_snprintf(groupName, MAX_U32_DEC_DIGITS_COUNT, "%u", i) <= (int) MAX_U32_DEC_DIGITS_COUNT);
+            drawDivider(groupName);
         }
     }
 }
