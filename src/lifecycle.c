@@ -4,7 +4,7 @@
 #include "render/render.h"
 #include "defs.h"
 #include "net.h"
-#include "crypto.h"
+#include "logic.h"
 #include "lifecycle.h"
 
 static const unsigned UI_UPDATE_PERIOD = 1000 / 60;
@@ -19,7 +19,6 @@ THIS(
     SDL_cond* netUpdateCond;
     SDL_mutex* netUpdateLock;
     SDL_Thread* netThread;
-    volatile bool netInitialized;
 )
 #pragma clang diagnostic pop
 
@@ -30,11 +29,8 @@ static void updateSynchronized(Function action, SDL_cond* cond, SDL_mutex* lock)
     SDL_UnlockMutex(lock);
 }
 
-static void netThread(void) {
-    while (this->running)
-        if (this->netInitialized)
-            updateSynchronized((Function) &netListen, this->netUpdateCond, this->netUpdateLock);
-}
+static void netThread(void)
+{ while (this->running) updateSynchronized((Function) &logicNetListen, this->netUpdateCond, this->netUpdateLock); }
 
 static unsigned synchronizeThreadUpdates(void) {
     if (this->updateThreadCounter == NET_UPDATE_PERIOD) {
@@ -46,33 +42,6 @@ static unsigned synchronizeThreadUpdates(void) {
     return this->running ? UI_UPDATE_PERIOD : 0;
 }
 
-static void onMessageReceived(const byte* message) {} // TODO
-
-static void onLogInResult(bool successful) {
-    if (!successful) renderShowMessage("Logging in failed", true);
-}
-
-static void onErrorReceived(int flag) {
-    SDL_Log("error received %d", flag);
-}
-
-static void onRegisterResult(bool successful) {
-    SDL_Log("registration %s", successful ? "succeeded" : "failed");
-}
-int a = 0; // TODO: test only
-static void onDisconnected(void) { // TODO: run netClean() after calling this callback
-    this->netInitialized = false;
-    SDL_Log("disconnected");
-
-    if (a == 0) { // TODO: test only
-        this->netInitialized = true;
-        this->netInitialized = netInit(&onMessageReceived, &onLogInResult, &onErrorReceived, &onRegisterResult, &onDisconnected);
-        char test[16] = {'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-        netLogIn(test, test);
-    }
-    a++;
-}
-
 static void async(void (*action)(void)) {
     SDL_DetachThread(SDL_CreateThread(
         (int (*)(void*)) action,
@@ -81,42 +50,10 @@ static void async(void (*action)(void)) {
     ));
 }
 
-static void hideUiMessageDelayed(void) {
-    sleep(3);
-    renderHideMessage();
-}
-
-static void onCredentialsReceived(
-    const char* username,
-    const char* password,
-    bool logIn
-) {
-    assert(!this->netInitialized);
-    this->netInitialized = netInit(
-        &onMessageReceived,
-        &onLogInResult,
-        &onErrorReceived,
-        &onRegisterResult,
-        &onDisconnected
-    );
-
-    if (!this->netInitialized) {
-        renderShowMessage("Unable to connect to the server", true); // TODO: create message queue
-        async(&hideUiMessageDelayed);
-    }
-
-    if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
-}
-
 static void showLogInUiDelayed(void) { // causes render module to show splash page until logIn page is queried one second later
     sleep(1);
     renderShowLogIn();
 }
-
-static void credentialsRandomFiller(char* credentials, unsigned size)
-{ cryptoFillWithRandomBytes((byte*) credentials, size); }
-
-static void onLoginRegisterPageQueriedByUser(bool logIn) { logIn ? renderShowLogIn() : renderShowRegister(); }
 
 bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
     this = SDL_malloc(sizeof *this);
@@ -124,7 +61,7 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
     this->updateThreadCounter = 1;
     this->netUpdateCond = SDL_CreateCond();
     this->netUpdateLock = SDL_CreateMutex();
-    this->netInitialized = false;
+    logicInit();
     this->netThread = SDL_CreateThread((int (*)(void*)) &netThread, "netThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
@@ -133,9 +70,9 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
     renderInit(
         NET_USERNAME_SIZE,
         NET_UNHASHED_PASSWORD_SIZE,
-        &onCredentialsReceived,
-        &credentialsRandomFiller,
-        &onLoginRegisterPageQueriedByUser
+        &logicOnCredentialsReceived,
+        &logicCredentialsRandomFiller,
+        &logicOnLoginRegisterPageQueriedByUser
     );
     async(&showLogInUiDelayed);
 
@@ -144,15 +81,6 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
         (unsigned (*)(unsigned, void*)) &synchronizeThreadUpdates,
         NULL
     );
-
-//    char test[16] = {'a', 'd', 'm', 'i', 'n', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // TODO: test only
-//    char test[16] = {'u', 's', 'e', 'r', '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-//    char test[16] = {'n', 'e', 'w', '0', '0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-//
-//    if (this->netInitialized) { // TODO: test only
-//        char test[16] = {'u', 's', 'e', 'r', '3', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-//        netLogIn(test, test);
-//    }
 
     return true;
 }
@@ -191,10 +119,11 @@ void lifecycleLoop(void) {
 void lifecycleClean(void) {
     if (!this) return;
 
+    logicClean();
+
     SDL_RemoveTimer(this->threadsSynchronizerTimerId);
 
     renderClean();
-    if (this->netInitialized) netClean();
 
     SDL_WaitThread(this->netThread, NULL);
     SDL_DestroyMutex(this->netUpdateLock);

@@ -17,7 +17,7 @@ bool netInit(
     NetNotifierCallback onLogInResult,
     NetServiceCallback onErrorReceived, // not called on login error & register error as there are separated callback for them
     NetNotifierCallback onRegisterResult,
-    NetCallback onDisconnected // cleanup is performed before this callback starts, so module needs to be reinitialized after this callback ends to continue working with this module
+    NetCallback onDisconnected // cleanup is performed after this callback returns, so module needs to be reinitialized after this callback ends to continue working with this module
 ); // returns true on success
 
 void netLogIn(const char* username, const char* password); // in case of failure the server disconnects client
