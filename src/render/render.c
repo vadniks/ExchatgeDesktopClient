@@ -169,7 +169,8 @@ void renderInit(
     List* list = listInit();
     for (unsigned i = 0; i < 5; i++) listAdd(list, ints + i);
     for (unsigned i = 0; i < 5; i++) SDL_Log("list %u", *((unsigned*) listGet(list, i)));
-    listIterateOver(list, &test);
+    listIterateOver(list, true, &test);
+    listIterateOver(list, false, &test);
     listDestroy(list);
 }
 
