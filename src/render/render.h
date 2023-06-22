@@ -18,6 +18,7 @@ typedef void (*RenderLogInRegisterPageQueriedByUserCallback)(bool logIn);
 typedef struct {
     unsigned id;
     char* name;
+    bool conversationExists; // true if current user (who has logged in via this client) and this user (who displayed in the users list) have already started a conversation
     void (*onClicked)(unsigned id);
 } RenderUser;
 
@@ -32,7 +33,7 @@ void renderInit(
 );
 
 List* renderInitUsersList(void);
-RenderUser* renderCreateUser(unsigned id, const char* name); // name (which is null-terminated string with (0, this->usernameSize] range sized length) is copied
+RenderUser* renderCreateUser(unsigned id, const char* name, bool conversationExists); // name (which is null-terminated string with (0, this->usernameSize] range sized length) is copied
 void renderDestroyUser(RenderUser* user);
 void renderSetUsersList(const List* usersList); // <RenderUser*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
 void renderInputBegan(void);

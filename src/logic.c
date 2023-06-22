@@ -22,7 +22,7 @@ void logicInit(void) {
         char name[NET_USERNAME_SIZE];
         SDL_memset(name, '0' + (int) i, NET_USERNAME_SIZE - 1);
         name[NET_USERNAME_SIZE - 1] = '\0';
-        listAdd(this->usersList, renderCreateUser(i, name));
+        listAdd(this->usersList, renderCreateUser(i, name, i % 5 == 0));
     }
 }
 

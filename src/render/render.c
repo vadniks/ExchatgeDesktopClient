@@ -12,6 +12,7 @@ STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
 STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
 STATIC_CONST_UNSIGNED WINDOW_MINIMAL_WIDTH = WINDOW_WIDTH / 2;
 STATIC_CONST_UNSIGNED WINDOW_MINIMAL_HEIGHT = WINDOW_HEIGHT / 2;
+STATIC_CONST_UNSIGNED MAX_U32_DEC_DIGITS_COUNT = 10; // 0xffffffff = 4294967295 10 digits
 
 STATIC_CONST_UNSIGNED STATE_INITIAL = 0;
 STATIC_CONST_UNSIGNED STATE_LOG_IN = 1;
@@ -26,6 +27,12 @@ STATIC_CONST_STRING REGISTER = "Register";
 STATIC_CONST_STRING USERNAME = "Username";
 STATIC_CONST_STRING PASSWORD = "Password";
 STATIC_CONST_STRING PROCEED = "Proceed";
+STATIC_CONST_STRING CONNECTED_USERS = "Connected users";
+STATIC_CONST_STRING START_CONVERSATION = "Start conversation";
+STATIC_CONST_STRING CONTINUE_CONVERSATION = "Continue conversation"; // TODO: add possibility to delete conversation
+STATIC_CONST_STRING ID_TEXT = "Id";
+STATIC_CONST_STRING NAME_TEXT = "Name";
+STATIC_CONST_STRING EMPTY_TEXT = "";
 
 const unsigned RENDER_MAX_MESSAGE_TEXT_SIZE = 64;
 
@@ -166,10 +173,10 @@ void renderInit(
 
 List* renderInitUsersList(void) { return listInit((ListDeallocator) renderDestroyUser); }
 
-RenderUser* renderCreateUser(unsigned id, const char* name) {
+RenderUser* renderCreateUser(unsigned id, const char* name, bool conversationExists) {
     assert(this);
     bool foundNullTerminator = false;
-    for (unsigned i = 0; i < this->usernameSize; i++)
+    for (unsigned i = 0; i < this->usernameSize; i++) // TODO: extract this piece of null-terminator finder code into separate function/macro
         if (name[i] == '\0') {
             assert(i <= this->usernameSize);
             foundNullTerminator = true;
@@ -180,6 +187,7 @@ RenderUser* renderCreateUser(unsigned id, const char* name) {
     RenderUser* user = SDL_malloc(sizeof *user);
     user->id = id;
     user->name = SDL_calloc(this->usernameSize, sizeof(char));
+    user->conversationExists = conversationExists;
     SDL_memcpy(user->name, name, this->usernameSize);
     return user;
 }
@@ -307,14 +315,37 @@ static void drawLoginPage(bool logIn) {
     if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
 }
 
-bool test = false; // TODO: test only
+typedef enum {
+    DURM_STAB = -1,
+    DURM_CONVERSATION_EXISTS = false,
+    DURM_CONVERSATION_DOESNT_EXISTS = true,
+} DrawUserRowModes;
+
+static void drawUserRow(const char* id, const char* name, DrawUserRowModes mode) {
+    nk_label(this->context, id, NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, name, NK_TEXT_ALIGN_CENTERED);
+
+    mode == DURM_STAB
+        ? nk_spacer(this->context)
+        : (void) nk_button_label(this->context, mode ? CONTINUE_CONVERSATION : START_CONVERSATION);
+}
+
 static void drawUsersList(void) {
-    // TODO: test only
-    if (!test) for (unsigned i = 0; i < listSize(this->usersList); i++) {
+    nk_layout_row_dynamic(this->context, 0, 1);
+    nk_label(this->context, CONNECTED_USERS, NK_TEXT_ALIGN_CENTERED);
+    nk_spacer(this->context);
+
+    nk_layout_row_dynamic(this->context, 0, 3);
+    drawUserRow(ID_TEXT, NAME_TEXT, DURM_STAB);
+
+    for (unsigned i = 0; i < listSize(this->usersList); i++) {
         RenderUser* user = (RenderUser*) listGet(this->usersList, i);
-        SDL_Log("dul %u %s", user->id, user->name);
+
+        char idString[MAX_U32_DEC_DIGITS_COUNT];
+        assert(SDL_snprintf(idString, MAX_U32_DEC_DIGITS_COUNT, "%u", user->id) <= (int) MAX_U32_DEC_DIGITS_COUNT);
+
+        drawUserRow(idString, user->name, user->conversationExists);
     }
-    test = true;
 }
 
 static void drawError(void) {
@@ -324,12 +355,12 @@ static void drawError(void) {
     if (this->isErrorMessage) nk_label_colored(
         this->context,
         this->messageText,
-        NK_TEXT_ALIGN_CENTERED,
+        NK_TEXT_ALIGN_CENTERED | NK_TEXT_ALIGN_BOTTOM,
         (struct nk_color) { 0xff, 0, 0, 0xff }
     ); else nk_label(
         this->context,
         this->messageText,
-        NK_TEXT_ALIGN_CENTERED
+        NK_TEXT_ALIGN_CENTERED | NK_TEXT_ALIGN_BOTTOM
     );
 }
 
