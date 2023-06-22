@@ -8,18 +8,27 @@
 
 THIS(
     volatile bool netInitialized;
+    List* usersList;
 )
+
+static void deallocateRenderUser(void* renderUser) { SDL_free(renderUser); }
 
 void logicInit(void) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
     this->netInitialized = false;
+    this->usersList = listInit(&deallocateRenderUser);
 }
 
 void logicNetListen(void) {
     assert(this);
     if (!this->netInitialized) return;
     netListen();
+}
+
+const List* logicUsersList(void) {
+    assert(this);
+    return this->usersList;
 }
 
 static void onMessageReceived(const byte* message) {
@@ -70,6 +79,7 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
 
 void logicClean(void) {
     assert(this);
+    listDestroy(this->usersList);
     if (this->netInitialized) netClean();
     SDL_free(this);
 }

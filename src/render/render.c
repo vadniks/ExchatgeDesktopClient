@@ -51,6 +51,7 @@ THIS(
     bool isErrorMessage;
     char messageText[RENDER_MAX_MESSAGE_TEXT_SIZE];
     SDL_mutex* uiQueriesMutex;
+    const List* usersList;
 )
 #pragma clang diagnostic pop
 
@@ -92,7 +93,8 @@ void renderInit(
     unsigned passwordSize,
     RenderCredentialsReceivedCallback onCredentialsReceived,
     RenderCredentialsRandomFiller credentialsRandomFiller,
-    RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser
+    RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser,
+    const List* usersList
 ) {
     assert(!this && usernameSize > 0 && passwordSize > 0);
     this = SDL_malloc(sizeof *this);
@@ -107,8 +109,12 @@ void renderInit(
     this->enteredPasswordSize = 0;
     this->enteredCredentialsBuffer = SDL_calloc(this->usernameSize + this->passwordSize, sizeof(char));
     this->onLoginRegisterPageQueriedByUser = onLoginRegisterPageQueriedByUser;
+    this->showMessage = false;
+    this->isErrorMessage = false;
+    SDL_memset(this->messageText, 0, RENDER_MAX_MESSAGE_TEXT_SIZE);
     this->uiQueriesMutex = SDL_CreateMutex();
     assert(this->uiQueriesMutex);
+    this->usersList = usersList;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -187,6 +193,11 @@ void renderShowRegister(void) {
 void renderShowUsersList(void) {
     assert(this);
     SYNCHRONIZED(this->state = STATE_USERS_LIST;)
+}
+
+void renderShowMessageExchange(void) {
+    assert(this);
+    SYNCHRONIZED(this->state = STATE_MESSAGE_EXCHANGE;)
 }
 
 void renderShowMessage(const char* message, bool error) {
