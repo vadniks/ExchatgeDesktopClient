@@ -61,7 +61,6 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
     this->updateThreadCounter = 1;
     this->netUpdateCond = SDL_CreateCond();
     this->netUpdateLock = SDL_CreateMutex();
-    logicInit();
     this->netThread = SDL_CreateThread((int (*)(void*)) &netThread, "netThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
@@ -72,10 +71,11 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
         NET_UNHASHED_PASSWORD_SIZE,
         &logicOnCredentialsReceived,
         &logicCredentialsRandomFiller,
-        &logicOnLoginRegisterPageQueriedByUser,
-        logicUsersList()
+        &logicOnLoginRegisterPageQueriedByUser
     );
     async(&showLogInUiDelayed);
+    logicInit();
+    renderSetUsersList(logicUsersList());
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(
         UI_UPDATE_PERIOD,

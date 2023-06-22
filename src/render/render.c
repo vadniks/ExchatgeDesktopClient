@@ -93,8 +93,7 @@ void renderInit(
     unsigned passwordSize,
     RenderCredentialsReceivedCallback onCredentialsReceived,
     RenderCredentialsRandomFiller credentialsRandomFiller,
-    RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser,
-    const List* usersList
+    RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser
 ) {
     assert(!this && usernameSize > 0 && passwordSize > 0);
     this = SDL_malloc(sizeof *this);
@@ -114,7 +113,7 @@ void renderInit(
     SDL_memset(this->messageText, 0, RENDER_MAX_MESSAGE_TEXT_SIZE);
     this->uiQueriesMutex = SDL_CreateMutex();
     assert(this->uiQueriesMutex);
-    this->usersList = usersList;
+    this->usersList = NULL;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -163,6 +162,36 @@ void renderInit(
     setStyle();
 
     this->colorf = (struct nk_colorf) { 0.10f, 0.18f, 0.24f, 1.00f };
+}
+
+List* renderInitUsersList(void) { return listInit((ListDeallocator) renderDestroyUser); }
+
+RenderUser* renderCreateUser(unsigned id, const char* name) {
+    assert(this);
+    bool foundNullTerminator = false;
+    for (unsigned i = 0; i < this->usernameSize; i++)
+        if (name[i] == '\0') {
+            assert(i <= this->usernameSize);
+            foundNullTerminator = true;
+            break;
+        }
+    assert(foundNullTerminator);
+
+    RenderUser* user = SDL_malloc(sizeof *user);
+    user->id = id;
+    user->name = SDL_calloc(this->usernameSize, sizeof(char));
+    SDL_memcpy(user->name, name, this->usernameSize);
+    return user;
+}
+
+void renderDestroyUser(RenderUser* user) {
+    SDL_free(user->name);
+    SDL_free(user);
+}
+
+void renderSetUsersList(const List* usersList) {
+    assert(this);
+    this->usersList = usersList;
 }
 
 void renderInputBegan(void) {
@@ -278,8 +307,14 @@ static void drawLoginPage(bool logIn) {
     if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
 }
 
+bool test = false; // TODO: test only
 static void drawUsersList(void) {
-
+    // TODO: test only
+    if (!test) for (unsigned i = 0; i < listSize(this->usersList); i++) {
+        RenderUser* user = (RenderUser*) listGet(this->usersList, i);
+        SDL_Log("dul %u %s", user->id, user->name);
+    }
+    test = true;
 }
 
 static void drawError(void) {

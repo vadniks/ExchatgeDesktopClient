@@ -17,7 +17,7 @@ typedef void (*RenderLogInRegisterPageQueriedByUserCallback)(bool logIn);
 
 typedef struct {
     unsigned id;
-    const char* name;
+    char* name;
     void (*onClicked)(unsigned id);
 } RenderUser;
 
@@ -28,10 +28,13 @@ void renderInit(
     unsigned passwordSize,
     RenderCredentialsReceivedCallback onCredentialsReceived,
     RenderCredentialsRandomFiller credentialsRandomFiller,
-    RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser,
-    const List* usersList // must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
+    RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser
 );
 
+List* renderInitUsersList(void);
+RenderUser* renderCreateUser(unsigned id, const char* name); // name (which is null-terminated string with (0, this->usernameSize] range sized length) is copied
+void renderDestroyUser(RenderUser* user);
+void renderSetUsersList(const List* usersList); // <RenderUser*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
 void renderInputBegan(void);
 void renderProcessEvent(SDL_Event* event);
 void renderInputEnded(void);

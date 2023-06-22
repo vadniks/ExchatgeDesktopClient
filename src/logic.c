@@ -11,17 +11,23 @@ THIS(
     List* usersList;
 )
 
-static void deallocateRenderUser(void* renderUser) { SDL_free(renderUser); }
-
 void logicInit(void) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
     this->netInitialized = false;
-    this->usersList = listInit(&deallocateRenderUser);
+    this->usersList = renderInitUsersList();
+
+    // TODO: test only
+    for (unsigned i = 0; i < 10; i++) {
+        char name[NET_USERNAME_SIZE];
+        SDL_memset(name, '0' + (int) i, NET_USERNAME_SIZE - 1);
+        name[NET_USERNAME_SIZE - 1] = '\0';
+        listAdd(this->usersList, renderCreateUser(i, name));
+    }
 }
 
 void logicNetListen(void) {
-    assert(this);
+    if (!this) return; // logic module might haven't been initialized by the time lifecycle module's netThread has started periodically calling this function to update connection
     if (!this->netInitialized) return;
     netListen();
 }
@@ -37,6 +43,7 @@ static void onMessageReceived(const byte* message) {
 
 static void onLogInResult(bool successful) {
     if (!successful) renderShowMessage("Logging in failed", true);
+    else renderShowUsersList();
 }
 
 static void onErrorReceived(int flag) {
