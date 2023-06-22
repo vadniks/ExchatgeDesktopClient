@@ -321,13 +321,16 @@ static void drawLoginPage(bool logIn) {
 }
 
 static void drawUserRow(const char* id, const char* name, int mode) { // -1 - stub, 0 - conversation doesn't exist, 1 - exists
-    nk_layout_row_dynamic(this->context, 0, 3);
+    bool group = false;
+    if (mode == -1) if (nk_group_begin(this->context, EMPTY_TEXT, NK_PANEL_NONE)) group = true;
+
+    nk_layout_row_dynamic(this->context, mode == -1 ? 10 : 0, 3);
     nk_label(this->context, id, NK_TEXT_ALIGN_LEFT);
     nk_label(this->context, name, NK_TEXT_ALIGN_CENTERED);
 
     if (mode == -1) {
         nk_spacer(this->context);
-        nk_spacer(this->context);
+        if (group) nk_group_end(this->context);
         return;
     }
 
