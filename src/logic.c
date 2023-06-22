@@ -84,6 +84,10 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
     logIn ? renderShowLogIn() : renderShowRegister();
 }
 
+void logicOnUserForConversationChosen(RenderConversationChooseVariants chooseVariant) {
+    SDL_Log("user for conversation chosen %d", chooseVariant);
+}
+
 void logicClean(void) {
     assert(this);
     listDestroy(this->usersList);

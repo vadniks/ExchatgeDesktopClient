@@ -22,6 +22,14 @@ typedef struct {
     void (*onClicked)(unsigned id);
 } RenderUser;
 
+typedef enum {
+    RENDER_DELETE_CONVERSATION = -1,
+    RENDER_START_CONVERSATION = false, // 0
+    RENDER_CONTINUE_CONVERSATION = true // 1
+} RenderConversationChooseVariants;
+
+typedef void (*RenderUserForConversationChosenCallback)(RenderConversationChooseVariants chooseVariant);
+
 extern const unsigned RENDER_MAX_MESSAGE_TEXT_SIZE;
 
 void renderInit(
@@ -29,7 +37,8 @@ void renderInit(
     unsigned passwordSize,
     RenderCredentialsReceivedCallback onCredentialsReceived,
     RenderCredentialsRandomFiller credentialsRandomFiller,
-    RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser
+    RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser,
+    RenderUserForConversationChosenCallback onUserForConversationChosen
 );
 
 List* renderInitUsersList(void);

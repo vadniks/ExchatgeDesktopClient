@@ -71,7 +71,8 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
         NET_UNHASHED_PASSWORD_SIZE,
         &logicOnCredentialsReceived,
         &logicCredentialsRandomFiller,
-        &logicOnLoginRegisterPageQueriedByUser
+        &logicOnLoginRegisterPageQueriedByUser,
+        &logicOnUserForConversationChosen
     );
     async(&showLogInUiDelayed);
     logicInit();

@@ -11,4 +11,5 @@ const List* logicUsersList(void); // returns permanent users list in which actua
 void logicOnCredentialsReceived(const char* username, const char* password, bool logIn);
 void logicCredentialsRandomFiller(char* credentials, unsigned size);
 void logicOnLoginRegisterPageQueriedByUser(bool logIn);
+void logicOnUserForConversationChosen(RenderConversationChooseVariants chooseVariant);
 void logicClean(void);

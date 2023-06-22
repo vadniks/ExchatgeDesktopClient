@@ -29,7 +29,9 @@ STATIC_CONST_STRING PASSWORD = "Password";
 STATIC_CONST_STRING PROCEED = "Proceed";
 STATIC_CONST_STRING CONNECTED_USERS = "Connected users";
 STATIC_CONST_STRING START_CONVERSATION = "Start conversation";
-STATIC_CONST_STRING CONTINUE_CONVERSATION = "Continue conversation"; // TODO: add possibility to delete conversation
+STATIC_CONST_STRING CONTINUE_CONVERSATION = "Continue conversation";
+STATIC_CONST_STRING DELETE_CONVERSATION = "Delete conversation";
+STATIC_CONST_STRING ACTIONS = "Actions";
 STATIC_CONST_STRING ID_TEXT = "Id";
 STATIC_CONST_STRING NAME_TEXT = "Name";
 STATIC_CONST_STRING EMPTY_TEXT = "";
@@ -59,6 +61,7 @@ THIS(
     char messageText[RENDER_MAX_MESSAGE_TEXT_SIZE];
     SDL_mutex* uiQueriesMutex;
     const List* usersList;
+    RenderUserForConversationChosenCallback onUserForConversationChosen;
 )
 #pragma clang diagnostic pop
 
@@ -100,7 +103,8 @@ void renderInit(
     unsigned passwordSize,
     RenderCredentialsReceivedCallback onCredentialsReceived,
     RenderCredentialsRandomFiller credentialsRandomFiller,
-    RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser
+    RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser,
+    RenderUserForConversationChosenCallback onUserForConversationChosen
 ) {
     assert(!this && usernameSize > 0 && passwordSize > 0);
     this = SDL_malloc(sizeof *this);
@@ -121,6 +125,7 @@ void renderInit(
     this->uiQueriesMutex = SDL_CreateMutex();
     assert(this->uiQueriesMutex);
     this->usersList = NULL;
+    this->onUserForConversationChosen = onUserForConversationChosen;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -315,19 +320,28 @@ static void drawLoginPage(bool logIn) {
     if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
 }
 
-typedef enum {
-    DURM_STAB = -1,
-    DURM_CONVERSATION_EXISTS = false,
-    DURM_CONVERSATION_DOESNT_EXISTS = true,
-} DrawUserRowModes;
-
-static void drawUserRow(const char* id, const char* name, DrawUserRowModes mode) {
+static void drawUserRow(const char* id, const char* name, int mode) { // -1 - stub, 0 - conversation doesn't exist, 1 - exists
+    nk_layout_row_dynamic(this->context, 0, 3);
     nk_label(this->context, id, NK_TEXT_ALIGN_LEFT);
     nk_label(this->context, name, NK_TEXT_ALIGN_CENTERED);
 
-    mode == DURM_STAB
-        ? nk_spacer(this->context)
-        : (void) nk_button_label(this->context, mode ? CONTINUE_CONVERSATION : START_CONVERSATION);
+    if (mode == -1) {
+        nk_spacer(this->context);
+        nk_spacer(this->context);
+        return;
+    }
+
+    if (mode)
+        nk_button_label(this->context, CONTINUE_CONVERSATION);
+    else
+        nk_button_label(this->context, START_CONVERSATION);
+
+    if (mode) {
+        nk_layout_row_dynamic(this->context, 0, 3);
+        nk_spacer(this->context);
+        nk_spacer(this->context);
+        nk_button_label(this->context, DELETE_CONVERSATION);
+    }
 }
 
 static void drawUsersList(void) {
@@ -335,16 +349,21 @@ static void drawUsersList(void) {
     nk_label(this->context, CONNECTED_USERS, NK_TEXT_ALIGN_CENTERED);
     nk_spacer(this->context);
 
-    nk_layout_row_dynamic(this->context, 0, 3);
-    drawUserRow(ID_TEXT, NAME_TEXT, DURM_STAB);
+    drawUserRow(ID_TEXT, NAME_TEXT, -1);
 
-    for (unsigned i = 0; i < listSize(this->usersList); i++) {
+    const unsigned size = listSize(this->usersList);
+    for (unsigned i = 0; i < size; i++) {
         RenderUser* user = (RenderUser*) listGet(this->usersList, i);
 
         char idString[MAX_U32_DEC_DIGITS_COUNT];
         assert(SDL_snprintf(idString, MAX_U32_DEC_DIGITS_COUNT, "%u", user->id) <= (int) MAX_U32_DEC_DIGITS_COUNT);
 
         drawUserRow(idString, user->name, user->conversationExists);
+
+        if (i < size - 1) {
+            nk_layout_row_dynamic(this->context, 0, 3);
+            nk_spacer(this->context);
+        }
     }
 }
 
