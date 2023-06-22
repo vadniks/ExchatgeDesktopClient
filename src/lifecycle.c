@@ -49,11 +49,7 @@ static unsigned synchronizeThreadUpdates(void) {
 static void onMessageReceived(const byte* message) {} // TODO
 
 static void onLogInResult(bool successful) {
-    SDL_Log("logging in %s", successful ? "succeeded" : "failed"); // TODO: test only
-
-    byte* body = SDL_calloc(netMessageBodySize(), sizeof(char));
-    if (successful) netSend(0x7fffffff, body, netMessageBodySize(), 0x7ffffffe);
-    SDL_free(body);
+    if (!successful) renderShowMessage("Logging in failed", true);
 }
 
 static void onErrorReceived(int flag) {
@@ -85,7 +81,7 @@ static void async(void (*action)(void)) {
     ));
 }
 
-static void hideUiErrorDelayed(void) {
+static void hideUiMessageDelayed(void) {
     sleep(3);
     renderHideMessage();
 }
@@ -94,10 +90,9 @@ static void onCredentialsReceived(
     const char* username,
     const char* password,
     bool logIn
-) {// TODO: expose net module's flags in it's header
-    SDL_Log("credentials received %s %s %c", username, password, logIn ? 't' : 'f');
-
-    if (!this->netInitialized) this->netInitialized = netInit(
+) {
+    assert(!this->netInitialized);
+    this->netInitialized = netInit(
         &onMessageReceived,
         &onLogInResult,
         &onErrorReceived,
@@ -105,14 +100,12 @@ static void onCredentialsReceived(
         &onDisconnected
     );
 
-    SDL_Log("%s", this->netInitialized ? "net initialized" : "net isn't initialized"); // TODO: test only
-
-    if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
-
     if (!this->netInitialized) {
         renderShowMessage("Unable to connect to the server", true); // TODO: create message queue
-        async(&hideUiErrorDelayed);
+        async(&hideUiMessageDelayed);
     }
+
+    if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
 }
 
 static void showLogInUiDelayed(void) { // causes render module to show splash page until logIn page is queried one second later
@@ -123,9 +116,7 @@ static void showLogInUiDelayed(void) { // causes render module to show splash pa
 static void credentialsRandomFiller(char* credentials, unsigned size)
 { cryptoFillWithRandomBytes((byte*) credentials, size); }
 
-static void onLoginRegisterPageQueriedByUser(bool logIn) {
-    SDL_Log("%s", logIn ? "log in page requested" : "register page requested");
-}
+static void onLoginRegisterPageQueriedByUser(bool logIn) { logIn ? renderShowLogIn() : renderShowRegister(); }
 
 bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
     this = SDL_malloc(sizeof *this);
