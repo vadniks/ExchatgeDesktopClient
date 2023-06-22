@@ -2,8 +2,6 @@
 #include <assert.h>
 //#include "nuklearDefs.h" - cmake automatically includes precompiled version of this header
 #include "../defs.h"
-#include "collections/queue.h"
-#include "collections/list.h"
 #include "render.h"
 
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
@@ -83,8 +81,6 @@ static void setStyle(void) {
     nk_style_from_table(this->context, table);
 }
 
-static void test(void* value) { SDL_Log("list4 %u", *((unsigned*) value)); } // TODO: test only
-
 void renderInit(
     unsigned usernameSize,
     unsigned passwordSize,
@@ -153,25 +149,6 @@ void renderInit(
     setStyle();
 
     this->colorf = (struct nk_colorf) { 0.10f, 0.18f, 0.24f, 1.00f };
-
-    // TODO: create queue for system messages
-    unsigned ints[5] = {0, 1, 2, 3, 4}; // TODO: test only
-    Queue* queue = queueInit();
-    for (unsigned i = 0; i < 5; i++) queuePush(queue, &(ints[i]));
-    for (unsigned i = 0; i < 5; i++) SDL_Log("queue %u", *((unsigned*) queuePop(queue)));
-    queuePush(queue, &(ints[0]));
-    queuePush(queue, &(ints[1]));
-    queuePop(queue);
-    SDL_Log("queue2 %u", queueSize(queue));
-    queueDestroy(queue);
-
-    // TODO: test only
-    List* list = listInit();
-    for (unsigned i = 0; i < 5; i++) listAdd(list, ints + i);
-    for (unsigned i = 0; i < 5; i++) SDL_Log("list %u", *((unsigned*) listGet(list, i)));
-    listIterateOver(list, true, &test);
-    listIterateOver(list, false, &test);
-    listDestroy(list);
 }
 
 void renderInputBegan(void) {
