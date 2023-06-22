@@ -40,6 +40,10 @@ set(LIB_RENDER_NAME "render")
 add_subdirectory(src/render)
 target_link_libraries(${PROJECT_NAME} ${LIB_RENDER_NAME})
 
+set(LIB_COLLECTIONS_NAME "collections")
+add_subdirectory(src/collections)
+target_link_libraries(${PROJECT_NAME} ${LIB_COLLECTIONS_NAME})
+
 file(COPY res DESTINATION ${CMAKE_BINARY_DIR})
 
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)

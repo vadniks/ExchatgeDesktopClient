@@ -3,6 +3,8 @@
 #include <assert.h>
 #include "queue.h"
 
+STATIC_CONST_UNSIGNED VOID_PTR_SIZE = sizeof(void*);
+
 struct Queue_t {
     void** values;
     unsigned size;
@@ -15,16 +17,16 @@ Queue* queueInit(void) {
     return queue;
 }
 
-void queuePush(Queue* queue, void* value) {
+void queuePush(Queue* queue, void* nullable value) {
     assert(queue && queue->size < 0xfffffffe);
-    queue->values = SDL_realloc(queue->values, ++(queue->size) * sizeof(void*));
+    queue->values = SDL_realloc(queue->values, ++(queue->size) * VOID_PTR_SIZE);
     queue->values[queue->size - 1] = value;
 }
 
-void* queuePop(Queue* queue) {
-    assert(queue && queue->values);
+void* nullable queuePop(Queue* queue) {
+    assert(queue && queue->values && queue->size > 0);
     void* value = queue->values[--(queue->size)];
-    queue->values = SDL_realloc(queue->values, queue->size * sizeof(void*));
+    queue->values = SDL_realloc(queue->values, queue->size * VOID_PTR_SIZE);
     return value;
 }
 
