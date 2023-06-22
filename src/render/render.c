@@ -320,13 +320,13 @@ static void drawLoginPage(bool logIn) {
     if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
 }
 
-static void drawUserRow(const char* id, const char* name, int mode) { // -1 - stub, 0 - conversation doesn't exist, 1 - exists
+static void drawUserRow(const char* nullable id, const char* nullable name, int mode) { // mode: -1 - stub, 0 - conversation doesn't exist, 1 - exists
     bool group = false;
     if (mode == -1) if (nk_group_begin(this->context, EMPTY_TEXT, NK_PANEL_NONE)) group = true;
 
     nk_layout_row_dynamic(this->context, mode == -1 ? 10 : 0, 3);
-    nk_label(this->context, id, NK_TEXT_ALIGN_LEFT);
-    nk_label(this->context, name, NK_TEXT_ALIGN_CENTERED);
+    nk_label(this->context, id ? id : ID_TEXT, NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, name ? name : NAME_TEXT, NK_TEXT_ALIGN_CENTERED);
 
     if (mode == -1) {
         nk_spacer(this->context);
@@ -352,7 +352,7 @@ static void drawUsersList(void) {
     nk_label(this->context, CONNECTED_USERS, NK_TEXT_ALIGN_CENTERED);
     nk_spacer(this->context);
 
-    drawUserRow(ID_TEXT, NAME_TEXT, -1);
+    drawUserRow(NULL, NULL, -1);
 
     const unsigned size = listSize(this->usersList);
     for (unsigned i = 0; i < size; i++) {
