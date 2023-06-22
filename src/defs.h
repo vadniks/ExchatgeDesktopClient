@@ -8,7 +8,7 @@
 #define staticAssert(x) _Static_assert(x, "")
 
 #ifdef __clang__
-#   define nullable _Nullable
+#   define nullable _Nullable // all pointers without nullable attribute in their declarations are treated as non-nullable pointers in this project
 #else
 #   define nullable
 #endif
