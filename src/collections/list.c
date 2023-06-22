@@ -9,12 +9,14 @@ STATIC_CONST_UNSIGNED MAX_SIZE = 0xfffffffe;
 struct List_t {
     void** values;
     unsigned size;
+    ListDeallocator nullable deallocator;
 };
 
-List* listInit(void) {
+List* listInit(ListDeallocator nullable deallocator) {
     List* list = SDL_malloc(sizeof *list);
     list->values = NULL;
     list->size = 0;
+    list->deallocator = deallocator;
     return list;
 }
 
@@ -43,8 +45,14 @@ void listIterateOver(const List* list, bool fromStart, void (*action)(void*)) {
         for (unsigned i = list->size > 0 ? list->size - 1 : 0; i > 0; (*action)(list->values[i--]));
 }
 
+static void destroyValuesIfNotEmpty(List* list) {
+    if (!list->deallocator) return;
+    for (unsigned i = 0; i < list->size; list->deallocator(list->values[i++]));
+}
+
 void listDestroy(List* list) {
     assert(list);
+    destroyValuesIfNotEmpty(list);
     SDL_free(list->values);
     SDL_free(list);
 }

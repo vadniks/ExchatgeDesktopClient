@@ -17,6 +17,7 @@ STATIC_CONST_UNSIGNED STATE_INITIAL = 0;
 STATIC_CONST_UNSIGNED STATE_LOG_IN = 1;
 STATIC_CONST_UNSIGNED STATE_REGISTER = 2;
 STATIC_CONST_UNSIGNED STATE_USERS_LIST = 3;
+STATIC_CONST_UNSIGNED STATE_MESSAGE_EXCHANGE = 4;
 
 STATIC_CONST_STRING TITLE = "Exchatge";
 STATIC_CONST_STRING SUBTITLE = "A secured message exchanger";
@@ -266,6 +267,10 @@ static void drawLoginPage(bool logIn) {
     if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
 }
 
+static void drawUsersList(void) {
+
+}
+
 static void drawError(void) {
     nk_spacer(this->context);
     nk_layout_row_dynamic(this->context, 0, 1);
@@ -296,7 +301,7 @@ static void drawPage(void) {
             drawLoginPage(false);
             break;
         case STATE_USERS_LIST:
-
+            drawUsersList();
             break;
         default: assert(false);
     }

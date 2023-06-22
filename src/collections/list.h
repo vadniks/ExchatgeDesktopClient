@@ -7,9 +7,11 @@
 struct List_t;
 typedef struct List_t List;
 
-List* listInit(void);
+typedef void (*ListDeallocator)(void*);
+
+List* listInit(ListDeallocator nullable deallocator);
 void listAdd(List* list, void* nullable value);
 void* nullable listGet(const List* list, unsigned index);
 unsigned listSize(const List* list);
 void listIterateOver(const List* list, bool fromStart, void (*action)(void*));
-void listDestroy(List* list); // all values inside a list must be deallocated before calling this function
+void listDestroy(List* list); // all values that are still remain inside a queue at a time destroy is called are deallocated via supplied deallocator if it's not null
