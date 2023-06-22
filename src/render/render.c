@@ -4,6 +4,10 @@
 #include "../defs.h"
 #include "render.h"
 
+#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->uiQueriesMutex));
+#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->uiQueriesMutex));
+#define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
+
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
 STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
 STATIC_CONST_UNSIGNED WINDOW_MINIMAL_WIDTH = WINDOW_WIDTH / 2;
@@ -33,7 +37,7 @@ THIS(
     SDL_Renderer* renderer;
     struct nk_context* context;
     struct nk_colorf colorf;
-    volatile unsigned state;
+    unsigned state;
     unsigned usernameSize;
     unsigned passwordSize;
     RenderCredentialsReceivedCallback onCredentialsReceived;
@@ -42,9 +46,10 @@ THIS(
     unsigned enteredPasswordSize;
     char* enteredCredentialsBuffer;
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser;
-    volatile bool showMessage;
-    volatile bool isErrorMessage;
+    bool showMessage;
+    bool isErrorMessage;
     char messageText[RENDER_MAX_MESSAGE_TEXT_SIZE];
+    SDL_mutex* uiQueriesMutex;
 )
 #pragma clang diagnostic pop
 
@@ -101,6 +106,8 @@ void renderInit(
     this->enteredPasswordSize = 0;
     this->enteredCredentialsBuffer = SDL_calloc(this->usernameSize + this->passwordSize, sizeof(char));
     this->onLoginRegisterPageQueriedByUser = onLoginRegisterPageQueriedByUser;
+    this->uiQueriesMutex = SDL_CreateMutex();
+    assert(this->uiQueriesMutex);
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -166,23 +173,25 @@ void renderInputEnded(void) {
     nk_input_end(this->context);
 }
 
-void renderShowLogIn(void) { // TODO: make all showPage functions atomic/synchronized, allowing calling such functions from different threads
+void renderShowLogIn(void) {
     assert(this);
-    this->state = STATE_LOG_IN;
+    SYNCHRONIZED(this->state = STATE_LOG_IN;)
 }
 
 void renderShowRegister(void) {
     assert(this);
-    this->state = STATE_REGISTER;
+    SYNCHRONIZED(this->state = STATE_REGISTER;)
 }
 
 void renderShowUsersList(void) {
     assert(this);
-    this->state = STATE_USERS_LIST;
+    SYNCHRONIZED(this->state = STATE_USERS_LIST;)
 }
 
 void renderShowMessage(const char* message, bool error) {
     assert(this);
+
+    SYNCHRONIZED_BEGIN
     SDL_memset(this->messageText, 0, RENDER_MAX_MESSAGE_TEXT_SIZE);
 
     bool foundNullTerminator = false;
@@ -199,11 +208,12 @@ void renderShowMessage(const char* message, bool error) {
 
     this->isErrorMessage = error;
     this->showMessage = true;
+    SYNCHRONIZED_END
 }
 
 void renderHideMessage(void) {
     assert(this);
-    this->showMessage = false;
+    SYNCHRONIZED(this->showMessage = false;)
 }
 
 static void drawSplashPage(void) {
@@ -321,6 +331,7 @@ void renderDraw(void) {
 void renderClean(void) {
     if (!this) return;
 
+    SDL_DestroyMutex(this->uiQueriesMutex);
     SDL_free(this->enteredCredentialsBuffer);
 
     nk_sdl_shutdown();

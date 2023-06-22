@@ -1,5 +1,5 @@
 
-#include <sdl/SDL.h>
+#include <sdl/SDL_stdinc.h>
 #include <assert.h>
 #include "queue.h"
 
