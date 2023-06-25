@@ -77,7 +77,8 @@ bool lifecycleInit(unsigned argc, const char** argv) { // TODO: expose net modul
         &logicOnUserForConversationChosen,
         NET_MESSAGE_BODY_SIZE,
         NET_USERNAME_SIZE,
-        &logicOnServerShutdownRequested
+        &logicOnServerShutdownRequested,
+        NET_MESSAGE_BODY_SIZE
     );
     async(&showLogInUiDelayed);
     logicInit(argc, argv, &async, &delayed);

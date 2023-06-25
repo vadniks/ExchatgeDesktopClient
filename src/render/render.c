@@ -39,6 +39,7 @@ STATIC_CONST_STRING WELCOME_ADMIN = "Welcome admin!";
 STATIC_CONST_STRING SHUTDOWN_SERVER = "Shutdown the server";
 STATIC_CONST_STRING DISCONNECTED_TEXT = "Disconnected";
 STATIC_CONST_STRING UNABLE_TO_CONNECT_TO_THE_SERVER_TEXT = "Unable to connect to the server";
+STATIC_CONST_STRING SEND_TEXT = "Send";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -72,6 +73,9 @@ THIS(
     unsigned conversationNameSize;
     bool adminMode;
     RenderOnServerShutdownRequested onServerShutdownRequested;
+    unsigned conversationMessageSize;
+    char* conversationMessage;
+    unsigned enteredConversationMessageSize;
 )
 #pragma clang diagnostic pop
 
@@ -117,7 +121,8 @@ void renderInit(
     RenderUserForConversationChosenCallback onUserForConversationChosen,
     unsigned maxMessageSize,
     unsigned conversationNameSize,
-    RenderOnServerShutdownRequested onServerShutdownRequested
+    RenderOnServerShutdownRequested onServerShutdownRequested,
+    unsigned conversationMessageSize
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -155,6 +160,9 @@ void renderInit(
 
     this->adminMode = false;
     this->onServerShutdownRequested = onServerShutdownRequested;
+    this->conversationMessageSize = conversationMessageSize;
+    this->conversationMessage = SDL_calloc(this->conversationMessageSize, sizeof(char));
+    this->enteredConversationMessageSize = 0;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -426,7 +434,7 @@ static void drawLoginPage(bool logIn) {
         this->enteredCredentialsBuffer,
         (int*) &(this->enteredUsernameSize),
         (int) this->usernameSize,
-        nk_filter_default
+        &nk_filter_default
     );
 
     nk_label(this->context, PASSWORD, NK_TEXT_ALIGN_LEFT);
@@ -437,7 +445,7 @@ static void drawLoginPage(bool logIn) {
         this->enteredCredentialsBuffer + this->usernameSize,
         (int*) &(this->enteredPasswordSize),
         (int) this->passwordSize,
-        nk_filter_default
+        &nk_filter_default
     );
 
     nk_layout_row_dynamic(this->context, 0, 2);
@@ -517,15 +525,15 @@ static void drawUsersList(void) {
 }
 
 static void drawConversation(void) {
+    const float height = (float) this->height * 0.925f;
+
     char title[this->conversationNameSize + 1];
     SDL_memcpy(title, this->conversationName, this->conversationNameSize);
 
-    nk_layout_row_dynamic(this->context, 0, 1);
+    nk_layout_row_dynamic(this->context, height * 0.05f, 1);
     nk_label(this->context, title, NK_TEXT_ALIGN_CENTERED);
-    nk_spacer(this->context);
 
-    nk_layout_row_dynamic(this->context, (float) this->height * 0.75f, 1);
-
+    nk_layout_row_dynamic(this->context, height * 0.85f, 1);
     if (!nk_group_begin(this->context, title, 0)) return;
     nk_layout_row_dynamic(this->context, 0, 2);
 
@@ -547,6 +555,22 @@ static void drawConversation(void) {
     }
 
     nk_group_end(this->context);
+
+    nk_layout_row_begin(this->context, NK_DYNAMIC, height * 0.1f, 2);
+    nk_layout_row_push(this->context, 0.85f);
+
+    nk_edit_string(
+        this->context,
+        NK_EDIT_BOX | NK_EDIT_MULTILINE | NK_EDIT_EDITOR,
+        this->conversationMessage,
+        (int*) &(this->enteredConversationMessageSize),
+        (int) this->conversationMessageSize,
+        nk_filter_default
+    );
+
+    nk_layout_row_push(this->context, 0.15f);
+    if (nk_button_label(this->context, SEND_TEXT)) SDL_Log("send clicked"); // TODO
+    nk_layout_row_end(this->context);
 }
 
 static void drawError(void) {
@@ -615,6 +639,7 @@ void renderDraw(void) {
 void renderClean(void) {
     if (!this) return;
 
+    SDL_free(this->conversationMessage);
     SDL_free(this->conversationName);
 
     SDL_DestroyMutex(this->uiQueriesMutex);

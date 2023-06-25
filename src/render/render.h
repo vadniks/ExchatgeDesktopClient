@@ -49,7 +49,8 @@ void renderInit(
     RenderUserForConversationChosenCallback onUserForConversationChosen,
     unsigned maxMessageSize,
     unsigned conversationNameSize,
-    RenderOnServerShutdownRequested onServerShutdownRequested
+    RenderOnServerShutdownRequested onServerShutdownRequested,
+    unsigned conversationMessageSize
 );
 void renderSetAdminMode(bool mode);
 
