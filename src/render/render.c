@@ -524,6 +524,9 @@ static void drawConversation(void) {
     nk_label(this->context, title, NK_TEXT_ALIGN_CENTERED);
     nk_spacer(this->context);
 
+    nk_layout_row_dynamic(this->context, (float) this->height * 0.75f, 1);
+
+    if (!nk_group_begin(this->context, title, 0)) return;
     nk_layout_row_dynamic(this->context, 0, 2);
 
     const unsigned size = listSize(this->messagesList);
@@ -542,6 +545,8 @@ static void drawConversation(void) {
             nk_spacer(this->context);
         }
     }
+
+    nk_group_end(this->context);
 }
 
 static void drawError(void) {
@@ -561,8 +566,6 @@ static void drawError(void) {
 }
 
 static void drawPage(void) {
-    nk_spacer(this->context);
-
     switch (this->state) {
         case STATE_INITIAL:
             drawSplashPage();
