@@ -21,7 +21,7 @@ STATIC_CONST_UNSIGNED STATE_USERS_LIST = 3;
 STATIC_CONST_UNSIGNED STATE_CONVERSATION = 4;
 
 STATIC_CONST_STRING TITLE = "Exchatge";
-STATIC_CONST_STRING SUBTITLE = "A secured message exchanger";
+STATIC_CONST_STRING SUBTITLE = "A secured text exchanger";
 STATIC_CONST_STRING LOG_IN = "Log in";
 STATIC_CONST_STRING REGISTER = "Register";
 STATIC_CONST_STRING USERNAME = "Username";
@@ -57,12 +57,14 @@ THIS(
     unsigned enteredPasswordSize;
     char* enteredCredentialsBuffer;
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser;
-    bool showMessage;
-    bool isErrorMessage;
-    char messageText[RENDER_MAX_MESSAGE_TEXT_SIZE];
+    bool showSystemMessage;
+    bool isErrorMessageSystem;
+    char systemMessageText[RENDER_MAX_MESSAGE_TEXT_SIZE]; // message from the system (application)
     SDL_mutex* uiQueriesMutex;
-    const List* usersList;
+    const List* usersList; // allocated elsewhere
     RenderUserForConversationChosenCallback onUserForConversationChosen;
+    const List* messagesList; // allocated elsewhere, conversation messages
+    unsigned maxMessageSize;
 )
 #pragma clang diagnostic pop
 
@@ -105,7 +107,8 @@ void renderInit(
     RenderCredentialsReceivedCallback onCredentialsReceived,
     RenderCredentialsRandomFiller credentialsRandomFiller,
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser,
-    RenderUserForConversationChosenCallback onUserForConversationChosen
+    RenderUserForConversationChosenCallback onUserForConversationChosen,
+    unsigned maxMessageSize
 ) {
     assert(!this && usernameSize > 0 && passwordSize > 0);
     this = SDL_malloc(sizeof *this);
@@ -120,13 +123,15 @@ void renderInit(
     this->enteredPasswordSize = 0;
     this->enteredCredentialsBuffer = SDL_calloc(this->usernameSize + this->passwordSize, sizeof(char));
     this->onLoginRegisterPageQueriedByUser = onLoginRegisterPageQueriedByUser;
-    this->showMessage = false;
-    this->isErrorMessage = false;
-    SDL_memset(this->messageText, 0, RENDER_MAX_MESSAGE_TEXT_SIZE);
+    this->showSystemMessage = false;
+    this->isErrorMessageSystem = false;
+    SDL_memset(this->systemMessageText, 0, RENDER_MAX_MESSAGE_TEXT_SIZE);
     this->uiQueriesMutex = SDL_CreateMutex();
     assert(this->uiQueriesMutex);
     this->usersList = NULL;
     this->onUserForConversationChosen = onUserForConversationChosen;
+    this->messagesList = NULL;
+    this->maxMessageSize = maxMessageSize;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -208,6 +213,33 @@ void renderSetUsersList(const List* usersList) {
     this->usersList = usersList;
 }
 
+List* renderInitMessagesList(void) { return listInit((ListDeallocator) &renderDestroyMessage); }
+
+RenderMessage* renderCreateMessage(unsigned long timestamp, bool fromThisClient, const char* text, unsigned size) {
+    assert(this && size > 0 && size - 1 <= this->maxMessageSize);
+
+    RenderMessage* message = SDL_malloc(sizeof *message);
+    message->timestamp = timestamp;
+    message->fromThisClient = fromThisClient;
+
+    message->text = SDL_calloc(size, this->maxMessageSize); // sets all bytes to zero so the string consists only of null-terminators so no need to insert one
+    SDL_memcpy(message->text, text, size);
+
+    message->size = size;
+
+    return message;
+}
+
+void renderDestroyMessage(RenderMessage* message) {
+    SDL_free(message->text);
+    SDL_free(message);
+}
+
+void renderSetMessagesList(const List* messagesList) {
+    assert(this);
+    this->messagesList = messagesList;
+}
+
 void renderInputBegan(void) {
     assert(this);
     nk_input_begin(this->context);
@@ -250,15 +282,15 @@ void renderShowMessageExchange(void) {
     SYNCHRONIZED(this->state = STATE_CONVERSATION;)
 }
 
-void renderShowMessage(const char* message, bool error) {
+void renderShowSystemMessage(const char* message, bool error) {
     assert(this);
 
     SYNCHRONIZED_BEGIN
-    SDL_memset(this->messageText, 0, RENDER_MAX_MESSAGE_TEXT_SIZE);
+    SDL_memset(this->systemMessageText, 0, RENDER_MAX_MESSAGE_TEXT_SIZE);
 
     bool foundNullTerminator = false;
     for (unsigned i = 0; i < RENDER_MAX_MESSAGE_TEXT_SIZE; i++) {
-        this->messageText[i] = message[i];
+        this->systemMessageText[i] = message[i];
 
         if (message[i] == '\0') {
             assert(i > 0);
@@ -268,28 +300,28 @@ void renderShowMessage(const char* message, bool error) {
     }
     assert(foundNullTerminator);
 
-    this->isErrorMessage = error;
-    this->showMessage = true;
+    this->isErrorMessageSystem = error;
+    this->showSystemMessage = true;
     SYNCHRONIZED_END
 }
 
-void renderHideMessage(void) {
+void renderHideSystemMessage(void) {
     assert(this);
     SYNCHRONIZED_BEGIN
 
-    this->showMessage = false;
-    this->isErrorMessage = false;
+    this->showSystemMessage = false;
+    this->isErrorMessageSystem = false;
 
     SYNCHRONIZED_END
 }
 
-void renderShowError(void) {
+void renderShowSystemError(void) {
     assert(this);
     SYNCHRONIZED_BEGIN
 
-    SDL_memcpy(this->messageText, ERROR_TEXT, 6); // Error + \0 = 6 chars
-    this->isErrorMessage = true;
-    this->showMessage = true;
+    SDL_memcpy(this->systemMessageText, ERROR_TEXT, 6); // Error + \0 = 6 chars
+    this->isErrorMessageSystem = true;
+    this->showSystemMessage = true;
 
     SYNCHRONIZED_END
 }
@@ -413,14 +445,14 @@ static void drawError(void) {
     nk_spacer(this->context);
     nk_layout_row_dynamic(this->context, 0, 1);
 
-    if (this->isErrorMessage) nk_label_colored(
+    if (this->isErrorMessageSystem) nk_label_colored(
         this->context,
-        this->messageText,
+        this->systemMessageText,
         NK_TEXT_ALIGN_CENTERED | NK_TEXT_ALIGN_BOTTOM,
         (struct nk_color) { 0xff, 0, 0, 0xff }
     ); else nk_label(
         this->context,
-        this->messageText,
+        this->systemMessageText,
         NK_TEXT_ALIGN_CENTERED | NK_TEXT_ALIGN_BOTTOM
     );
 }
@@ -447,7 +479,7 @@ static void drawPage(void) {
         default: assert(false);
     }
 
-    if (this->showMessage) drawError();
+    if (this->showSystemMessage) drawError();
 }
 
 void renderDraw(void) {

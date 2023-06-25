@@ -33,7 +33,7 @@ STATIC_CONST_UNSIGNED TOKEN_TRAILING_SIZE = 16;
 STATIC_CONST_UNSIGNED TOKEN_UNSIGNED_VALUE_SIZE = 2 * INT_SIZE; // 8
 STATIC_CONST_UNSIGNED TOKEN_SIZE = TOKEN_UNSIGNED_VALUE_SIZE + 40 + TOKEN_TRAILING_SIZE; // 64
 STATIC_CONST_UNSIGNED MESSAGE_HEAD_SIZE = INT_SIZE * 6 + LONG_SIZE + TOKEN_SIZE; // 96
-STATIC_CONST_UNSIGNED MESSAGE_BODY_SIZE = MESSAGE_SIZE - MESSAGE_HEAD_SIZE; // 928
+const unsigned NET_MESSAGE_BODY_SIZE = MESSAGE_SIZE - MESSAGE_HEAD_SIZE; // 928
 
 FLAG(PROCEED, 0x00000000)
 FLAG(FINISH, 0x00000001)
@@ -97,7 +97,7 @@ typedef struct {
 
 typedef struct {
     MessageHead;
-    byte body[MESSAGE_BODY_SIZE]; // payload
+    byte body[NET_MESSAGE_BODY_SIZE]; // payload
 } Message;
 
 staticAssert(sizeof(MessageHead) == 96 && sizeof(Message) == 1024 && sizeof(Message) - sizeof(MessageHead) == 928);
@@ -202,11 +202,6 @@ void netRegister(const char* username, const char* password) {
     SDL_free(credentials);
 }
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "ConstantFunctionResult"
-unsigned netMessageBodySize(void) { return MESSAGE_BODY_SIZE; } // reveals only one constant to the users of this api
-#pragma clang diagnostic pop
-
 static Message* unpackMessage(const byte* buffer) {
     Message* msg = SDL_malloc(sizeof *msg);
 
@@ -218,7 +213,7 @@ static Message* unpackMessage(const byte* buffer) {
     SDL_memcpy(&(msg->from), buffer + INT_SIZE * 4 + LONG_SIZE, INT_SIZE);
     SDL_memcpy(&(msg->to), buffer + INT_SIZE * 5 + LONG_SIZE, INT_SIZE);
     SDL_memcpy(&(msg->token), buffer + INT_SIZE * 6 + LONG_SIZE, TOKEN_SIZE);
-    SDL_memcpy(&(msg->body), buffer + MESSAGE_HEAD_SIZE, MESSAGE_BODY_SIZE);
+    SDL_memcpy(&(msg->body), buffer + MESSAGE_HEAD_SIZE, NET_MESSAGE_BODY_SIZE);
 
     return msg;
 }
@@ -234,7 +229,7 @@ static byte* packMessage(const Message* msg) {
     SDL_memcpy(buffer + INT_SIZE * 4 + LONG_SIZE, &(msg->from), INT_SIZE);
     SDL_memcpy(buffer + INT_SIZE * 5 + LONG_SIZE, &(msg->to), INT_SIZE);
     SDL_memcpy(buffer + INT_SIZE * 6 + LONG_SIZE, &(msg->token), TOKEN_SIZE);
-    SDL_memcpy(buffer + MESSAGE_HEAD_SIZE, &(msg->body), MESSAGE_BODY_SIZE);
+    SDL_memcpy(buffer + MESSAGE_HEAD_SIZE, &(msg->body), NET_MESSAGE_BODY_SIZE);
 
     return buffer;
 }
@@ -315,7 +310,7 @@ void netListen(void) {
 }
 
 void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
-    assert(this && size > 0 && size <= MESSAGE_BODY_SIZE);
+    assert(this && size > 0 && size <= NET_MESSAGE_BODY_SIZE);
 
     Message message = {
         {

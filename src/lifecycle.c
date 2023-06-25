@@ -74,11 +74,13 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
         &logicOnCredentialsReceived,
         &logicCredentialsRandomFiller,
         &logicOnLoginRegisterPageQueriedByUser,
-        &logicOnUserForConversationChosen
+        &logicOnUserForConversationChosen,
+        NET_MESSAGE_BODY_SIZE
     );
     async(&showLogInUiDelayed);
     logicInit(&async, &delayed);
     renderSetUsersList(logicUsersList());
+    renderSetMessagesList(logicMessagesList());
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(
         UI_UPDATE_PERIOD,

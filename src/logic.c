@@ -13,6 +13,7 @@ THIS(
     List* usersList;
     LogicAsyncTask asyncTask;
     LogicDelayedTask delayedTask;
+    List* messagesList;
 )
 #pragma clang diagnostic pop
 
@@ -23,6 +24,7 @@ void logicInit(LogicAsyncTask asyncTask, LogicDelayedTask delayedTask) {
     this->usersList = renderInitUsersList();
     this->asyncTask = asyncTask;
     this->delayedTask = delayedTask;
+    this->messagesList = renderInitMessagesList();
 
     // TODO: test only
     for (unsigned i = 0; i < 100; i++) {
@@ -44,17 +46,22 @@ const List* logicUsersList(void) {
     return this->usersList;
 }
 
+const List* logicMessagesList(void) {
+    assert(this);
+    return this->messagesList;
+}
+
 static void onMessageReceived(const byte* message) {
 
 }
 
 static void onLogInResult(bool successful) {
     if (successful) {
-        renderHideMessage();
+        renderHideSystemMessage();
         renderShowUsersList();
     } else {
         renderShowLogIn();
-        renderShowError();
+        renderShowSystemError();
     }
 }
 
@@ -81,7 +88,7 @@ void logicOnCredentialsReceived(const char* username, const char* password, bool
         &onDisconnected
     );
 
-    if (!this->netInitialized) renderShowMessage("Unable to connect to the server", true); // TODO: create message queue
+    if (!this->netInitialized) renderShowSystemMessage("Unable to connect to the server", true); // TODO: create text queue
     if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
 }
 
@@ -92,7 +99,7 @@ void logicCredentialsRandomFiller(char* credentials, unsigned size) {
 
 void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
     assert(this);
-    renderHideMessage();
+    renderHideSystemMessage();
     logIn ? renderShowLogIn() : renderShowRegister();
 }
 
@@ -103,6 +110,7 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
 void logicClean(void) {
     assert(this);
     listDestroy(this->usersList);
+    listDestroy(this->messagesList);
     if (this->netInitialized) netClean();
     SDL_free(this);
 }

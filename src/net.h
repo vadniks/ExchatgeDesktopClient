@@ -11,6 +11,7 @@ typedef void (*NetCallback)(void);
 
 extern const unsigned NET_USERNAME_SIZE;
 extern const unsigned NET_UNHASHED_PASSWORD_SIZE;
+extern const unsigned NET_MESSAGE_BODY_SIZE;
 
 bool netInit(
     NetMessageReceivedCallback onMessageReceived,
@@ -22,7 +23,6 @@ bool netInit(
 
 void netLogIn(const char* username, const char* password); // in case of failure the server disconnects client
 void netRegister(const char* username, const char* password); // the server disconnects client regardless of the result, but it sends messages with the result
-unsigned netMessageBodySize(void);
 void netListen(void);
 void netSend(int flag, const byte* body, unsigned size, unsigned xTo);
 void netClean(void);
