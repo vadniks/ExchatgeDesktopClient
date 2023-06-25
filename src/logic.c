@@ -105,7 +105,7 @@ static void processCredentials(void** data) {
     bool logIn = *((bool*) data[2]);
 
     assert(this); // TODO: thread data race possible when app has been exited but the thread still executes - might cause dereference error
-    this->netInitialized = netInit(
+    this->netInitialized = netInit( // TODO: to solve this issue save references to all threads and wait for them in module's clean function
         &onMessageReceived,
         &onLogInResult,
         &onErrorReceived,

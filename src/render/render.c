@@ -371,34 +371,36 @@ void renderShowSystemError(void) { showSystemError(ERROR_TEXT, 6); }
 void renderShowDisconnectedSystemMessage(void) { showSystemError(DISCONNECTED_TEXT, 13); }
 void renderShowUnableToConnectToTheServerSystemMessage(void) { showSystemError(UNABLE_TO_CONNECT_TO_THE_SERVER_TEXT, 32); }
 
-static void drawSplashPage(void) {
-    static char anim = '|'; // value is saved between function calls
+static void drawInfiniteProgressbar(char* animRef, unsigned* counterRef) {
     const unsigned maxCounterValue = 60 / 12; // 5 - 12 times slower than screen update
-    static unsigned counter = maxCounterValue;
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "UnusedValue" // it's value used in the next time this function is called 'cause it's a static variable
-    if (counter > 0)
-        counter = counter < maxCounterValue ? counter + 1 : 0;
+    if (*counterRef > 0)
+        *counterRef = *counterRef < maxCounterValue ? *counterRef + 1 : 0;
     else {
-        switch (anim) { // anim: | / - \... - aka infinite circle-like progress bar
+        switch (*animRef) { // anim: | / - \... - aka infinite circle-like progress bar
             case '|':
-                anim = '/';
+                *animRef = '/';
                 break;
             case '/':
-                anim = '-';
+                *animRef = '-';
                 break;
             case '-':
-                anim = '\\';
+                *animRef = '\\';
                 break;
             case '\\':
-                anim = '|';
+                *animRef = '|';
                 break;
             default: assert(false);
         }
-        counter++;
+        (*counterRef)++;
     }
-#pragma clang diagnostic pop
+}
+
+static void drawSplashPage(void) {
+    static char anim = '|'; // value is saved between function calls
+    static unsigned counter = 0;
+
+    drawInfiniteProgressbar(&anim, &counter);
 
     const float height = (float) this->height;
 
