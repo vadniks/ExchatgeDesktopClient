@@ -45,9 +45,11 @@ List* renderInitUsersList(void);
 RenderUser* renderCreateUser(unsigned id, const char* name, bool conversationExists); // name (which is null-terminated string with (0, this->usernameSize] range sized length) is copied
 void renderDestroyUser(RenderUser* user);
 void renderSetUsersList(const List* usersList); // <RenderUser*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
+
 void renderInputBegan(void);
 void renderProcessEvent(SDL_Event* event);
 void renderInputEnded(void);
+
 void renderShowLogIn(void);
 void renderShowRegister(void);
 void renderShowUsersList(void);
@@ -55,5 +57,6 @@ void renderShowMessageExchange(void);
 void renderShowMessage(const char* message, bool error); // shows system message to the user, expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE] (with null-terminator included);
 void renderHideMessage(void);
 void renderShowError(void);
+
 void renderDraw(void);
 void renderClean(void);

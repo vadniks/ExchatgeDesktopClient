@@ -18,7 +18,7 @@ STATIC_CONST_UNSIGNED STATE_INITIAL = 0;
 STATIC_CONST_UNSIGNED STATE_LOG_IN = 1;
 STATIC_CONST_UNSIGNED STATE_REGISTER = 2;
 STATIC_CONST_UNSIGNED STATE_USERS_LIST = 3;
-STATIC_CONST_UNSIGNED STATE_MESSAGE_EXCHANGE = 4;
+STATIC_CONST_UNSIGNED STATE_CONVERSATION = 4;
 
 STATIC_CONST_STRING TITLE = "Exchatge";
 STATIC_CONST_STRING SUBTITLE = "A secured message exchanger";
@@ -247,7 +247,7 @@ void renderShowUsersList(void) {
 
 void renderShowMessageExchange(void) {
     assert(this);
-    SYNCHRONIZED(this->state = STATE_MESSAGE_EXCHANGE;)
+    SYNCHRONIZED(this->state = STATE_CONVERSATION;)
 }
 
 void renderShowMessage(const char* message, bool error) {
@@ -405,6 +405,10 @@ static void drawUsersList(void) {
     }
 }
 
+static void drawConversation(void) {
+
+}
+
 static void drawError(void) {
     nk_spacer(this->context);
     nk_layout_row_dynamic(this->context, 0, 1);
@@ -436,6 +440,9 @@ static void drawPage(void) {
             break;
         case STATE_USERS_LIST:
             drawUsersList();
+            break;
+        case STATE_CONVERSATION:
+            drawConversation();
             break;
         default: assert(false);
     }
