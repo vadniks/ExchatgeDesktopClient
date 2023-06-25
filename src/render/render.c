@@ -400,13 +400,21 @@ static void drawSplashPage(void) {
     }
 #pragma clang diagnostic pop
 
-    nk_layout_row_dynamic(this->context, 0, 1);
+    const float height = (float) this->height;
+
+    nk_layout_row_dynamic(this->context, height * 0.3f, 1);
+    nk_spacer(this->context);
+
+    nk_layout_row_dynamic(this->context, height * 0.0625f, 1);
     nk_label(this->context, TITLE, NK_TEXT_CENTERED);
     nk_label(this->context, SUBTITLE, NK_TEXT_CENTERED);
 
-    nk_layout_row_dynamic(this->context, 0, 1);
+    nk_layout_row_dynamic(this->context, height * 0.125f, 1);
     char animText[2] = {anim, '\0'};
     nk_label(this->context, animText, NK_TEXT_ALIGN_CENTERED);
+
+    nk_layout_row_dynamic(this->context, height * 0.25f, 1);
+    nk_spacer(this->context);
 }
 
 static void onProceedClickedAfterLogInRegister(bool logIn) {
