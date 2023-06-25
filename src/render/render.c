@@ -8,17 +8,6 @@
 #define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->uiQueriesMutex)); }
 #define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
 
-#define INFINITE_PROGRESS_BAR_STORAGE_VARIABLES \
-    static char anim = '|'; \
-    static unsigned counter = 0; // value is saved between function calls
-
-#define PREPARE_INFINITE_PROGRESS_BAR prepareInfiniteProgressbar(&anim, &counter);
-
-#define DRAW_INFINITE_PROGRESS_BAR(height) \
-    nk_layout_row_dynamic(this->context, height, 1); \
-    char animText[2] = {anim, '\0'}; \
-    nk_label(this->context, animText, NK_TEXT_ALIGN_CENTERED);
-
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
 STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
 STATIC_CONST_UNSIGNED WINDOW_MINIMAL_WIDTH = WINDOW_WIDTH / 2;
@@ -88,6 +77,8 @@ THIS(
     char* conversationMessage;
     unsigned enteredConversationMessageSize;
     bool loading;
+    char infiniteProgressBarAnim;
+    unsigned infiniteProgressBarCounter;
 )
 #pragma clang diagnostic pop
 
@@ -176,6 +167,8 @@ void renderInit(
     this->conversationMessage = SDL_calloc(this->conversationMessageSize, sizeof(char));
     this->enteredConversationMessageSize = 0;
     this->loading = false;
+    this->infiniteProgressBarAnim = '|';
+    this->infiniteProgressBarCounter = 0;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -394,35 +387,37 @@ void renderHideInfiniteProgressBar(void) {
     SYNCHRONIZED(this->loading = false;)
 }
 
-static void prepareInfiniteProgressbar(char* animRef, unsigned* counterRef) {
+static void drawInfiniteProgressBar(float height) {
     const unsigned maxCounterValue = 60 / 12; // 5 - 12 times slower than screen update
 
-    if (*counterRef > 0)
-        *counterRef = *counterRef < maxCounterValue ? *counterRef + 1 : 0;
+    if (this->infiniteProgressBarCounter > 0)
+        this->infiniteProgressBarCounter =
+            this->infiniteProgressBarCounter < maxCounterValue ? this->infiniteProgressBarCounter + 1 : 0;
     else {
-        switch (*animRef) { // anim: | / - \... - aka infinite circle-like progress bar
+        switch (this->infiniteProgressBarAnim) { // anim: | / - \... - aka infinite circle-like progress bar
             case '|':
-                *animRef = '/';
+                this->infiniteProgressBarAnim = '/';
                 break;
             case '/':
-                *animRef = '-';
+                this->infiniteProgressBarAnim = '-';
                 break;
             case '-':
-                *animRef = '\\';
+                this->infiniteProgressBarAnim = '\\';
                 break;
             case '\\':
-                *animRef = '|';
+                this->infiniteProgressBarAnim = '|';
                 break;
             default: assert(false);
         }
-        (*counterRef)++;
+        (this->infiniteProgressBarCounter)++;
     }
+
+    nk_layout_row_dynamic(this->context, height, 1); \
+    char animText[2] = {this->infiniteProgressBarAnim, '\0'}; \
+    nk_label(this->context, animText, NK_TEXT_ALIGN_CENTERED);
 }
 
 static void drawSplashPage(void) {
-    INFINITE_PROGRESS_BAR_STORAGE_VARIABLES
-    PREPARE_INFINITE_PROGRESS_BAR
-
     const float height = (float) this->height;
 
     nk_layout_row_dynamic(this->context, height * 0.3f, 1);
@@ -431,8 +426,7 @@ static void drawSplashPage(void) {
     nk_layout_row_dynamic(this->context, height * 0.0625f, 1);
     nk_label(this->context, TITLE, NK_TEXT_CENTERED);
     nk_label(this->context, SUBTITLE, NK_TEXT_CENTERED);
-
-    DRAW_INFINITE_PROGRESS_BAR(height * 0.125f)
+    drawInfiniteProgressBar(height * 0.125f);
 
     nk_layout_row_dynamic(this->context, height * 0.25f, 1);
     nk_spacer(this->context);
@@ -481,11 +475,7 @@ static void drawLoginPage(bool logIn) {
     if (nk_button_label(this->context, PROCEED)) onProceedClickedAfterLogInRegister(logIn);
     if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
 
-    INFINITE_PROGRESS_BAR_STORAGE_VARIABLES // TODO: ugly?
-    if (this->loading) {
-        PREPARE_INFINITE_PROGRESS_BAR
-        DRAW_INFINITE_PROGRESS_BAR(0)
-    }
+    if (this->loading) drawInfiniteProgressBar(0);
 }
 
 static void drawDivider(const char* groupName) {
