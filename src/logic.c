@@ -109,13 +109,13 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
     if (chooseVariant == RENDER_START_CONVERSATION || chooseVariant == RENDER_CONTINUE_CONVERSATION) {
         for (unsigned i = 0; i < 100; i++) { // TODO: test only
             char text[NET_MESSAGE_BODY_SIZE];
-            SDL_memset(text, (int) i, NET_MESSAGE_BODY_SIZE);
+            SDL_memset(text, '0' + (int) i, NET_MESSAGE_BODY_SIZE);
             listAdd(this->messagesList, renderCreateMessage(i, i % 5 == 0, text, NET_MESSAGE_BODY_SIZE));
         }
 
         char title[NET_USERNAME_SIZE]; // TODO: test only
-        SDL_memset(title, 0, NET_USERNAME_SIZE);
-        title[0] = 't'; title[1] = 'e'; title[2] = 's'; title[3] = 't';
+        SDL_memcpy(title, "Conversation", 12);
+        SDL_memset(title + 12, 0, NET_USERNAME_SIZE - 12);
         renderShowConversation(title);
     }
 }

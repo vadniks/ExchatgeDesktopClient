@@ -35,7 +35,6 @@ STATIC_CONST_STRING ID_TEXT = "Id";
 STATIC_CONST_STRING NAME_TEXT = "Name";
 STATIC_CONST_STRING EMPTY_TEXT = "";
 STATIC_CONST_STRING ERROR_TEXT = "Error";
-STATIC_CONST_STRING CONVERSATION_WITH = "Conversation with "; // 18 chars
 
 const unsigned RENDER_MAX_MESSAGE_TEXT_SIZE = 64;
 
@@ -457,15 +456,31 @@ static void drawUsersList(void) {
 }
 
 static void drawConversation(void) {
-    nk_layout_row_dynamic(this->context, 0, 1);
+    char title[this->conversationNameSize + 1];
+    SDL_memcpy(title, this->conversationName, this->conversationNameSize);
 
-    const unsigned conversationWithStringSize = 18;
-    char title[conversationWithStringSize + this->conversationNameSize];
-    SDL_memcpy(title, CONVERSATION_WITH, conversationWithStringSize);
-    SDL_memcpy(title + conversationWithStringSize, this->conversationName, this->conversationNameSize);
+    nk_layout_row_dynamic(this->context, 0, 1);
     nk_label(this->context, title, NK_TEXT_ALIGN_CENTERED);
+    nk_spacer(this->context);
 
     nk_layout_row_dynamic(this->context, 0, 2);
+
+    const unsigned size = listSize(this->messagesList);
+    for (unsigned i = 0; i < size; i++) {
+        RenderMessage* message = listGet(this->messagesList, i);
+
+        char text[this->maxMessageSize + 1];
+        SDL_memcpy(text, message->text, this->maxMessageSize);
+        text[this->maxMessageSize] = '\0';
+
+        if (message->fromThisClient) {
+            nk_spacer(this->context);
+            nk_label(this->context, text, NK_TEXT_ALIGN_RIGHT);
+        } else {
+            nk_label(this->context, text, NK_TEXT_ALIGN_LEFT);
+            nk_spacer(this->context);
+        }
+    }
 }
 
 static void drawError(void) {
