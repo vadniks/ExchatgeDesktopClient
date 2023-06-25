@@ -28,7 +28,7 @@ typedef enum {
     RENDER_CONTINUE_CONVERSATION = true // 1
 } RenderConversationChooseVariants;
 
-typedef void (*RenderUserForConversationChosenCallback)(RenderConversationChooseVariants chooseVariant);
+typedef void (*RenderUserForConversationChosenCallback)(unsigned id, RenderConversationChooseVariants chooseVariant);
 
 extern const unsigned RENDER_MAX_MESSAGE_TEXT_SIZE;
 

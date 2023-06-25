@@ -96,8 +96,8 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
     logIn ? renderShowLogIn() : renderShowRegister();
 }
 
-void logicOnUserForConversationChosen(RenderConversationChooseVariants chooseVariant) {
-    SDL_Log("user for conversation chosen %d", chooseVariant);
+void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant) {
+    SDL_Log("user for conversation chosen %d for user %u", chooseVariant, id);
 }
 
 void logicClean(void) {

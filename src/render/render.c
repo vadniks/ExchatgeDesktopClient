@@ -352,9 +352,9 @@ static void drawDivider(const char* groupName) {
     }
 }
 
-static void drawUserRow(const char* nullable id, const char* nullable name, int mode) { // mode: -1 - stub, 0 - conversation doesn't exist, 1 - exists
+static void drawUserRow(unsigned id, const char* nullable idString, const char* nullable name, int mode) { // mode: -1 - stub, 0 - conversation doesn't exist, 1 - exists
     nk_layout_row_dynamic(this->context, 0, 3);
-    nk_label(this->context, id ? id : ID_TEXT, NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, idString ? idString : ID_TEXT, NK_TEXT_ALIGN_LEFT);
     nk_label(this->context, name ? name : NAME_TEXT, NK_TEXT_ALIGN_CENTERED);
 
     if (mode == -1) {
@@ -365,10 +365,10 @@ static void drawUserRow(const char* nullable id, const char* nullable name, int 
 
     if (mode) {
         if (nk_button_label(this->context, CONTINUE_CONVERSATION))
-            (*(this->onUserForConversationChosen))(RENDER_CONTINUE_CONVERSATION);
+            (*(this->onUserForConversationChosen))(id, RENDER_CONTINUE_CONVERSATION);
     } else {
         if (nk_button_label(this->context, START_CONVERSATION))
-            (*(this->onUserForConversationChosen))(RENDER_START_CONVERSATION);
+            (*(this->onUserForConversationChosen))(id, RENDER_START_CONVERSATION);
     }
 
     if (mode) {
@@ -377,7 +377,7 @@ static void drawUserRow(const char* nullable id, const char* nullable name, int 
         nk_spacer(this->context);
 
         if (nk_button_label(this->context, DELETE_CONVERSATION))
-            (*(this->onUserForConversationChosen))(RENDER_DELETE_CONVERSATION);
+            (*(this->onUserForConversationChosen))(id, RENDER_DELETE_CONVERSATION);
     }
 }
 
@@ -386,7 +386,7 @@ static void drawUsersList(void) {
     nk_label(this->context, CONNECTED_USERS, NK_TEXT_ALIGN_CENTERED);
     nk_spacer(this->context);
 
-    drawUserRow(NULL, NULL, -1);
+    drawUserRow(0xffffffff, NULL, NULL, -1);
 
     const unsigned size = listSize(this->usersList);
     for (unsigned i = 0; i < size; i++) {
@@ -395,7 +395,7 @@ static void drawUsersList(void) {
         char idString[MAX_U32_DEC_DIGITS_COUNT];
         assert(SDL_snprintf(idString, MAX_U32_DEC_DIGITS_COUNT, "%u", user->id) <= (int) MAX_U32_DEC_DIGITS_COUNT);
 
-        drawUserRow(idString, user->name, user->conversationExists);
+        drawUserRow(user->id, idString, user->name, user->conversationExists);
 
         if (i < size - 1) {
             char groupName[MAX_U32_DEC_DIGITS_COUNT];
