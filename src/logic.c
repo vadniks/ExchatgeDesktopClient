@@ -104,7 +104,7 @@ static void processCredentials(void** data) {
     const char* password = data[1];
     bool logIn = *((bool*) data[2]);
 
-    assert(this);
+    assert(this); // TODO: thread data race possible when app has been exited but the thread still executes - might cause dereference error
     this->netInitialized = netInit(
         &onMessageReceived,
         &onLogInResult,
