@@ -50,10 +50,12 @@ static void async(void (*action)(void)) {
     ));
 }
 
-static void showLogInUiDelayed(void) { // causes render module to show splash page until logIn page is queried one second later
-    sleep(1);
-    renderShowLogIn();
+static void delayed(unsigned seconds, void (*action)(void)) {
+    sleep(seconds);
+    (*(action))();
 }
+
+static void showLogInUiDelayed(void) { delayed(1, &renderShowLogIn); } // causes render module to show splash page until logIn page is queried one second later
 
 bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
     this = SDL_malloc(sizeof *this);
@@ -75,7 +77,7 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
         &logicOnUserForConversationChosen
     );
     async(&showLogInUiDelayed);
-    logicInit(&async);
+    logicInit(&async, &delayed);
     renderSetUsersList(logicUsersList());
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(

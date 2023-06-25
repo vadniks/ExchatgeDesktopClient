@@ -11,16 +11,18 @@
 THIS(
     volatile bool netInitialized;
     List* usersList;
-    LogicAsyncTaskLauncher asyncTaskLauncher;
+    LogicAsyncTask asyncTask;
+    LogicDelayedTask delayedTask;
 )
 #pragma clang diagnostic pop
 
-void logicInit(LogicAsyncTaskLauncher asyncTaskLauncher) {
+void logicInit(LogicAsyncTask asyncTask, LogicDelayedTask delayedTask) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
     this->netInitialized = false;
     this->usersList = renderInitUsersList();
-    this->asyncTaskLauncher = asyncTaskLauncher;
+    this->asyncTask = asyncTask;
+    this->delayedTask = delayedTask;
 
     // TODO: test only
     for (unsigned i = 0; i < 100; i++) {
@@ -46,9 +48,17 @@ static void onMessageReceived(const byte* message) {
 
 }
 
+static void hideUiMessage(void) { (*(this->delayedTask))(3, &renderHideMessage); }
+
 static void onLogInResult(bool successful) {
-    if (!successful) renderShowMessage("Logging in failed", true);
-    else renderShowUsersList();
+    if (successful) {
+        renderShowUsersList();
+        return;
+    }
+
+    renderShowLogIn();
+    renderShowMessage("Logging in failed", true);
+    (*(this->asyncTask))(&hideUiMessage);
 }
 
 static void onErrorReceived(int flag) {

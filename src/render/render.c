@@ -224,7 +224,14 @@ void renderInputEnded(void) {
 
 void renderShowLogIn(void) {
     assert(this);
-    SYNCHRONIZED(this->state = STATE_LOG_IN;)
+    SYNCHRONIZED_BEGIN
+
+    SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize * sizeof(char));
+    this->enteredUsernameSize = 0;
+    this->enteredPasswordSize = 0;
+    this->state = STATE_LOG_IN;
+
+    SYNCHRONIZED_END
 }
 
 void renderShowRegister(void) {
