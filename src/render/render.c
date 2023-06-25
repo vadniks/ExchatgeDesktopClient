@@ -35,6 +35,7 @@ STATIC_CONST_STRING ACTIONS = "Actions";
 STATIC_CONST_STRING ID_TEXT = "Id";
 STATIC_CONST_STRING NAME_TEXT = "Name";
 STATIC_CONST_STRING EMPTY_TEXT = "";
+STATIC_CONST_STRING ERROR_TEXT = "Error";
 
 const unsigned RENDER_MAX_MESSAGE_TEXT_SIZE = 64;
 
@@ -274,7 +275,23 @@ void renderShowMessage(const char* message, bool error) {
 
 void renderHideMessage(void) {
     assert(this);
-    SYNCHRONIZED(this->showMessage = false;)
+    SYNCHRONIZED_BEGIN
+
+    this->showMessage = false;
+    this->isErrorMessage = false;
+
+    SYNCHRONIZED_END
+}
+
+void renderShowError(void) {
+    assert(this);
+    SYNCHRONIZED_BEGIN
+
+    SDL_memcpy(this->messageText, ERROR_TEXT, 6); // Error + \0 = 6 chars
+    this->isErrorMessage = true;
+    this->showMessage = true;
+
+    SYNCHRONIZED_END
 }
 
 static void drawSplashPage(void) {

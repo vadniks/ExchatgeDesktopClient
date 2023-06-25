@@ -54,5 +54,6 @@ void renderShowUsersList(void);
 void renderShowMessageExchange(void);
 void renderShowMessage(const char* message, bool error); // shows system message to the user, expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE] (with null-terminator included);
 void renderHideMessage(void);
+void renderShowError(void);
 void renderDraw(void);
 void renderClean(void);

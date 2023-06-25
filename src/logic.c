@@ -48,17 +48,14 @@ static void onMessageReceived(const byte* message) {
 
 }
 
-static void hideUiMessage(void) { (*(this->delayedTask))(3, &renderHideMessage); }
-
 static void onLogInResult(bool successful) {
     if (successful) {
+        renderHideMessage();
         renderShowUsersList();
-        return;
+    } else {
+        renderShowLogIn();
+        renderShowError();
     }
-
-    renderShowLogIn();
-    renderShowMessage("Logging in failed", true);
-    (*(this->asyncTask))(&hideUiMessage);
 }
 
 static void onErrorReceived(int flag) {
