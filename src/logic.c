@@ -99,8 +99,12 @@ static void onDisconnected(void) {
     renderShowDisconnectedSystemMessage();
 }
 
-void logicOnCredentialsReceived(const char* username, const char* password, bool logIn) {
-    assert(this && !this->netInitialized);
+static void processCredentials(void** data) {
+    const char* username = data[0];
+    const char* password = data[1];
+    bool logIn = *((bool*) data[2]);
+
+    assert(this);
     this->netInitialized = netInit(
         &onMessageReceived,
         &onLogInResult,
@@ -111,6 +115,29 @@ void logicOnCredentialsReceived(const char* username, const char* password, bool
 
     if (!this->netInitialized) renderShowUnableToConnectToTheServerSystemMessage(); // TODO: create text queue
     if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
+
+    logicCredentialsRandomFiller(data[0], NET_USERNAME_SIZE);
+    logicCredentialsRandomFiller(data[1], NET_UNHASHED_PASSWORD_SIZE);
+
+    SDL_free(data[0]);
+    SDL_free(data[1]);
+    SDL_free(data[2]);
+    SDL_free(data);
+}
+
+void logicOnCredentialsReceived(const char* username, const char* password, bool logIn) {
+    assert(this && !this->netInitialized);
+
+    void** data = SDL_malloc(3 * sizeof(void*));
+    data[0] = SDL_malloc(NET_USERNAME_SIZE * sizeof(char));
+    data[1] = SDL_malloc(NET_UNHASHED_PASSWORD_SIZE * sizeof(char));
+    data[2] = SDL_malloc(sizeof(bool));
+
+    SDL_memcpy(data[0], username, NET_USERNAME_SIZE);
+    SDL_memcpy(data[1], password, NET_UNHASHED_PASSWORD_SIZE);
+    *((bool*) data[2]) = logIn;
+
+    SDL_DetachThread(SDL_CreateThread((int (*)(void*)) &processCredentials, "credentialsProcessThread", data));
 }
 
 void logicCredentialsRandomFiller(char* credentials, unsigned size) {
