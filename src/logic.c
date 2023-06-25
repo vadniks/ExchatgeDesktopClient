@@ -95,7 +95,8 @@ static void onRegisterResult(bool successful) {
 
 static void onDisconnected(void) {
     this->netInitialized = false;
-    SDL_Log("disconnected");
+    renderShowLogIn();
+    renderShowDisconnectedSystemMessage();
 }
 
 void logicOnCredentialsReceived(const char* username, const char* password, bool logIn) {
@@ -141,7 +142,8 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
 }
 
 void logicOnServerShutdownRequested(void) {
-    SDL_Log("server shutdown requested");
+    assert(this);
+    if (this->netInitialized) netShutdownServer();
 }
 
 void logicClean(void) {

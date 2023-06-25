@@ -338,6 +338,14 @@ void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     SDL_free(encryptedMessage);
 }
 
+void netShutdownServer(void) {
+    assert(this);
+
+    byte body[NET_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    netSend(FLAG_SHUTDOWN, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
+}
+
 void netClean(void) {
     assert(this);
 

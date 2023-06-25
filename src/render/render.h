@@ -75,6 +75,7 @@ void renderShowConversation(const char* conversationName); // expects the name (
 void renderShowSystemMessage(const char* message, bool error); // shows system text to the user, expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE] (with null-terminator included);
 void renderHideSystemMessage(void);
 void renderShowSystemError(void); // just shows an error system message with text 'Error'
+void renderShowDisconnectedSystemMessage(void);
 
 void renderDraw(void);
 void renderClean(void);

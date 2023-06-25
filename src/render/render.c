@@ -37,6 +37,7 @@ STATIC_CONST_STRING EMPTY_TEXT = "";
 STATIC_CONST_STRING ERROR_TEXT = "Error";
 STATIC_CONST_STRING WELCOME_ADMIN = "Welcome admin!";
 STATIC_CONST_STRING SHUTDOWN_SERVER = "Shutdown the server";
+STATIC_CONST_STRING DISCONNECTED_TEXT = "Disconnected";
 
 const unsigned RENDER_MAX_MESSAGE_TEXT_SIZE = 64;
 
@@ -351,6 +352,17 @@ void renderShowSystemError(void) {
     SYNCHRONIZED_BEGIN
 
     SDL_memcpy(this->systemMessageText, ERROR_TEXT, 6); // Error + \0 = 6 chars
+    this->isErrorMessageSystem = true;
+    this->showSystemMessage = true;
+
+    SYNCHRONIZED_END
+}
+
+void renderShowDisconnectedSystemMessage(void) {
+    assert(this);
+    SYNCHRONIZED_BEGIN // TODO: extract show*System*() template
+
+    SDL_memcpy(this->systemMessageText, DISCONNECTED_TEXT, 13);
     this->isErrorMessageSystem = true;
     this->showSystemMessage = true;
 
