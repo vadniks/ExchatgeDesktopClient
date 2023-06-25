@@ -105,6 +105,19 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
 
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant) {
     SDL_Log("user for conversation chosen %d for user %u", chooseVariant, id);
+
+    if (chooseVariant == RENDER_START_CONVERSATION || chooseVariant == RENDER_CONTINUE_CONVERSATION) {
+        for (unsigned i = 0; i < 100; i++) { // TODO: test only
+            char text[NET_MESSAGE_BODY_SIZE];
+            SDL_memset(text, (int) i, NET_MESSAGE_BODY_SIZE);
+            listAdd(this->messagesList, renderCreateMessage(i, i % 5 == 0, text, NET_MESSAGE_BODY_SIZE));
+        }
+
+        char title[NET_USERNAME_SIZE]; // TODO: test only
+        SDL_memset(title, 0, NET_USERNAME_SIZE);
+        title[0] = 't'; title[1] = 'e'; title[2] = 's'; title[3] = 't';
+        renderShowConversation(title);
+    }
 }
 
 void logicClean(void) {

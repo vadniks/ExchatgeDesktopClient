@@ -46,7 +46,8 @@ void renderInit(
     RenderCredentialsRandomFiller credentialsRandomFiller,
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser,
     RenderUserForConversationChosenCallback onUserForConversationChosen,
-    unsigned maxMessageSize
+    unsigned maxMessageSize,
+    unsigned conversationNameSize
 );
 
 List* renderInitUsersList(void);
@@ -55,7 +56,7 @@ void renderDestroyUser(RenderUser* user);
 void renderSetUsersList(const List* usersList); // <RenderUser*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
 
 List* renderInitMessagesList(void);
-RenderMessage* renderCreateMessage(unsigned long timestamp, bool fromThisClient, const char* text, unsigned size); // text (whose length == size and 0 < length <= this->maxMessageSize - 1 (so the null-terminator is always at the end)) is copied
+RenderMessage* renderCreateMessage(unsigned long timestamp, bool fromThisClient, const char* text, unsigned size); // text (whose length == size and 0 < length <= this->maxMessageSize) is copied
 void renderDestroyMessage(RenderMessage* message);
 void renderSetMessagesList(const List* messagesList);
 
@@ -66,7 +67,8 @@ void renderInputEnded(void);
 void renderShowLogIn(void);
 void renderShowRegister(void);
 void renderShowUsersList(void);
-void renderShowMessageExchange(void);
+void renderShowConversation(const char* conversationName); // expects the name (which is copied) (with length == this->conversationNameSize) of the user with whom the current user will have a conversation or the name of that conversation
+
 void renderShowSystemMessage(const char* message, bool error); // shows system text to the user, expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE] (with null-terminator included);
 void renderHideSystemMessage(void);
 void renderShowSystemError(void); // just shows an error system message with text 'Error'

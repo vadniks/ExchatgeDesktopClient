@@ -4,8 +4,8 @@
 #include "../defs.h"
 #include "render.h"
 
-#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->uiQueriesMutex));
-#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->uiQueriesMutex));
+#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->uiQueriesMutex)); {
+#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->uiQueriesMutex)); }
 #define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
 
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
@@ -31,11 +31,11 @@ STATIC_CONST_STRING CONNECTED_USERS = "Connected users";
 STATIC_CONST_STRING START_CONVERSATION = "Start conversation";
 STATIC_CONST_STRING CONTINUE_CONVERSATION = "Continue conversation";
 STATIC_CONST_STRING DELETE_CONVERSATION = "Delete conversation";
-STATIC_CONST_STRING ACTIONS = "Actions";
 STATIC_CONST_STRING ID_TEXT = "Id";
 STATIC_CONST_STRING NAME_TEXT = "Name";
 STATIC_CONST_STRING EMPTY_TEXT = "";
 STATIC_CONST_STRING ERROR_TEXT = "Error";
+STATIC_CONST_STRING CONVERSATION_WITH = "Conversation with "; // 18 chars
 
 const unsigned RENDER_MAX_MESSAGE_TEXT_SIZE = 64;
 
@@ -65,6 +65,8 @@ THIS(
     RenderUserForConversationChosenCallback onUserForConversationChosen;
     const List* messagesList; // allocated elsewhere, conversation messages
     unsigned maxMessageSize;
+    char* conversationName; // conversation name or the name of the recipient
+    unsigned conversationNameSize;
 )
 #pragma clang diagnostic pop
 
@@ -108,15 +110,21 @@ void renderInit(
     RenderCredentialsRandomFiller credentialsRandomFiller,
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser,
     RenderUserForConversationChosenCallback onUserForConversationChosen,
-    unsigned maxMessageSize
+    unsigned maxMessageSize,
+    unsigned conversationNameSize
 ) {
-    assert(!this && usernameSize > 0 && passwordSize > 0);
+    assert(!this);
     this = SDL_malloc(sizeof *this);
     this->width = WINDOW_WIDTH;
     this->height = WINDOW_HEIGHT;
     this->state = STATE_INITIAL;
+
     this->usernameSize = usernameSize;
+    assert(usernameSize > 0);
+
     this->passwordSize = passwordSize;
+    assert(passwordSize > 0);
+
     this->onCredentialsReceived = onCredentialsReceived;
     this->credentialsRandomFiller = credentialsRandomFiller;
     this->enteredUsernameSize = 0;
@@ -126,12 +134,18 @@ void renderInit(
     this->showSystemMessage = false;
     this->isErrorMessageSystem = false;
     SDL_memset(this->systemMessageText, 0, RENDER_MAX_MESSAGE_TEXT_SIZE);
+
     this->uiQueriesMutex = SDL_CreateMutex();
     assert(this->uiQueriesMutex);
+
     this->usersList = NULL;
     this->onUserForConversationChosen = onUserForConversationChosen;
     this->messagesList = NULL;
     this->maxMessageSize = maxMessageSize;
+    this->conversationName = SDL_calloc(this->usernameSize, sizeof(char));
+
+    this->conversationNameSize = conversationNameSize;
+    assert(conversationNameSize > 0);
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -277,9 +291,14 @@ void renderShowUsersList(void) {
     SYNCHRONIZED(this->state = STATE_USERS_LIST;)
 }
 
-void renderShowMessageExchange(void) {
+void renderShowConversation(const char* conversationName) {
     assert(this);
-    SYNCHRONIZED(this->state = STATE_CONVERSATION;)
+    SYNCHRONIZED_BEGIN
+
+    SDL_memcpy(this->conversationName, conversationName, this->conversationNameSize);
+    this->state = STATE_CONVERSATION;
+
+    SYNCHRONIZED_END
 }
 
 void renderShowSystemMessage(const char* message, bool error) {
@@ -438,7 +457,15 @@ static void drawUsersList(void) {
 }
 
 static void drawConversation(void) {
+    nk_layout_row_dynamic(this->context, 0, 1);
 
+    const unsigned conversationWithStringSize = 18;
+    char title[conversationWithStringSize + this->conversationNameSize];
+    SDL_memcpy(title, CONVERSATION_WITH, conversationWithStringSize);
+    SDL_memcpy(title + conversationWithStringSize, this->conversationName, this->conversationNameSize);
+    nk_label(this->context, title, NK_TEXT_ALIGN_CENTERED);
+
+    nk_layout_row_dynamic(this->context, 0, 2);
 }
 
 static void drawError(void) {
@@ -508,6 +535,8 @@ void renderDraw(void) {
 
 void renderClean(void) {
     if (!this) return;
+
+    SDL_free(this->conversationName);
 
     SDL_DestroyMutex(this->uiQueriesMutex);
     SDL_free(this->enteredCredentialsBuffer);
