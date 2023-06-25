@@ -44,7 +44,7 @@ static unsigned synchronizeThreadUpdates(void) {
 
 static void async(void (*action)(void)) {
     SDL_DetachThread(SDL_CreateThread(
-        (int (*)(void*)) action,
+        (int (*)(void*)) action, // TODO: thread data race possible when app has been exited but the thread still executes - might cause dereference error on accessing 'this
         "asyncActionThread",
         NULL
     ));
@@ -52,7 +52,7 @@ static void async(void (*action)(void)) {
 
 static void delayed(unsigned seconds, void (*action)(void)) {
     sleep(seconds);
-    (*(action))();
+    (*(action))(); // TODO: thread data race possible when app has been exited but the thread still executes - might cause dereference error on accessing 'this
 }
 
 static void showLogInUiDelayed(void) { delayed(1, &renderShowLogIn); } // causes render module to show splash page until logIn page is queried one second later
