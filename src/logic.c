@@ -19,16 +19,16 @@ THIS(
 #pragma clang diagnostic pop
 
 static void parseArguments(unsigned argc, const char** argv) {
-    assert(!argc || argc == 1 && argv[0]);
+    assert(argc <= 1 || argc == 2 && argv[1]); // 'cause argv[0] is path to the executable everytime
 
-    if (argc == 0) {
+    if (argc <= 1) {
         this->adminMode = false;
         return;
     }
 
     const unsigned patternSize = 7;
     const char pattern[7] = "--admin"; // Just unlock access to admin operations, they're executed on the server after it verifies the caller, so verification on the client side is unnecessary
-    this->adminMode = !SDL_memcmp(argv[0], pattern, patternSize);
+    this->adminMode = !SDL_memcmp(argv[1], pattern, patternSize);
 }
 
 void logicInit(unsigned argc, const char** argv, LogicAsyncTask asyncTask, LogicDelayedTask delayedTask) {

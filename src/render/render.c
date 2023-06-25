@@ -445,17 +445,19 @@ static void drawUserRow(unsigned id, const char* nullable idString, const char* 
 }
 
 static void drawUsersList(void) {
-    nk_layout_row_dynamic(this->context, 0, 1);
-    nk_label(this->context, CONNECTED_USERS, NK_TEXT_ALIGN_CENTERED);
-    nk_spacer(this->context);
-
     if (this->adminMode) {
         nk_layout_row_dynamic(this->context, 0, 2);
         nk_label(this->context, WELCOME_ADMIN, NK_TEXT_ALIGN_LEFT);
 
         if (nk_button_label(this->context, SHUTDOWN_SERVER))
             (*(this->onServerShutdownRequested))();
+
+        nk_spacer(this->context);
     }
+
+    nk_layout_row_dynamic(this->context, 0, 1);
+    nk_label(this->context, CONNECTED_USERS, NK_TEXT_ALIGN_CENTERED);
+    nk_spacer(this->context);
 
     drawUserRow(0xffffffff, NULL, NULL, -1);
 
