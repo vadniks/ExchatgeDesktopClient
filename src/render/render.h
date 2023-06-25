@@ -38,7 +38,7 @@ typedef enum {
 
 typedef void (*RenderUserForConversationChosenCallback)(unsigned id, RenderConversationChooseVariants chooseVariant);
 
-extern const unsigned RENDER_MAX_MESSAGE_TEXT_SIZE;
+extern const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE;
 
 void renderInit(
     unsigned usernameSize,
@@ -76,6 +76,7 @@ void renderShowSystemMessage(const char* message, bool error); // shows system t
 void renderHideSystemMessage(void);
 void renderShowSystemError(void); // just shows an error system message with text 'Error'
 void renderShowDisconnectedSystemMessage(void);
+void renderShowUnableToConnectToTheServerSystemMessage(void); // TODO: too long name
 
 void renderDraw(void);
 void renderClean(void);

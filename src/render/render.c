@@ -38,8 +38,9 @@ STATIC_CONST_STRING ERROR_TEXT = "Error";
 STATIC_CONST_STRING WELCOME_ADMIN = "Welcome admin!";
 STATIC_CONST_STRING SHUTDOWN_SERVER = "Shutdown the server";
 STATIC_CONST_STRING DISCONNECTED_TEXT = "Disconnected";
+STATIC_CONST_STRING UNABLE_TO_CONNECT_TO_THE_SERVER_TEXT = "Unable to connect to the server";
 
-const unsigned RENDER_MAX_MESSAGE_TEXT_SIZE = 64;
+const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
@@ -61,7 +62,7 @@ THIS(
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser;
     bool showSystemMessage;
     bool isErrorMessageSystem;
-    char systemMessageText[RENDER_MAX_MESSAGE_TEXT_SIZE]; // message from the system (application)
+    char systemMessageText[RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE]; // message from the system (application)
     SDL_mutex* uiQueriesMutex;
     const List* usersList; // allocated elsewhere
     RenderUserForConversationChosenCallback onUserForConversationChosen;
@@ -138,7 +139,7 @@ void renderInit(
     this->onLoginRegisterPageQueriedByUser = onLoginRegisterPageQueriedByUser;
     this->showSystemMessage = false;
     this->isErrorMessageSystem = false;
-    SDL_memset(this->systemMessageText, 0, RENDER_MAX_MESSAGE_TEXT_SIZE);
+    SDL_memset(this->systemMessageText, 0, RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
 
     this->uiQueriesMutex = SDL_CreateMutex();
     assert(this->uiQueriesMutex);
@@ -318,10 +319,10 @@ void renderShowSystemMessage(const char* message, bool error) {
     assert(this);
 
     SYNCHRONIZED_BEGIN
-    SDL_memset(this->systemMessageText, 0, RENDER_MAX_MESSAGE_TEXT_SIZE);
+    SDL_memset(this->systemMessageText, 0, RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
 
     bool foundNullTerminator = false;
-    for (unsigned i = 0; i < RENDER_MAX_MESSAGE_TEXT_SIZE; i++) {
+    for (unsigned i = 0; i < RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE; i++) {
         this->systemMessageText[i] = message[i];
 
         if (message[i] == '\0') {
@@ -347,27 +348,20 @@ void renderHideSystemMessage(void) {
     SYNCHRONIZED_END
 }
 
-void renderShowSystemError(void) {
-    assert(this);
+static void showSystemError(const char* text, unsigned size) {
+    assert(this && size <= RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
     SYNCHRONIZED_BEGIN
 
-    SDL_memcpy(this->systemMessageText, ERROR_TEXT, 6); // Error + \0 = 6 chars
+    SDL_memcpy(this->systemMessageText, text, size);
     this->isErrorMessageSystem = true;
     this->showSystemMessage = true;
 
     SYNCHRONIZED_END
 }
 
-void renderShowDisconnectedSystemMessage(void) {
-    assert(this);
-    SYNCHRONIZED_BEGIN // TODO: extract show*System*() template
-
-    SDL_memcpy(this->systemMessageText, DISCONNECTED_TEXT, 13);
-    this->isErrorMessageSystem = true;
-    this->showSystemMessage = true;
-
-    SYNCHRONIZED_END
-}
+void renderShowSystemError(void) { showSystemError(ERROR_TEXT, 6); }
+void renderShowDisconnectedSystemMessage(void) { showSystemError(DISCONNECTED_TEXT, 13); }
+void renderShowUnableToConnectToTheServerSystemMessage(void) { showSystemError(UNABLE_TO_CONNECT_TO_THE_SERVER_TEXT, 32); }
 
 static void drawSplashPage(void) {
     static char anim = '|'; // value is saved between function calls

@@ -109,7 +109,7 @@ void logicOnCredentialsReceived(const char* username, const char* password, bool
         &onDisconnected
     );
 
-    if (!this->netInitialized) renderShowSystemMessage("Unable to connect to the server", true); // TODO: create text queue
+    if (!this->netInitialized) renderShowUnableToConnectToTheServerSystemMessage(); // TODO: create text queue
     if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
 }
 
