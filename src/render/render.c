@@ -358,9 +358,44 @@ void renderShowSystemError(void) {
 }
 
 static void drawSplashPage(void) {
+    static char anim = '|'; // value is saved between function calls
+    const unsigned maxCounterValue = 5;
+    static unsigned counter = maxCounterValue;
+
+    if (counter) {
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "UnusedValue" // it's value used in the next time this function is called 'cause it's a static variable
+        counter = counter < maxCounterValue ? counter + 1 : 0;
+#pragma clang diagnostic pop
+    } else {
+        switch (anim) { // anim: | / - \...
+            case '|':
+                anim = '/';
+                break;
+            case '/':
+                anim = '-';
+                break;
+            case '-':
+                anim = '\\';
+                break;
+            case '\\':
+                anim = '|';
+                break;
+            default: assert(false);
+        }
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "UnusedValue"
+        counter++;
+#pragma clang diagnostic pop
+    }
+
     nk_layout_row_dynamic(this->context, 0, 1);
     nk_label(this->context, TITLE, NK_TEXT_CENTERED);
     nk_label(this->context, SUBTITLE, NK_TEXT_CENTERED);
+
+    nk_layout_row_dynamic(this->context, 0, 1);
+    char animText[2] = {anim, '\0'};
+    nk_label(this->context, animText, NK_TEXT_ALIGN_CENTERED);
 }
 
 static void onProceedClickedAfterLogInRegister(bool logIn) {
