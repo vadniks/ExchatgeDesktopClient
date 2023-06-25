@@ -8,6 +8,17 @@
 #define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->uiQueriesMutex)); }
 #define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
 
+#define INFINITE_PROGRESS_BAR_STORAGE_VARIABLES \
+    static char anim = '|'; \
+    static unsigned counter = 0; // value is saved between function calls
+
+#define PREPARE_INFINITE_PROGRESS_BAR prepareInfiniteProgressbar(&anim, &counter);
+
+#define DRAW_INFINITE_PROGRESS_BAR(height) \
+    nk_layout_row_dynamic(this->context, height, 1); \
+    char animText[2] = {anim, '\0'}; \
+    nk_label(this->context, animText, NK_TEXT_ALIGN_CENTERED);
+
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
 STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
 STATIC_CONST_UNSIGNED WINDOW_MINIMAL_WIDTH = WINDOW_WIDTH / 2;
@@ -76,6 +87,7 @@ THIS(
     unsigned conversationMessageSize;
     char* conversationMessage;
     unsigned enteredConversationMessageSize;
+    bool loading;
 )
 #pragma clang diagnostic pop
 
@@ -163,6 +175,7 @@ void renderInit(
     this->conversationMessageSize = conversationMessageSize;
     this->conversationMessage = SDL_calloc(this->conversationMessageSize, sizeof(char));
     this->enteredConversationMessageSize = 0;
+    this->loading = false;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -371,7 +384,17 @@ void renderShowSystemError(void) { showSystemError(ERROR_TEXT, 6); }
 void renderShowDisconnectedSystemMessage(void) { showSystemError(DISCONNECTED_TEXT, 13); }
 void renderShowUnableToConnectToTheServerSystemMessage(void) { showSystemError(UNABLE_TO_CONNECT_TO_THE_SERVER_TEXT, 32); }
 
-static void drawInfiniteProgressbar(char* animRef, unsigned* counterRef) {
+void renderShowInfiniteProgressBar(void) {
+    assert(this);
+    SYNCHRONIZED(this->loading = true;)
+}
+
+void renderHideInfiniteProgressBar(void) {
+    assert(this);
+    SYNCHRONIZED(this->loading = false;)
+}
+
+static void prepareInfiniteProgressbar(char* animRef, unsigned* counterRef) {
     const unsigned maxCounterValue = 60 / 12; // 5 - 12 times slower than screen update
 
     if (*counterRef > 0)
@@ -397,10 +420,8 @@ static void drawInfiniteProgressbar(char* animRef, unsigned* counterRef) {
 }
 
 static void drawSplashPage(void) {
-    static char anim = '|'; // value is saved between function calls
-    static unsigned counter = 0;
-
-    drawInfiniteProgressbar(&anim, &counter);
+    INFINITE_PROGRESS_BAR_STORAGE_VARIABLES
+    PREPARE_INFINITE_PROGRESS_BAR
 
     const float height = (float) this->height;
 
@@ -411,9 +432,7 @@ static void drawSplashPage(void) {
     nk_label(this->context, TITLE, NK_TEXT_CENTERED);
     nk_label(this->context, SUBTITLE, NK_TEXT_CENTERED);
 
-    nk_layout_row_dynamic(this->context, height * 0.125f, 1);
-    char animText[2] = {anim, '\0'};
-    nk_label(this->context, animText, NK_TEXT_ALIGN_CENTERED);
+    DRAW_INFINITE_PROGRESS_BAR(height * 0.125f)
 
     nk_layout_row_dynamic(this->context, height * 0.25f, 1);
     nk_spacer(this->context);
@@ -461,6 +480,12 @@ static void drawLoginPage(bool logIn) {
     nk_layout_row_dynamic(this->context, 0, 2);
     if (nk_button_label(this->context, PROCEED)) onProceedClickedAfterLogInRegister(logIn);
     if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
+
+    INFINITE_PROGRESS_BAR_STORAGE_VARIABLES // TODO: ugly?
+    if (this->loading) {
+        PREPARE_INFINITE_PROGRESS_BAR
+        DRAW_INFINITE_PROGRESS_BAR(0)
+    }
 }
 
 static void drawDivider(const char* groupName) {

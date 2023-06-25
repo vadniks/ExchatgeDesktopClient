@@ -123,10 +123,13 @@ static void processCredentials(void** data) {
     SDL_free(data[1]);
     SDL_free(data[2]);
     SDL_free(data);
+
+    renderHideInfiniteProgressBar();
 }
 
 void logicOnCredentialsReceived(const char* username, const char* password, bool logIn) {
     assert(this && !this->netInitialized);
+    renderShowInfiniteProgressBar();
 
     void** data = SDL_malloc(3 * sizeof(void*));
     data[0] = SDL_malloc(NET_USERNAME_SIZE * sizeof(char));
