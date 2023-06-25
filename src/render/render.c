@@ -362,13 +362,12 @@ static void drawSplashPage(void) {
     const unsigned maxCounterValue = 60 / 12; // 5 - 12 times slower than screen update
     static unsigned counter = maxCounterValue;
 
-    if (counter > 0) {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "UnusedValue" // it's value used in the next time this function is called 'cause it's a static variable
+    if (counter > 0)
         counter = counter < maxCounterValue ? counter + 1 : 0;
-#pragma clang diagnostic pop
-    } else {
-        switch (anim) { // anim: | / - \...
+    else {
+        switch (anim) { // anim: | / - \... - aka infinite circle-like progress bar
             case '|':
                 anim = '/';
                 break;
@@ -383,11 +382,9 @@ static void drawSplashPage(void) {
                 break;
             default: assert(false);
         }
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "UnusedValue"
         counter++;
-#pragma clang diagnostic pop
     }
+#pragma clang diagnostic pop
 
     nk_layout_row_dynamic(this->context, 0, 1);
     nk_label(this->context, TITLE, NK_TEXT_CENTERED);
