@@ -57,7 +57,7 @@ static void delayed(unsigned seconds, void (*action)(void)) {
 
 static void showLogInUiDelayed(void) { delayed(1, &renderShowLogIn); } // causes render module to show splash page until logIn page is queried one second later
 
-bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
+bool lifecycleInit(unsigned argc, const char** argv) { // TODO: expose net module's flags in it's header
     this = SDL_malloc(sizeof *this);
     this->running = true;
     this->updateThreadCounter = 1;
@@ -76,10 +76,12 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
         &logicOnLoginRegisterPageQueriedByUser,
         &logicOnUserForConversationChosen,
         NET_MESSAGE_BODY_SIZE,
-        NET_USERNAME_SIZE
+        NET_USERNAME_SIZE,
+        &logicOnServerShutdownRequested
     );
     async(&showLogInUiDelayed);
-    logicInit(&async, &delayed);
+    logicInit(argc, argv, &async, &delayed);
+    renderSetAdminMode(logicIsAdminMode());
     renderSetUsersList(logicUsersList());
     renderSetMessagesList(logicMessagesList());
 

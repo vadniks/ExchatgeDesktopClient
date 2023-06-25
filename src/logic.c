@@ -14,10 +14,24 @@ THIS(
     LogicAsyncTask asyncTask;
     LogicDelayedTask delayedTask;
     List* messagesList;
+    bool adminMode;
 )
 #pragma clang diagnostic pop
 
-void logicInit(LogicAsyncTask asyncTask, LogicDelayedTask delayedTask) {
+static void parseArguments(unsigned argc, const char** argv) {
+    assert(!argc || argc == 1 && argv[0]);
+
+    if (argc == 0) {
+        this->adminMode = false;
+        return;
+    }
+
+    const unsigned patternSize = 7;
+    const char pattern[7] = "--admin"; // Just unlock access to admin operations, they're executed on the server after it verifies the caller, so verification on the client side is unnecessary
+    this->adminMode = !SDL_memcmp(argv[0], pattern, patternSize);
+}
+
+void logicInit(unsigned argc, const char** argv, LogicAsyncTask asyncTask, LogicDelayedTask delayedTask) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
     this->netInitialized = false;
@@ -25,6 +39,7 @@ void logicInit(LogicAsyncTask asyncTask, LogicDelayedTask delayedTask) {
     this->asyncTask = asyncTask;
     this->delayedTask = delayedTask;
     this->messagesList = renderInitMessagesList();
+    parseArguments(argc, argv);
 
     // TODO: test only
     for (unsigned i = 0; i < 100; i++) {
@@ -33,6 +48,11 @@ void logicInit(LogicAsyncTask asyncTask, LogicDelayedTask delayedTask) {
         name[NET_USERNAME_SIZE - 1] = '\0';
         listAdd(this->usersList, renderCreateUser(i, name, i % 5 == 0));
     }
+}
+
+bool logicIsAdminMode(void) {
+    assert(this);
+    return this->adminMode;
 }
 
 void logicNetListen(void) {
@@ -118,6 +138,10 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
         SDL_memset(title + 12, 0, NET_USERNAME_SIZE - 12);
         renderShowConversation(title);
     }
+}
+
+void logicOnServerShutdownRequested(void) {
+    SDL_Log("server shutdown requested");
 }
 
 void logicClean(void) {

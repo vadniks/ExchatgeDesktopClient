@@ -35,6 +35,8 @@ STATIC_CONST_STRING ID_TEXT = "Id";
 STATIC_CONST_STRING NAME_TEXT = "Name";
 STATIC_CONST_STRING EMPTY_TEXT = "";
 STATIC_CONST_STRING ERROR_TEXT = "Error";
+STATIC_CONST_STRING WELCOME_ADMIN = "Welcome admin!";
+STATIC_CONST_STRING SHUTDOWN_SERVER = "Shutdown the server";
 
 const unsigned RENDER_MAX_MESSAGE_TEXT_SIZE = 64;
 
@@ -66,6 +68,8 @@ THIS(
     unsigned maxMessageSize;
     char* conversationName; // conversation name or the name of the recipient
     unsigned conversationNameSize;
+    bool adminMode;
+    RenderOnServerShutdownRequested onServerShutdownRequested;
 )
 #pragma clang diagnostic pop
 
@@ -110,7 +114,8 @@ void renderInit(
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser,
     RenderUserForConversationChosenCallback onUserForConversationChosen,
     unsigned maxMessageSize,
-    unsigned conversationNameSize
+    unsigned conversationNameSize,
+    RenderOnServerShutdownRequested onServerShutdownRequested
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -145,6 +150,9 @@ void renderInit(
 
     this->conversationNameSize = conversationNameSize;
     assert(conversationNameSize > 0);
+
+    this->adminMode = false;
+    this->onServerShutdownRequested = onServerShutdownRequested;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -193,6 +201,11 @@ void renderInit(
     setStyle();
 
     this->colorf = (struct nk_colorf) { 0.10f, 0.18f, 0.24f, 1.00f };
+}
+
+void renderSetAdminMode(bool mode) {
+    assert(this);
+    this->adminMode = mode;
 }
 
 List* renderInitUsersList(void) { return listInit((ListDeallocator) renderDestroyUser); }
@@ -435,6 +448,14 @@ static void drawUsersList(void) {
     nk_layout_row_dynamic(this->context, 0, 1);
     nk_label(this->context, CONNECTED_USERS, NK_TEXT_ALIGN_CENTERED);
     nk_spacer(this->context);
+
+    if (this->adminMode) {
+        nk_layout_row_dynamic(this->context, 0, 2);
+        nk_label(this->context, WELCOME_ADMIN, NK_TEXT_ALIGN_LEFT);
+
+        if (nk_button_label(this->context, SHUTDOWN_SERVER))
+            (*(this->onServerShutdownRequested))();
+    }
 
     drawUserRow(0xffffffff, NULL, NULL, -1);
 

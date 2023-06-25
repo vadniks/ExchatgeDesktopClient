@@ -14,6 +14,7 @@ typedef void (*RenderCredentialsReceivedCallback)( // buffer is filled with rand
 
 typedef void (*RenderCredentialsRandomFiller)(char* credentials, unsigned size); // Function that fills credentials fields with random data & doesn't deallocates them
 typedef void (*RenderLogInRegisterPageQueriedByUserCallback)(bool logIn);
+typedef void (*RenderOnServerShutdownRequested)(void);
 
 typedef struct {
     unsigned id;
@@ -47,8 +48,10 @@ void renderInit(
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser,
     RenderUserForConversationChosenCallback onUserForConversationChosen,
     unsigned maxMessageSize,
-    unsigned conversationNameSize
+    unsigned conversationNameSize,
+    RenderOnServerShutdownRequested onServerShutdownRequested
 );
+void renderSetAdminMode(bool mode);
 
 List* renderInitUsersList(void);
 RenderUser* renderCreateUser(unsigned id, const char* name, bool conversationExists); // name (which is null-terminated string with (0, this->usernameSize] range sized length) is copied
