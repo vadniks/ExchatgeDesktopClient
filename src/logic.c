@@ -27,7 +27,7 @@ static void parseArguments(unsigned argc, const char** argv) {
     }
 
     const unsigned patternSize = 7;
-    const char pattern[7] = "--admin"; // Just unlock access to admin operations, they're executed on the server after it verifies the caller, so verification on the client side is unnecessary
+    const char pattern[patternSize] = "--admin"; // Just unlock access to admin operations, they're executed on the server after it verifies the caller, so verification on the client side is unnecessary
     this->adminMode = !SDL_memcmp(argv[1], pattern, patternSize);
 }
 
