@@ -412,8 +412,8 @@ static void drawInfiniteProgressBar(float height) {
         (this->infiniteProgressBarCounter)++;
     }
 
-    nk_layout_row_dynamic(this->context, height, 1); \
-    char animText[2] = {this->infiniteProgressBarAnim, '\0'}; \
+    nk_layout_row_dynamic(this->context, height, 1);
+    char animText[2] = {this->infiniteProgressBarAnim, '\0'};
     nk_label(this->context, animText, NK_TEXT_ALIGN_CENTERED);
 }
 
@@ -518,7 +518,7 @@ static void drawUserRow(unsigned id, const char* nullable idString, const char* 
 static void drawUsersList(void) {
     if (this->adminMode) {
         nk_layout_row_dynamic(this->context, 0, 2);
-        nk_label(this->context, WELCOME_ADMIN, NK_TEXT_ALIGN_LEFT);
+        nk_label(this->context, WELCOME_ADMIN, NK_TEXT_ALIGN_CENTERED);
 
         if (nk_button_label(this->context, SHUTDOWN_SERVER))
             (*(this->onServerShutdownRequested))();
