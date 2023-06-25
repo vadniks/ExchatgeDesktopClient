@@ -321,7 +321,7 @@ static void drawLoginPage(bool logIn) {
 
     nk_edit_string(
         this->context,
-        NK_EDIT_SIMPLE,
+        NK_EDIT_FIELD,
         this->enteredCredentialsBuffer,
         (int*) &(this->enteredUsernameSize),
         (int) this->usernameSize,
@@ -332,7 +332,7 @@ static void drawLoginPage(bool logIn) {
 
     nk_edit_string(
         this->context,
-        NK_EDIT_SIMPLE,
+        NK_EDIT_FIELD,
         this->enteredCredentialsBuffer + this->usernameSize,
         (int*) &(this->enteredPasswordSize),
         (int) this->passwordSize,
