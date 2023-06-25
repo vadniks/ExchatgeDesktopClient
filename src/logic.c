@@ -82,7 +82,6 @@ void logicOnCredentialsReceived(const char* username, const char* password, bool
     );
 
     if (!this->netInitialized) renderShowMessage("Unable to connect to the server", true); // TODO: create message queue
-
     if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
 }
 
