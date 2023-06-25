@@ -359,10 +359,10 @@ void renderShowSystemError(void) {
 
 static void drawSplashPage(void) {
     static char anim = '|'; // value is saved between function calls
-    const unsigned maxCounterValue = 5;
+    const unsigned maxCounterValue = 60 / 12; // 5 - 12 times slower than screen update
     static unsigned counter = maxCounterValue;
 
-    if (counter) {
+    if (counter > 0) {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "UnusedValue" // it's value used in the next time this function is called 'cause it's a static variable
         counter = counter < maxCounterValue ? counter + 1 : 0;
