@@ -349,7 +349,7 @@ void renderHideSystemMessage(void) {
 }
 
 static void showSystemError(const char* text, unsigned size) {
-    assert(this && size <= RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
+    assert(this && size > 0 && size <= RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
     SYNCHRONIZED_BEGIN
 
     SDL_memcpy(this->systemMessageText, text, size);
