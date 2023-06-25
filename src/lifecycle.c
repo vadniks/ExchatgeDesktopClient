@@ -75,7 +75,7 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
         &logicCredentialsRandomFiller,
         &logicOnLoginRegisterPageQueriedByUser,
         &logicOnUserForConversationChosen,
-        NET_MESSAGE_BODY_SIZE
+        NET_MESSAGE_BODY_SIZE + 1 // 1 stands for null-terminator which isn't sent or received by the protocol 'cause it's needed only for printing the message string
     );
     async(&showLogInUiDelayed);
     logicInit(&async, &delayed);
