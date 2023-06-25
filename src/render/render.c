@@ -339,16 +339,21 @@ static void drawUserRow(const char* nullable id, const char* nullable name, int 
         return;
     }
 
-    if (mode)
-        nk_button_label(this->context, CONTINUE_CONVERSATION);
-    else
-        nk_button_label(this->context, START_CONVERSATION);
+    if (mode) {
+        if (nk_button_label(this->context, CONTINUE_CONVERSATION))
+            (*(this->onUserForConversationChosen))(RENDER_CONTINUE_CONVERSATION);
+    } else {
+        if (nk_button_label(this->context, START_CONVERSATION))
+            (*(this->onUserForConversationChosen))(RENDER_START_CONVERSATION);
+    }
 
     if (mode) {
         nk_layout_row_dynamic(this->context, 0, 3);
         nk_spacer(this->context);
         nk_spacer(this->context);
-        nk_button_label(this->context, DELETE_CONVERSATION);
+
+        if (nk_button_label(this->context, DELETE_CONVERSATION))
+            (*(this->onUserForConversationChosen))(RENDER_DELETE_CONVERSATION);
     }
 }
 

@@ -75,7 +75,7 @@ bool lifecycleInit(void) { // TODO: expose net module's flags in it's header
         &logicOnUserForConversationChosen
     );
     async(&showLogInUiDelayed);
-    logicInit();
+    logicInit(&async);
     renderSetUsersList(logicUsersList());
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(

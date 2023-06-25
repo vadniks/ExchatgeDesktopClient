@@ -6,19 +6,24 @@
 #include "net.h"
 #include "logic.h"
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
     volatile bool netInitialized;
     List* usersList;
+    LogicAsyncTaskLauncher asyncTaskLauncher;
 )
+#pragma clang diagnostic pop
 
-void logicInit(void) {
+void logicInit(LogicAsyncTaskLauncher asyncTaskLauncher) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
     this->netInitialized = false;
     this->usersList = renderInitUsersList();
+    this->asyncTaskLauncher = asyncTaskLauncher;
 
     // TODO: test only
-    for (unsigned i = 0; i < 10; i++) {
+    for (unsigned i = 0; i < 100; i++) {
         char name[NET_USERNAME_SIZE];
         SDL_memset(name, '0' + (int) i, NET_USERNAME_SIZE - 1);
         name[NET_USERNAME_SIZE - 1] = '\0';
@@ -81,6 +86,7 @@ void logicCredentialsRandomFiller(char* credentials, unsigned size) {
 
 void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
     assert(this);
+    renderHideMessage();
     logIn ? renderShowLogIn() : renderShowRegister();
 }
 

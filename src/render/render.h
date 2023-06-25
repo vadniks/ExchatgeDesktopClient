@@ -1,7 +1,7 @@
 
-#pragma once
+#pragma once // TODO: rename this module to UI
 
-#include <sdl/SDL.h>
+#include <sdl/SDL.h> // TODO: store messages (encrypted) on the client side
 #include <stdbool.h>
 #include "collections/list.h"
 #include "../defs.h"
