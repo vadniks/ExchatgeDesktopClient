@@ -482,11 +482,25 @@ static void drawLoginPage(bool logIn) {
 
 static void drawUserRow(unsigned id, const char* idString, const char* name, int mode) { // mode: -1 - stub, 0 - conversation doesn't exist, 1 - exists
     const float height = 75.0f, height2 = height * 0.5f * 0.7f;
-    nk_layout_row_dynamic(this->context, height, 2);
+    nk_layout_row_dynamic(this->context, height, 3);
     const unsigned intSize = sizeof(int);
 
+    char descriptionGroupName[2 + intSize];
+    descriptionGroupName[0] = 1;
+    SDL_memcpy(descriptionGroupName + 1, &id, intSize);
+    descriptionGroupName[1 + intSize] = 0;
+
+    if (nk_group_begin(this->context, descriptionGroupName, 0)) {
+        nk_layout_row_dynamic(this->context, height2, 1);
+
+        nk_label(this->context, ID_TEXT, NK_TEXT_ALIGN_LEFT);
+        nk_label(this->context, NAME_TEXT, NK_TEXT_ALIGN_LEFT);
+
+        nk_group_end(this->context);
+    }
+
     char idAndNameGroupName[2 + intSize];
-    idAndNameGroupName[0] = 1;
+    idAndNameGroupName[0] = 2;
     SDL_memcpy(idAndNameGroupName + 1, &id, intSize);
     idAndNameGroupName[1 + intSize] = 0;
 
@@ -500,7 +514,7 @@ static void drawUserRow(unsigned id, const char* idString, const char* name, int
     }
 
     char actionsGroupName[2 + intSize];
-    actionsGroupName[0] = 2;
+    actionsGroupName[0] = 3;
     SDL_memcpy(actionsGroupName + 1, &id, intSize);
     actionsGroupName[1 + intSize] = 0;
 
