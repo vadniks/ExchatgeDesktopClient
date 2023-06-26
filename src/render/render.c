@@ -8,6 +8,8 @@
 #define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->uiQueriesMutex)); }
 #define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
 
+#define CURRENT_HEIGHT_CONSTANT const float height = (float) this->height * 0.925f;
+
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
 STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
 STATIC_CONST_UNSIGNED WINDOW_MINIMAL_WIDTH = WINDOW_WIDTH / 2;
@@ -516,7 +518,7 @@ static void drawUserRow(unsigned id, const char* nullable idString, const char* 
 }
 
 static void drawUsersList(void) {
-    const float height = (float) this->height * 0.925f;
+    CURRENT_HEIGHT_CONSTANT
 
     if (this->adminMode) {
         nk_layout_row_dynamic(this->context, height * 0.07f, 2);
@@ -545,19 +547,13 @@ static void drawUsersList(void) {
         assert(SDL_snprintf(idString, MAX_U32_DEC_DIGITS_COUNT, "%u", user->id) <= (int) MAX_U32_DEC_DIGITS_COUNT);
 
         drawUserRow(user->id, idString, user->name, user->conversationExists);
-
-//        if (i < size - 1) {
-//            char subgroupName[MAX_U32_DEC_DIGITS_COUNT];
-//            assert(SDL_snprintf(subgroupName, MAX_U32_DEC_DIGITS_COUNT, "%u", i) <= (int) MAX_U32_DEC_DIGITS_COUNT);
-//            drawDivider(subgroupName);
-//        }
     }
 
     nk_group_end(this->context);
 }
 
 static void drawConversation(void) {
-    const float height = (float) this->height * 0.925f;
+    CURRENT_HEIGHT_CONSTANT
 
     char title[this->conversationNameSize + 1];
     SDL_memcpy(title, this->conversationName, this->conversationNameSize);
