@@ -29,7 +29,7 @@ STATIC_CONST_STRING REGISTER = "Register";
 STATIC_CONST_STRING USERNAME = "Username";
 STATIC_CONST_STRING PASSWORD = "Password";
 STATIC_CONST_STRING PROCEED = "Proceed";
-STATIC_CONST_STRING CONNECTED_USERS = "Connected users";
+STATIC_CONST_STRING USERS_LIST = "Users list";
 STATIC_CONST_STRING START_CONVERSATION = "Start conversation";
 STATIC_CONST_STRING CONTINUE_CONVERSATION = "Continue conversation";
 STATIC_CONST_STRING DELETE_CONVERSATION = "Delete conversation";
@@ -588,7 +588,7 @@ static void drawUsersList(void) {
     }
 
     nk_layout_row_dynamic(this->context, height * 0.03f, 1);
-    nk_label(this->context, CONNECTED_USERS, NK_TEXT_ALIGN_CENTERED);
+    nk_label(this->context, USERS_LIST, NK_TEXT_ALIGN_CENTERED);
 
     nk_layout_row_dynamic(this->context, height * (this->adminMode ? 0.8f : 0.97f), 1);
     char groupName[2] = {1, 0};
