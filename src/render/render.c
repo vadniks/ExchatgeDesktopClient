@@ -590,7 +590,7 @@ static void drawUsersList(void) {
     nk_layout_row_dynamic(this->context, height * 0.03f, 1);
     nk_label(this->context, CONNECTED_USERS, NK_TEXT_ALIGN_CENTERED);
 
-    nk_layout_row_dynamic(this->context, height * 0.8f, 1);
+    nk_layout_row_dynamic(this->context, height * (this->adminMode ? 0.8f : 0.97f), 1);
     char groupName[2] = {1, 0};
     if (!nk_group_begin(this->context, groupName, 0)) return;
 
