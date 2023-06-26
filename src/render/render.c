@@ -495,7 +495,6 @@ static void drawUserRow(unsigned id, const char* nullable idString, const char* 
 
     if (mode == -1) {
         nk_spacer(this->context);
-        drawDivider(EMPTY_TEXT);
         return;
     }
 
