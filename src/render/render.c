@@ -512,7 +512,7 @@ static void drawLoginPage(bool logIn) {
 }
 
 static void drawUserRow(unsigned id, const char* idString, const char* name, bool conversationExists) {
-    const float height = 75.0f, height2 = height * 0.5f * 0.7f;
+    const float height = (float) decreaseHeightIfNeeded(this->height) * 0.925f * 0.15f, height2 = height * 0.5f * 0.7f;
     nk_layout_row_begin(this->context, NK_DYNAMIC, height, 3);
     const unsigned intSize = sizeof(int);
 
@@ -522,7 +522,7 @@ static void drawUserRow(unsigned id, const char* idString, const char* name, boo
     descriptionGroupName[1 + intSize] = 0;
 
     nk_layout_row_push(this->context, 0.1f);
-    if (nk_group_begin(this->context, descriptionGroupName, 0)) {
+    if (nk_group_begin(this->context, descriptionGroupName, NK_WINDOW_NO_SCROLLBAR)) {
         nk_layout_row_dynamic(this->context, height2, 1);
 
         nk_label(this->context, ID_TEXT, NK_TEXT_ALIGN_LEFT);
@@ -537,7 +537,7 @@ static void drawUserRow(unsigned id, const char* idString, const char* name, boo
     idAndNameGroupName[1 + intSize] = 0;
 
     nk_layout_row_push(this->context, 0.6f);
-    if (nk_group_begin(this->context, idAndNameGroupName, 0)) {
+    if (nk_group_begin(this->context, idAndNameGroupName, NK_WINDOW_NO_SCROLLBAR)) {
         nk_layout_row_dynamic(this->context, height2, 1);
 
         nk_label(this->context, idString, NK_TEXT_ALIGN_LEFT);
@@ -552,7 +552,7 @@ static void drawUserRow(unsigned id, const char* idString, const char* name, boo
     actionsGroupName[1 + intSize] = 0;
 
     nk_layout_row_push(this->context, 0.3f);
-    if (nk_group_begin(this->context, actionsGroupName, 0)) {
+    if (nk_group_begin(this->context, actionsGroupName, NK_WINDOW_NO_SCROLLBAR)) {
         nk_layout_row_dynamic(this->context, height2, 1);
 
         if (conversationExists) {
