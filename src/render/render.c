@@ -505,7 +505,7 @@ static void drawUserRow(unsigned id, const char* idString, const char* name, boo
     SDL_memcpy(idAndNameGroupName + 1, &id, intSize);
     idAndNameGroupName[1 + intSize] = 0;
 
-    nk_layout_row_push(this->context, 0.45f);
+    nk_layout_row_push(this->context, 0.6f);
     if (nk_group_begin(this->context, idAndNameGroupName, 0)) {
         nk_layout_row_dynamic(this->context, height2, 1);
 
@@ -520,7 +520,7 @@ static void drawUserRow(unsigned id, const char* idString, const char* name, boo
     SDL_memcpy(actionsGroupName + 1, &id, intSize);
     actionsGroupName[1 + intSize] = 0;
 
-    nk_layout_row_push(this->context, 0.45f);
+    nk_layout_row_push(this->context, 0.3f);
     if (nk_group_begin(this->context, actionsGroupName, 0)) {
         nk_layout_row_dynamic(this->context, height2, 1);
 
