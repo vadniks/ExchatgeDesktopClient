@@ -447,6 +447,11 @@ static void onProceedClickedAfterLogInRegister(bool logIn) {
 }
 
 static void drawLoginPage(bool logIn) {
+    CURRENT_HEIGHT_CONSTANT
+
+    nk_layout_row_dynamic(this->context, height * 0.25f, 1);
+    nk_spacer(this->context);
+
     nk_layout_row_dynamic(this->context, 0, 1);
     nk_label(this->context, logIn ? LOG_IN : REGISTER, NK_TEXT_CENTERED);
 
@@ -478,6 +483,9 @@ static void drawLoginPage(bool logIn) {
     if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
 
     if (this->loading) drawInfiniteProgressBar(0);
+
+    nk_layout_row_dynamic(this->context, height * 0.25f, 1);
+    nk_spacer(this->context);
 }
 
 static void drawUserRow(unsigned id, const char* idString, const char* name, bool conversationExists) {
