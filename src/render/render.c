@@ -480,7 +480,7 @@ static void drawLoginPage(bool logIn) {
     if (this->loading) drawInfiniteProgressBar(0);
 }
 
-static void drawUserRow(unsigned id, const char* idString, const char* name, int mode) { // mode: -1 - stub, 0 - conversation doesn't exist, 1 - exists
+static void drawUserRow(unsigned id, const char* idString, const char* name, bool conversationExists) {
     const float height = 75.0f, height2 = height * 0.5f * 0.7f;
     nk_layout_row_begin(this->context, NK_DYNAMIC, height, 3);
     const unsigned intSize = sizeof(int);
@@ -524,7 +524,7 @@ static void drawUserRow(unsigned id, const char* idString, const char* name, int
     if (nk_group_begin(this->context, actionsGroupName, 0)) {
         nk_layout_row_dynamic(this->context, height2, 1);
 
-        if (mode) {
+        if (conversationExists) {
             if (nk_button_label(this->context, CONTINUE_CONVERSATION))
                 (*(this->onUserForConversationChosen))(id, RENDER_CONTINUE_CONVERSATION);
 
