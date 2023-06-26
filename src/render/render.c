@@ -578,7 +578,7 @@ static void drawUsersList(void) {
     CURRENT_HEIGHT_CONSTANT
 
     if (this->adminMode) {
-        nk_layout_row_dynamic(this->context, height * 0.07f, 2);
+        nk_layout_row_dynamic(this->context, (float) decreaseHeightIfNeeded((unsigned) height) * 0.07f, 2);
         nk_label(this->context, WELCOME_ADMIN, NK_TEXT_ALIGN_CENTERED);
 
         if (nk_button_label(this->context, SHUTDOWN_SERVER))
