@@ -446,18 +446,18 @@ static void onProceedClickedAfterLogInRegister(bool logIn) {
     this->enteredPasswordSize = 0;
 }
 
-static void drawLoginPage(bool logIn) {
-    CURRENT_HEIGHT_CONSTANT
+static void drawLogInForm(int width, float height, bool logIn) {
+    width -= 15; height -= 25;
+
+    char groupName[2] = {1, 0};
+    if (!nk_group_begin(this->context, groupName, NK_WINDOW_NO_SCROLLBAR)) return;
 
     nk_layout_row_dynamic(this->context, height * 0.25f, 1);
-    nk_spacer(this->context);
-
-    nk_layout_row_dynamic(this->context, 0, 1);
     nk_label(this->context, logIn ? LOG_IN : REGISTER, NK_TEXT_CENTERED);
 
-    nk_layout_row_dynamic(this->context, 0, 2);
-    nk_label(this->context, USERNAME, NK_TEXT_ALIGN_LEFT);
+    nk_layout_row_static(this->context, height * 0.25f, width / 2, 2);
 
+    nk_label(this->context, USERNAME, NK_TEXT_ALIGN_LEFT);
     nk_edit_string(
         this->context,
         NK_EDIT_FIELD,
@@ -468,7 +468,6 @@ static void drawLoginPage(bool logIn) {
     );
 
     nk_label(this->context, PASSWORD, NK_TEXT_ALIGN_LEFT);
-
     nk_edit_string(
         this->context,
         NK_EDIT_FIELD,
@@ -478,14 +477,38 @@ static void drawLoginPage(bool logIn) {
         &nk_filter_default
     );
 
-    nk_layout_row_dynamic(this->context, 0, 2);
+    nk_layout_row_static(this->context, height * 0.25f, width / 2, 2);
     if (nk_button_label(this->context, PROCEED)) onProceedClickedAfterLogInRegister(logIn);
     if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
 
-    if (this->loading) drawInfiniteProgressBar(0);
+    nk_group_end(this->context);
+}
+
+static unsigned decreaseWidthIfNeeded(unsigned width) { return width <= WINDOW_WIDTH ? width : WINDOW_WIDTH; }
+static unsigned decreaseHeightIfNeeded(unsigned height) { return height <= WINDOW_HEIGHT ? height : WINDOW_HEIGHT; }
+
+static void drawLoginPage(bool logIn) {
+    CURRENT_HEIGHT_CONSTANT
 
     nk_layout_row_dynamic(this->context, height * 0.25f, 1);
     nk_spacer(this->context);
+
+    const float width = (float) this->width, height2 = min(width, decreaseHeightIfNeeded(height)) * 0.4f;
+    nk_layout_row_begin(this->context, NK_STATIC, height2, 3);
+
+    nk_layout_row_push(this->context, width * 0.25f);
+    nk_spacer(this->context);
+
+    const float width2 = width * 0.925f;
+    nk_layout_row_push(this->context, width2 * 0.5f);
+    drawLogInForm((int) (width2 * 0.5f), height2, logIn);
+
+    nk_layout_row_push(this->context, width * 0.25f);
+    nk_spacer(this->context);
+
+    nk_layout_row_end(this->context);
+
+    if (this->loading) drawInfiniteProgressBar(0);
 }
 
 static void drawUserRow(unsigned id, const char* idString, const char* name, bool conversationExists) {
@@ -634,7 +657,6 @@ static void drawConversation(void) {
 }
 
 static void drawError(void) {
-    nk_spacer(this->context);
     nk_layout_row_dynamic(this->context, 0, 1);
 
     if (this->isErrorMessageSystem) nk_label_colored(
