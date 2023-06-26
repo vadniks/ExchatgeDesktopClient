@@ -516,8 +516,10 @@ static void drawUserRow(unsigned id, const char* nullable idString, const char* 
 }
 
 static void drawUsersList(void) {
+    const float height = (float) this->height * 0.925f;
+
     if (this->adminMode) {
-        nk_layout_row_dynamic(this->context, 0, 2);
+        nk_layout_row_dynamic(this->context, height * 0.07f, 2);
         nk_label(this->context, WELCOME_ADMIN, NK_TEXT_ALIGN_CENTERED);
 
         if (nk_button_label(this->context, SHUTDOWN_SERVER))
@@ -526,9 +528,12 @@ static void drawUsersList(void) {
         nk_spacer(this->context);
     }
 
-    nk_layout_row_dynamic(this->context, 0, 1);
+    nk_layout_row_dynamic(this->context, height * 0.03f, 1);
     nk_label(this->context, CONNECTED_USERS, NK_TEXT_ALIGN_CENTERED);
-    nk_spacer(this->context);
+
+    nk_layout_row_dynamic(this->context, height * 0.8f, 1);
+    char mainGroupName[3] = {0};
+    if (!nk_group_begin(this->context, mainGroupName, 0)) return;
 
     drawUserRow(0xffffffff, NULL, NULL, -1);
 
@@ -541,12 +546,14 @@ static void drawUsersList(void) {
 
         drawUserRow(user->id, idString, user->name, user->conversationExists);
 
-        if (i < size - 1) {
-            char groupName[MAX_U32_DEC_DIGITS_COUNT];
-            assert(SDL_snprintf(groupName, MAX_U32_DEC_DIGITS_COUNT, "%u", i) <= (int) MAX_U32_DEC_DIGITS_COUNT);
-            drawDivider(groupName);
-        }
+//        if (i < size - 1) {
+//            char subgroupName[MAX_U32_DEC_DIGITS_COUNT];
+//            assert(SDL_snprintf(subgroupName, MAX_U32_DEC_DIGITS_COUNT, "%u", i) <= (int) MAX_U32_DEC_DIGITS_COUNT);
+//            drawDivider(subgroupName);
+//        }
     }
+
+    nk_group_end(this->context);
 }
 
 static void drawConversation(void) {
