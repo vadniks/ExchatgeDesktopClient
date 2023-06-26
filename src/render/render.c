@@ -480,39 +480,47 @@ static void drawLoginPage(bool logIn) {
     if (this->loading) drawInfiniteProgressBar(0);
 }
 
-static void drawDivider(const char* groupName) {
-    nk_layout_row_dynamic(this->context, 5, 1);
-    if (nk_group_begin(this->context, groupName, 0)) {
-        nk_spacer(this->context);
+static void drawUserRow(unsigned id, const char* idString, const char* name, int mode) { // mode: -1 - stub, 0 - conversation doesn't exist, 1 - exists
+    const float height = 75.0f, height2 = height * 0.5f * 0.7f;
+    nk_layout_row_dynamic(this->context, height, 2);
+    const unsigned intSize = sizeof(int);
+
+    char idAndNameGroupName[2 + intSize];
+    idAndNameGroupName[0] = 1;
+    SDL_memcpy(idAndNameGroupName + 1, &id, intSize);
+    idAndNameGroupName[1 + intSize] = 0;
+
+    if (nk_group_begin(this->context, idAndNameGroupName, 0)) {
+        nk_layout_row_dynamic(this->context, height2, 1);
+
+        nk_label(this->context, idString, NK_TEXT_ALIGN_LEFT);
+        nk_label(this->context, name, NK_TEXT_ALIGN_LEFT);
+
         nk_group_end(this->context);
     }
-}
 
-static void drawUserRow(unsigned id, const char* nullable idString, const char* nullable name, int mode) { // mode: -1 - stub, 0 - conversation doesn't exist, 1 - exists
-    nk_layout_row_dynamic(this->context, 0, 3);
-    nk_label(this->context, idString ? idString : ID_TEXT, NK_TEXT_ALIGN_LEFT);
-    nk_label(this->context, name ? name : NAME_TEXT, NK_TEXT_ALIGN_CENTERED);
+    char actionsGroupName[2 + intSize];
+    actionsGroupName[0] = 2;
+    SDL_memcpy(actionsGroupName + 1, &id, intSize);
+    actionsGroupName[1 + intSize] = 0;
 
-    if (mode == -1) {
-        nk_spacer(this->context);
-        return;
-    }
+    if (nk_group_begin(this->context, actionsGroupName, 0)) {
+        nk_layout_row_dynamic(this->context, height2, 1);
 
-    if (mode) {
-        if (nk_button_label(this->context, CONTINUE_CONVERSATION))
-            (*(this->onUserForConversationChosen))(id, RENDER_CONTINUE_CONVERSATION);
-    } else {
-        if (nk_button_label(this->context, START_CONVERSATION))
-            (*(this->onUserForConversationChosen))(id, RENDER_START_CONVERSATION);
-    }
+        if (mode) {
+            if (nk_button_label(this->context, CONTINUE_CONVERSATION))
+                (*(this->onUserForConversationChosen))(id, RENDER_CONTINUE_CONVERSATION);
 
-    if (mode) {
-        nk_layout_row_dynamic(this->context, 0, 3);
-        nk_spacer(this->context);
-        nk_spacer(this->context);
+            if (nk_button_label(this->context, DELETE_CONVERSATION))
+                (*(this->onUserForConversationChosen))(id, RENDER_DELETE_CONVERSATION);
+        } else {
+            if (nk_button_label(this->context, START_CONVERSATION))
+                (*(this->onUserForConversationChosen))(id, RENDER_START_CONVERSATION);
 
-        if (nk_button_label(this->context, DELETE_CONVERSATION))
-            (*(this->onUserForConversationChosen))(id, RENDER_DELETE_CONVERSATION);
+            nk_spacer(this->context);
+        }
+
+        nk_group_end(this->context);
     }
 }
 
@@ -533,10 +541,8 @@ static void drawUsersList(void) {
     nk_label(this->context, CONNECTED_USERS, NK_TEXT_ALIGN_CENTERED);
 
     nk_layout_row_dynamic(this->context, height * 0.8f, 1);
-    char mainGroupName[3] = {0};
-    if (!nk_group_begin(this->context, mainGroupName, 0)) return;
-
-    drawUserRow(0xffffffff, NULL, NULL, -1);
+    char groupName[2] = {1, 0};
+    if (!nk_group_begin(this->context, groupName, 0)) return;
 
     const unsigned size = listSize(this->usersList);
     for (unsigned i = 0; i < size; i++) {
