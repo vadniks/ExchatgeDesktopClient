@@ -205,7 +205,7 @@ void renderInit(
     fontScale = scaleY;
 
     this->context = nk_sdl_init(this->window, this->renderer);
-    struct nk_font_config config = nk_font_config(10);
+    struct nk_font_config config = nk_font_config(14);
 
     struct nk_font_atlas* atlas = NULL;
     nk_sdl_font_stash_begin(&atlas);
