@@ -778,6 +778,7 @@ void renderDraw(void) {
 void renderClean(void) {
     if (!this) return;
 
+    if (this->currentSystemMessage) destroySystemMessage((RenderMessage*) this->currentSystemMessage); // if window was closed before pause ends
     queueDestroy(this->systemMessagesQueue);
 
     SDL_free(this->conversationMessage);
