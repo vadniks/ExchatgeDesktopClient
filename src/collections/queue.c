@@ -39,7 +39,7 @@ unsigned queueSize(const Queue* queue) {
 
 static void destroyValuesIfNotEmpty(Queue* queue) {
     if (!queue->deallocator) return;
-    for (unsigned i = 0; i < queue->size; queue->deallocator(queue->values[i++]));
+    for (unsigned i = 0; i < queue->size; (*(queue->deallocator))(queue->values[i++]));
 }
 
 void queueDestroy(Queue* queue) {

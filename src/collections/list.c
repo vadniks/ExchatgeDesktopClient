@@ -47,7 +47,7 @@ void listIterateOver(const List* list, bool fromStart, void (*action)(void*)) {
 
 static void destroyValuesIfNotEmpty(List* list) {
     if (!list->deallocator) return;
-    for (unsigned i = 0; i < list->size; list->deallocator(list->values[i++]));
+    for (unsigned i = 0; i < list->size; (*(list->deallocator))(list->values[i++]));
 }
 
 void listDestroy(List* list) {
