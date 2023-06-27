@@ -206,7 +206,10 @@ void renderInit(
     fontScale = scaleY;
 
     this->context = nk_sdl_init(this->window, this->renderer);
+
     struct nk_font_config config = nk_font_config((float) FONT_SIZE);
+    config.oversample_v = STBTT_MAX_OVERSAMPLE; // 8
+    config.oversample_h = STBTT_MAX_OVERSAMPLE;
 
     struct nk_font_atlas* atlas = NULL;
     nk_sdl_font_stash_begin(&atlas);
