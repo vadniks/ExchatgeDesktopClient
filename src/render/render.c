@@ -515,7 +515,12 @@ static void drawLoginPage(bool logIn) {
     nk_layout_row_dynamic(this->context, height * 0.25f, 1);
     nk_spacer(this->context);
 
-    const float width = (float) this->width, height2 = min(width, decreaseHeightIfNeeded(height)) * 0.4f;
+    const float width = (float) this->width;
+
+    float height2 = min(width, decreaseHeightIfNeeded(height)) * 0.4f;
+    if (this->loading) height2 -= 0.05f * height;
+    if (this->currentSystemMessage) height2 -= 0.05f * height;
+
     nk_layout_row_begin(this->context, NK_STATIC, height2, 3);
 
     nk_layout_row_push(this->context, width * 0.25f);
@@ -529,8 +534,6 @@ static void drawLoginPage(bool logIn) {
     nk_spacer(this->context);
 
     nk_layout_row_end(this->context);
-
-    if (this->loading) drawInfiniteProgressBar(0);
 }
 
 static void drawUserRowColumn(
@@ -619,11 +622,11 @@ static void drawUsersList(void) {
     nk_layout_row_dynamic(this->context, height * 0.03f, 1);
     nk_label(this->context, USERS_LIST, NK_TEXT_ALIGN_CENTERED);
 
-    const float groupHeight = this->adminMode
-        ? this->loading ? 0.75f : 0.8f
-        : this->loading ? 0.92f : 0.97f;
+    float heightMultiplier = this->adminMode ? 0.8f : 0.97f;
+    if (this->loading) heightMultiplier -= 0.05f;
+    if (this->currentSystemMessage) heightMultiplier -= 0.05f;
 
-    nk_layout_row_dynamic(this->context, height * groupHeight, 1);
+    nk_layout_row_dynamic(this->context, height * heightMultiplier, 1);
     char groupName[2] = {1, 0};
     if (!nk_group_begin(this->context, groupName, 0)) return;
 
@@ -638,8 +641,6 @@ static void drawUsersList(void) {
     }
 
     nk_group_end(this->context);
-
-    if (this->loading) drawInfiniteProgressBar(0.05f);
 }
 
 static void drawConversation(void) { // TODO: generate & sign messages from users on the client side
@@ -651,7 +652,11 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     nk_layout_row_dynamic(this->context, height * 0.05f, 1);
     nk_label(this->context, title, NK_TEXT_ALIGN_CENTERED);
 
-    nk_layout_row_dynamic(this->context, height * 0.85f, 1);
+    float heightCorrector = 0.0f;
+    if (this->loading) heightCorrector += 0.05f;
+    if (this->currentSystemMessage) heightCorrector += 0.1f;
+
+    nk_layout_row_dynamic(this->context, height * (0.85f - heightCorrector), 1);
     if (!nk_group_begin(this->context, title, 0)) return;
     nk_layout_row_dynamic(this->context, 0, 2);
 
@@ -675,8 +680,8 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     nk_group_end(this->context);
 
     nk_layout_row_begin(this->context, NK_DYNAMIC, height * 0.1f, 2);
-    nk_layout_row_push(this->context, 0.85f);
 
+    nk_layout_row_push(this->context, 0.85f);
     nk_edit_string(
         this->context,
         NK_EDIT_BOX | NK_EDIT_MULTILINE | NK_EDIT_EDITOR,
@@ -688,10 +693,11 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
 
     nk_layout_row_push(this->context, 0.15f);
     if (nk_button_label(this->context, SEND)) SDL_Log("send clicked"); // TODO
+
     nk_layout_row_end(this->context);
 }
 
-static void drawError(void) {
+static void drawErrorIfNedded(void) {
     this->systemMessageTicks++;
 
     if (!queueSize(this->systemMessagesQueue) && !this->currentSystemMessage) return; // TODO: optimize
@@ -741,7 +747,8 @@ static void drawPage(void) {
         default: assert(false);
     }
 
-    drawError();
+    if (this->loading) drawInfiniteProgressBar(0.05f);
+    drawErrorIfNedded();
 }
 
 void renderDraw(void) {
