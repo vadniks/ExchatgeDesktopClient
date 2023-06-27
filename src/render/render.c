@@ -538,7 +538,7 @@ static void drawUserRowColumn(
     }
 }
 
-static void drawUserRowColumnDescription(__attribute_maybe_unused__ void* nullable parameter) {
+static void drawUserRowColumnDescriptions(__attribute_maybe_unused__ void* nullable parameter) {
     nk_label(this->context, ID_TEXT, NK_TEXT_ALIGN_LEFT);
     nk_label(this->context, NAME_TEXT, NK_TEXT_ALIGN_LEFT);
 }
@@ -576,7 +576,7 @@ static void drawUserRow(unsigned id, const char* idString, const char* name, boo
     const float height = (float) decreaseHeightIfNeeded(this->height) * 0.925f * 0.15f, height2 = height * 0.5f * 0.7f;
     nk_layout_row_begin(this->context, NK_DYNAMIC, height, 4);
 
-    drawUserRowColumn(1, 0.1f, id, height2, &drawUserRowColumnDescription, NULL);
+    drawUserRowColumn(1, 0.1f, id, height2, &drawUserRowColumnDescriptions, NULL);
     drawUserRowColumn(2, 0.5f, id, height2, &drawUserRowColumnIdAndName, (void*[2]) {&idString, &name});
     drawUserRowColumn(3, 0.1f, id, height2, &drawUserRowColumnStatus, &online);
     drawUserRowColumn(4, 0.3f, id, height2, &drawUserRowColumnActions, (void*[2]) {&id, &conversationExists});
