@@ -76,18 +76,17 @@ static void onMessageReceived(const byte* message) {
 }
 
 static void onLogInResult(bool successful) {
-    if (successful) {
-        renderHideSystemMessage();
+    if (successful)
         renderShowUsersList();
-    } else {
+    else {
         renderShowLogIn();
         renderShowSystemError();
     }
 }
 
-static void onErrorReceived(int flag) {
+static void onErrorReceived(__attribute_maybe_unused__ int flag) {
     renderHideInfiniteProgressBar();
-    SDL_Log("error received %d", flag);
+    renderShowSystemError();
 }
 
 static void onRegisterResult(bool successful) {
@@ -115,7 +114,7 @@ static void processCredentials(void** data) {
         &onDisconnected
     );
 
-    if (!this->netInitialized) renderShowUnableToConnectToTheServerSystemMessage(); // TODO: create text queue
+    if (!this->netInitialized) renderShowUnableToConnectToTheServerSystemMessage();
     if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
 
     logicCredentialsRandomFiller(data[0], NET_USERNAME_SIZE);
@@ -152,7 +151,6 @@ void logicCredentialsRandomFiller(char* credentials, unsigned size) {
 
 void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
     assert(this);
-    renderHideSystemMessage();
     logIn ? renderShowLogIn() : renderShowRegister();
 }
 

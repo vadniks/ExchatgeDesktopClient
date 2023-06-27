@@ -692,7 +692,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
 }
 
 static void drawError(void) {
-    (this->systemMessageTicks)++;
+    this->systemMessageTicks++;
 
     if (!queueSize(this->systemMessagesQueue) && !this->currentSystemMessage) return; // TODO: optimize
 

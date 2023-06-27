@@ -27,8 +27,23 @@ void queuePush(Queue* queue, void* nullable value) {
 
 void* nullable queuePop(Queue* queue) {
     assert(queue && queue->values && queue->size > 0);
-    void* value = queue->values[--(queue->size)];
-    queue->values = SDL_realloc(queue->values, queue->size * VOID_PTR_SIZE);
+    void* value = queue->values[0];
+
+    const unsigned newSize = queue->size - 1;
+    if (!newSize) {
+        SDL_free(queue->values);
+        queue->values = NULL;
+        queue->size = 0;
+        return value;
+    }
+
+    void** temp = SDL_malloc(newSize * VOID_PTR_SIZE);
+    SDL_memcpy(temp, &(queue->values[1]), newSize * VOID_PTR_SIZE);
+
+    SDL_free(queue->values);
+    queue->values = temp;
+
+    queue->size = newSize;
     return value;
 }
 
