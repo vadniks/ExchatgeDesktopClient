@@ -646,7 +646,7 @@ static void drawUsersList(void) {
 static void drawConversation(void) { // TODO: generate & sign messages from users on the client side
     const float height = currentHeight();
 
-    char title[this->conversationNameSize + 1];
+    char title[this->conversationNameSize + 1]; // TODO: add button that returns back to users list
     SDL_memcpy(title, this->conversationName, this->conversationNameSize);
 
     nk_layout_row_dynamic(this->context, height * 0.05f, 1);
