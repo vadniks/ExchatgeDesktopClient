@@ -2,6 +2,7 @@
 #include <assert.h>
 //#include "nuklearDefs.h" - cmake automatically includes precompiled version of this header
 #include "../defs.h"
+#include "../collections/queue.h"
 #include "render.h"
 
 #define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->uiQueriesMutex)); {
@@ -45,6 +46,26 @@ STATIC_CONST_STRING OFFLINE = "Offline";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
+struct RenderUser_t {
+    unsigned id;
+    char* name;
+    bool conversationExists; // true if current user (who has logged in via this client) and this user (who displayed in the users list) have already started a conversation
+    bool online;
+    void (*onClicked)(unsigned id);
+};
+
+struct RenderMessage_t {
+    unsigned long timestamp;
+    bool fromThisClient;
+    char* text;
+    unsigned size;
+};
+
+typedef struct {
+    char text[RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE]; // TODO: rename constant
+    bool error;
+} SystemMessage;
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
@@ -63,9 +84,6 @@ THIS(
     unsigned enteredPasswordSize;
     char* enteredCredentialsBuffer;
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser;
-    bool showSystemMessage;
-    bool isErrorMessageSystem;
-    char systemMessageText[RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE]; // message from the system (application)
     SDL_mutex* uiQueriesMutex;
     const List* usersList; // allocated elsewhere
     RenderUserForConversationChosenCallback onUserForConversationChosen;
@@ -81,23 +99,11 @@ THIS(
     bool loading;
     char infiniteProgressBarAnim;
     unsigned infiniteProgressBarCounter;
+    Queue* systemMessagesQueue;
+    SystemMessage* nullable currentSystemMessage;
+    unsigned systemMessageTicks;
 )
 #pragma clang diagnostic pop
-
-struct RenderUser_t {
-    unsigned id;
-    char* name;
-    bool conversationExists; // true if current user (who has logged in via this client) and this user (who displayed in the users list) have already started a conversation
-    bool online;
-    void (*onClicked)(unsigned id);
-};
-
-struct RenderMessage_t {
-    unsigned long timestamp;
-    bool fromThisClient;
-    char* text;
-    unsigned size;
-};
 
 static void setStyle(void) {
     struct nk_color table[NK_COLOR_COUNT];
@@ -132,6 +138,8 @@ static void setStyle(void) {
     nk_style_from_table(this->context, table);
 }
 
+static void destroySystemMessage(RenderMessage* message) { SDL_free(message); }
+
 void renderInit(
     unsigned usernameSize,
     unsigned passwordSize,
@@ -162,9 +170,6 @@ void renderInit(
     this->enteredPasswordSize = 0;
     this->enteredCredentialsBuffer = SDL_calloc(this->usernameSize + this->passwordSize, sizeof(char));
     this->onLoginRegisterPageQueriedByUser = onLoginRegisterPageQueriedByUser;
-    this->showSystemMessage = false;
-    this->isErrorMessageSystem = false;
-    SDL_memset(this->systemMessageText, 0, RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
 
     this->uiQueriesMutex = SDL_CreateMutex();
     assert(this->uiQueriesMutex);
@@ -186,6 +191,9 @@ void renderInit(
     this->loading = false;
     this->infiniteProgressBarAnim = '|';
     this->infiniteProgressBarCounter = 0;
+    this->systemMessagesQueue = queueInit((QueueDeallocator) &destroySystemMessage);
+    this->currentSystemMessage = NULL;
+    this->systemMessageTicks = 0;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -202,6 +210,7 @@ void renderInit(
     SDL_SetHint(SDL_HINT_RENDER_OPENGL_SHADERS, "1");
     SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1");
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
+
     this->renderer = SDL_CreateRenderer(this->window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     assert(this->renderer);
 
@@ -351,17 +360,17 @@ void renderShowConversation(const char* conversationName) {
     SYNCHRONIZED_END
 }
 
-void renderShowSystemMessage(const char* message, bool error) {
-    assert(this);
+static void postSystemMessage(const char* text, bool error) { // expects a null-terminated string with length in range (0, SYSTEM_MESSAGE_SIZE_MAX]
+    SystemMessage* message = SDL_malloc(sizeof *message);
+    message->error = error;
 
-    SYNCHRONIZED_BEGIN
-    SDL_memset(this->systemMessageText, 0, RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
+    SDL_memset(message->text, 0, RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
 
     bool foundNullTerminator = false;
     for (unsigned i = 0; i < RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE; i++) {
-        this->systemMessageText[i] = message[i];
+        message->text[i] = text[i];
 
-        if (message[i] == '\0') {
+        if (!text[i]) {
             assert(i > 0);
             foundNullTerminator = true;
             break;
@@ -369,35 +378,27 @@ void renderShowSystemMessage(const char* message, bool error) {
     }
     assert(foundNullTerminator);
 
-    this->isErrorMessageSystem = error;
-    this->showSystemMessage = true;
-    SYNCHRONIZED_END
+    SYNCHRONIZED(queuePush(this->systemMessagesQueue, message);)
+}
+
+void renderShowSystemMessage(const char* message, bool error) {
+    assert(this);
+    postSystemMessage(message, error);
 }
 
 void renderHideSystemMessage(void) {
     assert(this);
     SYNCHRONIZED_BEGIN
 
-    this->showSystemMessage = false;
-    this->isErrorMessageSystem = false;
+    while (queueSize(this->systemMessagesQueue) > 0)
+        destroySystemMessage(queuePop(this->systemMessagesQueue));
 
     SYNCHRONIZED_END
 }
 
-static void showSystemError(const char* text, unsigned size) {
-    assert(this && size > 0 && size <= RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
-    SYNCHRONIZED_BEGIN
-
-    SDL_memcpy(this->systemMessageText, text, size);
-    this->isErrorMessageSystem = true;
-    this->showSystemMessage = true;
-
-    SYNCHRONIZED_END
-}
-
-void renderShowSystemError(void) { showSystemError(ERROR_TEXT, 6); }
-void renderShowDisconnectedSystemMessage(void) { showSystemError(DISCONNECTED, 13); }
-void renderShowUnableToConnectToTheServerSystemMessage(void) { showSystemError(UNABLE_TO_CONNECT_TO_THE_SERVER, 32); }
+void renderShowSystemError(void) { postSystemMessage(ERROR_TEXT, true); }
+void renderShowDisconnectedSystemMessage(void) { postSystemMessage(DISCONNECTED, true); }
+void renderShowUnableToConnectToTheServerSystemMessage(void) { postSystemMessage(UNABLE_TO_CONNECT_TO_THE_SERVER, true); }
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);
@@ -410,7 +411,7 @@ void renderHideInfiniteProgressBar(void) {
 }
 
 static void drawInfiniteProgressBar(float height) {
-    const unsigned maxCounterValue = 60 / 12; // 5 - 12 times slower than screen update
+    const unsigned maxCounterValue = 60 / 12; // 5 times slower than screen update
 
     if (this->infiniteProgressBarCounter > 0)
         this->infiniteProgressBarCounter =
@@ -691,16 +692,31 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
 }
 
 static void drawError(void) {
+    (this->systemMessageTicks)++;
+
+    if (!queueSize(this->systemMessagesQueue) && !this->currentSystemMessage) return; // TODO: optimize
+
+    if (this->systemMessageTicks >= 60 * 3) { // 3 seconds
+        this->systemMessageTicks = 0;
+
+        if (this->currentSystemMessage) destroySystemMessage((RenderMessage*) this->currentSystemMessage);
+        this->currentSystemMessage = NULL;
+
+        if (queueSize(this->systemMessagesQueue)) this->currentSystemMessage = queuePop(this->systemMessagesQueue);
+    }
+
+    if (!this->currentSystemMessage) return;
+
     nk_layout_row_dynamic(this->context, 0, 1);
 
-    if (this->isErrorMessageSystem) nk_label_colored(
+    if (this->currentSystemMessage->error) nk_label_colored(
         this->context,
-        this->systemMessageText,
+        this->currentSystemMessage->text,
         NK_TEXT_ALIGN_CENTERED | NK_TEXT_ALIGN_BOTTOM,
         (struct nk_color) { 0xff, 0, 0, 0xff }
     ); else nk_label(
         this->context,
-        this->systemMessageText,
+        this->currentSystemMessage->text,
         NK_TEXT_ALIGN_CENTERED | NK_TEXT_ALIGN_BOTTOM
     );
 }
@@ -725,7 +741,7 @@ static void drawPage(void) {
         default: assert(false);
     }
 
-    if (this->showSystemMessage) drawError();
+    drawError();
 }
 
 void renderDraw(void) {
@@ -754,6 +770,8 @@ void renderDraw(void) {
 
 void renderClean(void) {
     if (!this) return;
+
+    queueDestroy(this->systemMessagesQueue);
 
     SDL_free(this->conversationMessage);
     SDL_free(this->conversationName);
