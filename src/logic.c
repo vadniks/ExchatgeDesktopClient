@@ -93,8 +93,9 @@ static void onRegisterResult(bool successful) {
     SDL_Log("registration %s", successful ? "succeeded" : "failed");
 }
 
-static void onDisconnected(void) {
+static void onDisconnected(void) { // TODO: forbid using username 'admin' more than one time on the server side
     this->netInitialized = false;
+    renderHideInfiniteProgressBar();
     renderShowLogIn();
     renderShowDisconnectedSystemMessage();
 }
@@ -173,7 +174,10 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
 
 void logicOnServerShutdownRequested(void) {
     assert(this);
-    if (this->netInitialized) netShutdownServer();
+    if (!this->netInitialized) return;
+
+    renderShowInfiniteProgressBar();
+    (*(this->asyncTask))(&netShutdownServer);
 }
 
 void logicClean(void) {

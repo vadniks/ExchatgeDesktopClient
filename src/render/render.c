@@ -603,7 +603,11 @@ static void drawUsersList(void) {
     nk_layout_row_dynamic(this->context, height * 0.03f, 1);
     nk_label(this->context, USERS_LIST, NK_TEXT_ALIGN_CENTERED);
 
-    nk_layout_row_dynamic(this->context, height * (this->adminMode ? 0.8f : 0.97f), 1);
+    const float groupHeight = this->adminMode
+        ? this->loading ? 0.75f : 0.8f
+        : this->loading ? 0.92f : 0.97f;
+
+    nk_layout_row_dynamic(this->context, height * groupHeight, 1);
     char groupName[2] = {1, 0};
     if (!nk_group_begin(this->context, groupName, 0)) return;
 
@@ -618,6 +622,8 @@ static void drawUsersList(void) {
     }
 
     nk_group_end(this->context);
+
+    if (this->loading) drawInfiniteProgressBar(0.05f);
 }
 
 static void drawConversation(void) { // TODO: generate & sign messages from users on the client side
