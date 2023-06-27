@@ -519,8 +519,8 @@ static void drawUserRowColumn(
     float ration,
     unsigned id,
     float height2,
-    void (*contentDrawer)(void* nullable),
-    void* nullable parameter
+    void (*contentDrawer)(const void* nullable),
+    const void* nullable parameter
 ) {
     const unsigned intSize = sizeof(int);
 
@@ -538,27 +538,27 @@ static void drawUserRowColumn(
     }
 }
 
-static void drawUserRowColumnDescriptions(__attribute_maybe_unused__ void* nullable parameter) {
+static void drawUserRowColumnDescriptions(__attribute_maybe_unused__ const void* nullable parameter) {
     nk_label(this->context, ID_TEXT, NK_TEXT_ALIGN_LEFT);
     nk_label(this->context, NAME_TEXT, NK_TEXT_ALIGN_LEFT);
 }
 
-static void drawUserRowColumnIdAndName(void* parameter) {
+static void drawUserRowColumnIdAndName(const void* parameter) {
     assert(parameter);
-    nk_label(this->context, /*idString*/ *((const char**) ((void**) parameter)[0]), NK_TEXT_ALIGN_LEFT);
-    nk_label(this->context, /*name*/ *((const char**) ((void**) parameter)[1]), NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, /*idString*/ (const char*) ((const void**) parameter)[0], NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, /*name*/ (const char*) ((const void**) parameter)[1], NK_TEXT_ALIGN_LEFT);
 }
 
-static void drawUserRowColumnStatus(void* parameter) {
+static void drawUserRowColumnStatus(const void* parameter) {
     assert(parameter);
-    nk_label(this->context, /*online*/ *((bool*) parameter) ? ONLINE : OFFLINE, NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, /*online*/ *((const bool*) parameter) ? ONLINE : OFFLINE, NK_TEXT_ALIGN_LEFT);
 }
 
-static void drawUserRowColumnActions(void* parameter) {
+static void drawUserRowColumnActions(const void* parameter) {
     assert(parameter);
-    const unsigned id = *((unsigned*) ((void**) parameter)[0]);
+    const unsigned id = *((const unsigned*) ((const void**) parameter)[0]);
 
-    if (/*conversationExists*/ *((bool*) ((void**) parameter)[1])) {
+    if (/*conversationExists*/ *((const bool*) ((const void**) parameter)[1])) {
         if (nk_button_label(this->context, CONTINUE_CONVERSATION))
             (*(this->onUserForConversationChosen))(id, RENDER_CONTINUE_CONVERSATION);
 
@@ -577,9 +577,9 @@ static void drawUserRow(unsigned id, const char* idString, const char* name, boo
     nk_layout_row_begin(this->context, NK_DYNAMIC, height, 4);
 
     drawUserRowColumn(1, 0.1f, id, height2, &drawUserRowColumnDescriptions, NULL);
-    drawUserRowColumn(2, 0.5f, id, height2, &drawUserRowColumnIdAndName, (void*[2]) {&idString, &name});
+    drawUserRowColumn(2, 0.5f, id, height2, &drawUserRowColumnIdAndName, (const void*[2]) {idString, name});
     drawUserRowColumn(3, 0.1f, id, height2, &drawUserRowColumnStatus, &online);
-    drawUserRowColumn(4, 0.3f, id, height2, &drawUserRowColumnActions, (void*[2]) {&id, &conversationExists});
+    drawUserRowColumn(4, 0.3f, id, height2, &drawUserRowColumnActions, (const void*[2]) {&id, &conversationExists});
 
     nk_layout_row_end(this->context);
 }
