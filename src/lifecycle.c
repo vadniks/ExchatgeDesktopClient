@@ -80,11 +80,11 @@ bool lifecycleInit(unsigned argc, const char** argv) { // TODO: expose net modul
         &logicOnServerShutdownRequested,
         NET_MESSAGE_BODY_SIZE
     );
-    async(&showLogInUiDelayed);
     logicInit(argc, argv, &async, &delayed);
     renderSetAdminMode(logicIsAdminMode());
     renderSetUsersList(logicUsersList());
     renderSetMessagesList(logicMessagesList());
+    async(&showLogInUiDelayed);
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(
         UI_UPDATE_PERIOD,
