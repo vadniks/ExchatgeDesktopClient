@@ -8,8 +8,6 @@
 #define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->uiQueriesMutex)); }
 #define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
 
-#define CURRENT_HEIGHT_CONSTANT const float height = (float) this->height * 0.925f;
-
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
 STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
 STATIC_CONST_UNSIGNED WINDOW_MINIMAL_WIDTH = WINDOW_WIDTH / 2;
@@ -486,9 +484,10 @@ static void drawLogInForm(int width, float height, bool logIn) {
 
 static unsigned decreaseWidthIfNeeded(unsigned width) { return width <= WINDOW_WIDTH ? width : WINDOW_WIDTH; }
 static unsigned decreaseHeightIfNeeded(unsigned height) { return height <= WINDOW_HEIGHT ? height : WINDOW_HEIGHT; }
+static float currentHeight(void) { return (float) this->height * 0.925f; }
 
 static void drawLoginPage(bool logIn) {
-    CURRENT_HEIGHT_CONSTANT
+    const float height = currentHeight();
 
     nk_layout_row_dynamic(this->context, height * 0.25f, 1);
     nk_spacer(this->context);
@@ -575,7 +574,7 @@ static void drawUserRow(unsigned id, const char* idString, const char* name, boo
 }
 
 static void drawUsersList(void) {
-    CURRENT_HEIGHT_CONSTANT
+    const float height = currentHeight();
 
     if (this->adminMode) {
         nk_layout_row_dynamic(this->context, (float) decreaseHeightIfNeeded((unsigned) height) * 0.07f, 2);
@@ -607,8 +606,8 @@ static void drawUsersList(void) {
     nk_group_end(this->context);
 }
 
-static void drawConversation(void) {
-    CURRENT_HEIGHT_CONSTANT
+static void drawConversation(void) { // TODO: generate & sign messages from users on the client side
+    const float height = currentHeight();
 
     char title[this->conversationNameSize + 1];
     SDL_memcpy(title, this->conversationName, this->conversationNameSize);
