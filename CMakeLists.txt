@@ -15,7 +15,7 @@ add_compile_options("-fms-extensions")
 add_compile_options("-Wno-gnu-folding-constant")
 add_compile_options("-Wno-microsoft-anon-tag")
 add_compile_options("-Wno-gnu-empty-initializer")
-#add_compile_options("-std=gnu11")
+add_compile_options("-std=gnu11")
 
 add_compile_options("-Ofast") # -O3
 #add_link_options("-s")

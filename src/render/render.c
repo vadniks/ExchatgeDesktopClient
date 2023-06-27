@@ -40,6 +40,8 @@ STATIC_CONST_STRING SHUTDOWN_SERVER = "Shutdown the server";
 STATIC_CONST_STRING DISCONNECTED_TEXT = "Disconnected";
 STATIC_CONST_STRING UNABLE_TO_CONNECT_TO_THE_SERVER_TEXT = "Unable to connect to the server";
 STATIC_CONST_STRING SEND_TEXT = "Send";
+STATIC_CONST_STRING ONLINE = "Online";
+STATIC_CONST_STRING OFFLINE = "Offline";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -226,7 +228,7 @@ void renderSetAdminMode(bool mode) {
 
 List* renderInitUsersList(void) { return listInit((ListDeallocator) renderDestroyUser); }
 
-RenderUser* renderCreateUser(unsigned id, const char* name, bool conversationExists) {
+RenderUser* renderCreateUser(unsigned id, const char* name, bool conversationExists, bool online) {
     assert(this);
     bool foundNullTerminator = false;
     for (unsigned i = 0; i < this->usernameSize; i++) // TODO: extract this piece of null-terminator finder code into separate function/macro
@@ -240,8 +242,10 @@ RenderUser* renderCreateUser(unsigned id, const char* name, bool conversationExi
     RenderUser* user = SDL_malloc(sizeof *user);
     user->id = id;
     user->name = SDL_calloc(this->usernameSize, sizeof(char));
-    user->conversationExists = conversationExists;
     SDL_memcpy(user->name, name, this->usernameSize);
+    user->conversationExists = conversationExists;
+    user->online = online;
+
     return user;
 }
 
@@ -510,65 +514,72 @@ static void drawLoginPage(bool logIn) {
     if (this->loading) drawInfiniteProgressBar(0);
 }
 
-static void drawUserRow(unsigned id, const char* idString, const char* name, bool conversationExists) {
-    const float height = (float) decreaseHeightIfNeeded(this->height) * 0.925f * 0.15f, height2 = height * 0.5f * 0.7f;
-    nk_layout_row_begin(this->context, NK_DYNAMIC, height, 3);
+static void drawUserRowColumn(
+    byte groupId,
+    float ration,
+    unsigned id,
+    float height2,
+    void (*contentDrawer)(void* nullable),
+    void* nullable parameter
+) {
     const unsigned intSize = sizeof(int);
 
-    char descriptionGroupName[2 + intSize];
-    descriptionGroupName[0] = 1;
-    SDL_memcpy(descriptionGroupName + 1, &id, intSize);
-    descriptionGroupName[1 + intSize] = 0;
+    char groupName[2 + intSize];
+    groupName[0] = (char) groupId;
+    SDL_memcpy(groupName + 1, &id, intSize);
+    groupName[1 + intSize] = 0;
 
-    nk_layout_row_push(this->context, 0.1f);
-    if (nk_group_begin(this->context, descriptionGroupName, NK_WINDOW_NO_SCROLLBAR)) {
+    nk_layout_row_push(this->context, ration);
+    if (nk_group_begin(this->context, groupName, NK_WINDOW_NO_SCROLLBAR)) {
+
         nk_layout_row_dynamic(this->context, height2, 1);
-
-        nk_label(this->context, ID_TEXT, NK_TEXT_ALIGN_LEFT);
-        nk_label(this->context, NAME_TEXT, NK_TEXT_ALIGN_LEFT);
-
+        (*contentDrawer)(parameter);
         nk_group_end(this->context);
     }
+}
 
-    char idAndNameGroupName[2 + intSize];
-    idAndNameGroupName[0] = 2;
-    SDL_memcpy(idAndNameGroupName + 1, &id, intSize);
-    idAndNameGroupName[1 + intSize] = 0;
+static void drawUserRowColumnDescription(__attribute_maybe_unused__ void* nullable parameter) {
+    nk_label(this->context, ID_TEXT, NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, NAME_TEXT, NK_TEXT_ALIGN_LEFT);
+}
 
-    nk_layout_row_push(this->context, 0.6f);
-    if (nk_group_begin(this->context, idAndNameGroupName, NK_WINDOW_NO_SCROLLBAR)) {
-        nk_layout_row_dynamic(this->context, height2, 1);
+static void drawUserRowColumnIdAndName(void* parameter) {
+    assert(parameter);
+    nk_label(this->context, /*idString*/ *((const char**) ((void**) parameter)[0]), NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, /*name*/ *((const char**) ((void**) parameter)[1]), NK_TEXT_ALIGN_LEFT);
+}
 
-        nk_label(this->context, idString, NK_TEXT_ALIGN_LEFT);
-        nk_label(this->context, name, NK_TEXT_ALIGN_LEFT);
+static void drawUserRowColumnStatus(void* parameter) {
+    assert(parameter);
+    nk_label(this->context, /*online*/ *((bool*) parameter) ? ONLINE : OFFLINE, NK_TEXT_ALIGN_LEFT);
+}
 
-        nk_group_end(this->context);
+static void drawUserRowColumnActions(void* parameter) {
+    assert(parameter);
+    const unsigned id = *((unsigned*) ((void**) parameter)[0]);
+
+    if (/*conversationExists*/ *((bool*) ((void**) parameter)[1])) {
+        if (nk_button_label(this->context, CONTINUE_CONVERSATION))
+            (*(this->onUserForConversationChosen))(id, RENDER_CONTINUE_CONVERSATION);
+
+        if (nk_button_label(this->context, DELETE_CONVERSATION))
+            (*(this->onUserForConversationChosen))(id, RENDER_DELETE_CONVERSATION);
+    } else {
+        if (nk_button_label(this->context, START_CONVERSATION))
+            (*(this->onUserForConversationChosen))(id, RENDER_START_CONVERSATION);
+
+        nk_spacer(this->context);
     }
+}
 
-    char actionsGroupName[2 + intSize];
-    actionsGroupName[0] = 3;
-    SDL_memcpy(actionsGroupName + 1, &id, intSize);
-    actionsGroupName[1 + intSize] = 0;
+static void drawUserRow(unsigned id, const char* idString, const char* name, bool conversationExists, bool online) {
+    const float height = (float) decreaseHeightIfNeeded(this->height) * 0.925f * 0.15f, height2 = height * 0.5f * 0.7f;
+    nk_layout_row_begin(this->context, NK_DYNAMIC, height, 4);
 
-    nk_layout_row_push(this->context, 0.3f);
-    if (nk_group_begin(this->context, actionsGroupName, NK_WINDOW_NO_SCROLLBAR)) {
-        nk_layout_row_dynamic(this->context, height2, 1);
-
-        if (conversationExists) {
-            if (nk_button_label(this->context, CONTINUE_CONVERSATION))
-                (*(this->onUserForConversationChosen))(id, RENDER_CONTINUE_CONVERSATION);
-
-            if (nk_button_label(this->context, DELETE_CONVERSATION))
-                (*(this->onUserForConversationChosen))(id, RENDER_DELETE_CONVERSATION);
-        } else {
-            if (nk_button_label(this->context, START_CONVERSATION))
-                (*(this->onUserForConversationChosen))(id, RENDER_START_CONVERSATION);
-
-            nk_spacer(this->context);
-        }
-
-        nk_group_end(this->context);
-    }
+    drawUserRowColumn(1, 0.1f, id, height2, &drawUserRowColumnDescription, NULL);
+    drawUserRowColumn(2, 0.5f, id, height2, &drawUserRowColumnIdAndName, (void*[2]) {&idString, &name});
+    drawUserRowColumn(3, 0.1f, id, height2, &drawUserRowColumnStatus, &online);
+    drawUserRowColumn(4, 0.3f, id, height2, &drawUserRowColumnActions, (void*[2]) {&id, &conversationExists});
 
     nk_layout_row_end(this->context);
 }
@@ -600,7 +611,7 @@ static void drawUsersList(void) {
         char idString[MAX_U32_DEC_DIGITS_COUNT];
         assert(SDL_snprintf(idString, MAX_U32_DEC_DIGITS_COUNT, "%u", user->id) <= (int) MAX_U32_DEC_DIGITS_COUNT);
 
-        drawUserRow(user->id, idString, user->name, user->conversationExists);
+        drawUserRow(user->id, idString, user->name, user->conversationExists, user->online);
     }
 
     nk_group_end(this->context);
