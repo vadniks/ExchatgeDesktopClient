@@ -34,13 +34,12 @@ STATIC_CONST_STRING CONTINUE_CONVERSATION = "Continue conversation";
 STATIC_CONST_STRING DELETE_CONVERSATION = "Delete conversation";
 STATIC_CONST_STRING ID_TEXT = "Id";
 STATIC_CONST_STRING NAME_TEXT = "Name";
-STATIC_CONST_STRING EMPTY_TEXT = "";
 STATIC_CONST_STRING ERROR_TEXT = "Error";
 STATIC_CONST_STRING WELCOME_ADMIN = "Welcome admin!";
 STATIC_CONST_STRING SHUTDOWN_SERVER = "Shutdown the server";
-STATIC_CONST_STRING DISCONNECTED_TEXT = "Disconnected";
-STATIC_CONST_STRING UNABLE_TO_CONNECT_TO_THE_SERVER_TEXT = "Unable to connect to the server";
-STATIC_CONST_STRING SEND_TEXT = "Send";
+STATIC_CONST_STRING DISCONNECTED = "Disconnected";
+STATIC_CONST_STRING UNABLE_TO_CONNECT_TO_THE_SERVER = "Unable to connect to the server";
+STATIC_CONST_STRING SEND = "Send";
 STATIC_CONST_STRING ONLINE = "Online";
 STATIC_CONST_STRING OFFLINE = "Offline";
 
@@ -382,8 +381,8 @@ static void showSystemError(const char* text, unsigned size) {
 }
 
 void renderShowSystemError(void) { showSystemError(ERROR_TEXT, 6); }
-void renderShowDisconnectedSystemMessage(void) { showSystemError(DISCONNECTED_TEXT, 13); }
-void renderShowUnableToConnectToTheServerSystemMessage(void) { showSystemError(UNABLE_TO_CONNECT_TO_THE_SERVER_TEXT, 32); }
+void renderShowDisconnectedSystemMessage(void) { showSystemError(DISCONNECTED, 13); }
+void renderShowUnableToConnectToTheServerSystemMessage(void) { showSystemError(UNABLE_TO_CONNECT_TO_THE_SERVER, 32); }
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);
@@ -666,7 +665,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     );
 
     nk_layout_row_push(this->context, 0.15f);
-    if (nk_button_label(this->context, SEND_TEXT)) SDL_Log("send clicked"); // TODO
+    if (nk_button_label(this->context, SEND)) SDL_Log("send clicked"); // TODO
     nk_layout_row_end(this->context);
 }
 
