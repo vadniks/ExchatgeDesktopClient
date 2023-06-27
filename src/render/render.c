@@ -12,6 +12,7 @@ STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
 STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
 STATIC_CONST_UNSIGNED WINDOW_MINIMAL_WIDTH = WINDOW_WIDTH / 2;
 STATIC_CONST_UNSIGNED WINDOW_MINIMAL_HEIGHT = WINDOW_HEIGHT / 2;
+STATIC_CONST_UNSIGNED FONT_SIZE = 14;
 STATIC_CONST_UNSIGNED MAX_U32_DEC_DIGITS_COUNT = 10; // 0xffffffff = 4294967295 10 digits
 
 STATIC_CONST_UNSIGNED STATE_INITIAL = 0;
@@ -205,12 +206,12 @@ void renderInit(
     fontScale = scaleY;
 
     this->context = nk_sdl_init(this->window, this->renderer);
-    struct nk_font_config config = nk_font_config(14);
+    struct nk_font_config config = nk_font_config((float) FONT_SIZE);
 
     struct nk_font_atlas* atlas = NULL;
     nk_sdl_font_stash_begin(&atlas);
 
-    struct nk_font* font = nk_font_atlas_add_default(atlas, 14 * fontScale, &config);
+    struct nk_font* font = nk_font_atlas_add_default(atlas, config.size * fontScale, &config);
     nk_sdl_font_stash_end();
 
     font->handle.height /= fontScale;
