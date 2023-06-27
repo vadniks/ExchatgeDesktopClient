@@ -697,7 +697,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     nk_layout_row_end(this->context);
 }
 
-static void drawErrorIfNedded(void) {
+static void drawErrorIfNeeded(void) {
     this->systemMessageTicks++;
 
     if (!queueSize(this->systemMessagesQueue) && !this->currentSystemMessage) return; // TODO: optimize
@@ -748,7 +748,7 @@ static void drawPage(void) {
     }
 
     if (this->loading) drawInfiniteProgressBar(0.05f);
-    drawErrorIfNedded();
+    drawErrorIfNeeded();
 }
 
 void renderDraw(void) {
