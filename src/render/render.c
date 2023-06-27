@@ -84,6 +84,21 @@ THIS(
 )
 #pragma clang diagnostic pop
 
+struct RenderUser_t {
+    unsigned id;
+    char* name;
+    bool conversationExists; // true if current user (who has logged in via this client) and this user (who displayed in the users list) have already started a conversation
+    bool online;
+    void (*onClicked)(unsigned id);
+};
+
+struct RenderMessage_t {
+    unsigned long timestamp;
+    bool fromThisClient;
+    char* text;
+    unsigned size;
+};
+
 static void setStyle(void) {
     struct nk_color table[NK_COLOR_COUNT];
     table[NK_COLOR_TEXT] = nk_rgba(210, 210, 210, 255);

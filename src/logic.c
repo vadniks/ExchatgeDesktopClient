@@ -86,6 +86,7 @@ static void onLogInResult(bool successful) {
 }
 
 static void onErrorReceived(int flag) {
+    renderHideInfiniteProgressBar();
     SDL_Log("error received %d", flag);
 }
 

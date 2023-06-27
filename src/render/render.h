@@ -16,20 +16,11 @@ typedef void (*RenderCredentialsRandomFiller)(char* credentials, unsigned size);
 typedef void (*RenderLogInRegisterPageQueriedByUserCallback)(bool logIn);
 typedef void (*RenderOnServerShutdownRequested)(void);
 
-typedef struct {
-    unsigned id;
-    char* name;
-    bool conversationExists; // true if current user (who has logged in via this client) and this user (who displayed in the users list) have already started a conversation
-    bool online;
-    void (*onClicked)(unsigned id);
-} RenderUser;
+struct RenderUser_t;
+typedef struct RenderUser_t RenderUser;
 
-typedef struct {
-    unsigned long timestamp;
-    bool fromThisClient;
-    char* text;
-    unsigned size;
-} RenderMessage;
+struct RenderMessage_t;
+typedef struct RenderMessage_t RenderMessage;
 
 typedef enum {
     RENDER_DELETE_CONVERSATION = -1,
