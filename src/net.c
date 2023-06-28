@@ -78,6 +78,7 @@ THIS(
     NetServiceCallback onErrorReceived;
     NetNotifierCallback onRegisterResult;
     NetCallback onDisconnected;
+    NetCurrentTimeMillisGetter currentTimeMillisGetter;
     int lastSentFlag;
 )
 #pragma clang diagnostic pop
@@ -125,7 +126,8 @@ bool netInit(
     NetNotifierCallback onLogInResult,
     NetServiceCallback onErrorReceived,
     NetNotifierCallback onRegisterResult,
-    NetCallback onDisconnected
+    NetCallback onDisconnected,
+    NetCurrentTimeMillisGetter currentTimeMillisGetter
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
@@ -146,6 +148,7 @@ bool netInit(
     this->onErrorReceived = onErrorReceived;
     this->onRegisterResult = onRegisterResult;
     this->onDisconnected = onDisconnected;
+    this->currentTimeMillisGetter = currentTimeMillisGetter;
 
     assert(!SDLNet_Init());
 
@@ -180,12 +183,6 @@ static byte* makeCredentials(const char* username, const char* password) {
     SDL_memcpy(credentials, username, NET_USERNAME_SIZE);
     SDL_memcpy(&(credentials[NET_USERNAME_SIZE]), password, NET_UNHASHED_PASSWORD_SIZE);
     return credentials;
-}
-
-static unsigned long currentTimeMillis(void) {
-    struct timespec timespec;
-    assert(!clock_gettime(CLOCK_REALTIME, &timespec));
-    return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
 }
 
 void netLogIn(const char* username, const char* password) { // TODO: store both username & password encrypted inside a client
@@ -315,7 +312,7 @@ void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     Message message = {
         {
             flag,
-            currentTimeMillis(),
+            (*(this->currentTimeMillisGetter))(),
             size,
             0,
             1,

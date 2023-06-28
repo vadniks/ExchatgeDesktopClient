@@ -112,7 +112,8 @@ static void processCredentials(void** data) {
         &onLogInResult,
         &onErrorReceived,
         &onRegisterResult,
-        &onDisconnected
+        &onDisconnected,
+        &logicCurrentTimeMillis
     );
 
     if (!this->netInitialized) renderShowUnableToConnectToTheServerSystemMessage();
@@ -229,6 +230,12 @@ char* logicMillisToDateTime(unsigned long millis) {
     text[19] = 0;
 
     return text;
+}
+
+unsigned long logicCurrentTimeMillis(void) {
+    struct timespec timespec;
+    assert(!clock_gettime(CLOCK_REALTIME, &timespec));
+    return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
 }
 
 void logicClean(void) {

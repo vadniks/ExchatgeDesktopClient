@@ -8,6 +8,7 @@ typedef void (*NetMessageReceivedCallback)(const byte*);
 typedef void (*NetNotifierCallback)(bool); // true on success
 typedef void (*NetServiceCallback)(int); // receives message's flag
 typedef void (*NetCallback)(void);
+typedef unsigned long (*NetCurrentTimeMillisGetter)(void);
 
 extern const unsigned NET_USERNAME_SIZE;
 extern const unsigned NET_UNHASHED_PASSWORD_SIZE;
@@ -18,7 +19,8 @@ bool netInit(
     NetNotifierCallback onLogInResult,
     NetServiceCallback onErrorReceived, // not called on login error & register error as there are separated callback for them
     NetNotifierCallback onRegisterResult,
-    NetCallback onDisconnected // cleanup is performed after this callback returns, so module needs to be reinitialized after this callback ends to continue working with this module
+    NetCallback onDisconnected, // cleanup is performed after this callback returns, so module needs to be reinitialized after this callback ends to continue working with this module
+    NetCurrentTimeMillisGetter currentTimeMillisGetter
 ); // returns true on success
 
 void netLogIn(const char* username, const char* password); // in case of failure the server disconnects client

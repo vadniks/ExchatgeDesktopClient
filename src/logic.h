@@ -20,4 +20,5 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
 void logicOnServerShutdownRequested(void);
 void logicOnReturnFromConversationPageRequested(void);
 char* logicMillisToDateTime(unsigned long millis); // result deallocation is needed
+unsigned long logicCurrentTimeMillis(void);
 void logicClean(void);
