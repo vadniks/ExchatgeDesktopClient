@@ -141,7 +141,7 @@ static void setStyle(void) {
     nk_style_from_table(this->context, table);
 }
 
-static void destroySystemMessage(RenderMessage* message) { SDL_free(message); }
+static void destroySystemMessage(SystemMessage* message) { SDL_free(message); }
 
 void renderInit(
     unsigned usernameSize,
@@ -749,7 +749,7 @@ static void drawErrorIfNeeded(void) {
     if (this->systemMessageTicks >= 60 * 3) { // 3 seconds
         this->systemMessageTicks = 0;
 
-        if (this->currentSystemMessage) destroySystemMessage((RenderMessage*) this->currentSystemMessage);
+        if (this->currentSystemMessage) destroySystemMessage(this->currentSystemMessage);
         this->currentSystemMessage = NULL;
 
         if (queueSize(this->systemMessagesQueue)) this->currentSystemMessage = queuePop(this->systemMessagesQueue);
@@ -822,7 +822,7 @@ void renderDraw(void) {
 void renderClean(void) {
     if (!this) return;
 
-    if (this->currentSystemMessage) destroySystemMessage((RenderMessage*) this->currentSystemMessage); // if window was closed before pause has been ended
+    if (this->currentSystemMessage) destroySystemMessage(this->currentSystemMessage); // if window was closed before pause has been ended
     queueDestroy(this->systemMessagesQueue);
 
     SDL_free(this->conversationMessage);
