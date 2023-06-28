@@ -6,8 +6,11 @@ encrypted communication channel in the realtime.
 
 ## Dependencies
 
-Client side is written entirely in C with help of 
-[CMake](https://cmake.org) build system generator. 
+Client side is written entirely in C.
+
+Build is performed via [GNU Make](https://www.gnu.org/software/make) 
+with help of [CMake](https://cmake.org) build system generator.
+
 Client side uses the following libraries: 
 [SDL2](https://github.com/libsdl-org/SDL), 
 [SDL2Net](https://github.com/libsdl-org/SDL_net), 
