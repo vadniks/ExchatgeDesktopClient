@@ -18,4 +18,5 @@ void logicCredentialsRandomFiller(char* credentials, unsigned size);
 void logicOnLoginRegisterPageQueriedByUser(bool logIn);
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant);
 void logicOnServerShutdownRequested(void);
+void logicOnReturnFromConversationPageRequested(void);
 void logicClean(void);

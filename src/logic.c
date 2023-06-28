@@ -179,6 +179,11 @@ void logicOnServerShutdownRequested(void) {
     (*(this->asyncTask))(&netShutdownServer);
 }
 
+void logicOnReturnFromConversationPageRequested(void) {
+    assert(this);
+    renderShowUsersList();
+}
+
 void logicClean(void) {
     assert(this);
     listDestroy(this->usersList);

@@ -43,6 +43,7 @@ STATIC_CONST_STRING UNABLE_TO_CONNECT_TO_THE_SERVER = "Unable to connect to the 
 STATIC_CONST_STRING SEND = "Send";
 STATIC_CONST_STRING ONLINE = "Online";
 STATIC_CONST_STRING OFFLINE = "Offline";
+STATIC_CONST_STRING BACK = "Back";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -102,6 +103,7 @@ THIS(
     Queue* systemMessagesQueue;
     SystemMessage* nullable currentSystemMessage;
     unsigned systemMessageTicks;
+    RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested;
 )
 #pragma clang diagnostic pop
 
@@ -150,7 +152,8 @@ void renderInit(
     unsigned maxMessageSize,
     unsigned conversationNameSize,
     RenderOnServerShutdownRequested onServerShutdownRequested,
-    unsigned conversationMessageSize
+    unsigned conversationMessageSize,
+    RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -194,6 +197,7 @@ void renderInit(
     this->systemMessagesQueue = queueInit((QueueDeallocator) &destroySystemMessage);
     this->currentSystemMessage = NULL;
     this->systemMessageTicks = 0;
+    this->onReturnFromConversationPageRequested = onReturnFromConversationPageRequested;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -649,8 +653,18 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     char title[this->conversationNameSize + 1]; // TODO: add button that returns back to users list
     SDL_memcpy(title, this->conversationName, this->conversationNameSize);
 
-    nk_layout_row_dynamic(this->context, height * 0.05f, 1);
-    nk_label(this->context, title, NK_TEXT_ALIGN_CENTERED);
+    nk_layout_row_begin(this->context, NK_DYNAMIC, height * 0.05f, 3);
+
+    nk_layout_row_push(this->context, 0.15f);
+    if (nk_button_label(this->context, BACK)) (*(this->onReturnFromConversationPageRequested))();
+
+    nk_layout_row_push(this->context, 0.55f);
+    nk_spacer(this->context);
+
+    nk_layout_row_push(this->context, 0.3f);
+    nk_label(this->context, title, NK_TEXT_ALIGN_RIGHT);
+
+    nk_layout_row_end(this->context);
 
     float heightCorrector = 0.0f;
     if (this->loading) heightCorrector += 0.05f;
