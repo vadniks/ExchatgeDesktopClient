@@ -207,6 +207,7 @@ static void utos(char* buffer, unsigned length, unsigned number) {
 }
 
 char* logicMillisToDateTime(unsigned long millis) {
+    millis /= 1000;
     struct tm* tm = localtime((long*) &millis);
     assert(tm);
 
@@ -222,9 +223,9 @@ char* logicMillisToDateTime(unsigned long millis) {
 
     utos(text + 9, 2, tm->tm_mon);
     text[11] = '-';
-    utos(text, 12, tm->tm_mday);
+    utos(text + 12, 2, tm->tm_mday);
     text[14] = '-';
-    utos(text, 15, tm->tm_year);
+    utos(text + 15, 4, tm->tm_year);
     text[19] = 0;
 
     return text;
@@ -238,7 +239,7 @@ static unsigned long currentTimeMillis(void) {
 
 void logicClean(void) {
     char a[4] = {0}; // TODO: test only
-    utos(a, 3, 123);
+    utos(a, 4, 123);
     SDL_Log("%s %s", a, logicMillisToDateTime(currentTimeMillis()));
 
     assert(this);
