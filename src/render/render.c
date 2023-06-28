@@ -661,28 +661,33 @@ static void drawConversationMessage(float height, RenderMessage* message, struct
     SDL_memcpy(text, message->text, this->maxMessageSize);
     text[this->maxMessageSize] = 0;
 
-    nk_layout_row_push(this->context, 0.15f);
+    const bool aboveInitialWidth = this->width >= WINDOW_WIDTH * 2;
+    const float timestampRatio = aboveInitialWidth ? 0.075f : 0.15f,
+        fromRatio = aboveInitialWidth ? 0.05f : 0.1f,
+        textRatio = aboveInitialWidth ? 0.4375f : 0.375f;
+
+    nk_layout_row_push(this->context, timestampRatio);
     char* timestampText = (*(this->millisToDateTimeConverter))(message->timestamp);
     nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, *timestampColor);
     SDL_free(timestampText);
 
     if (!message->from) {
-        nk_layout_row_push(this->context, 0.1f);
+        nk_layout_row_push(this->context, fromRatio);
         nk_label_colored(this->context, YOU, NK_TEXT_ALIGN_CENTERED, *fromUsernameColor);
 
-        nk_layout_row_push(this->context, 0.375f);
+        nk_layout_row_push(this->context, textRatio);
         nk_spacer(this->context);
 
-        nk_layout_row_push(this->context, 0.375f);
+        nk_layout_row_push(this->context, textRatio);
         nk_text_wrap(this->context, text, (int) this->maxMessageSize);
     } else {
-        nk_layout_row_push(this->context, 0.1f);
+        nk_layout_row_push(this->context, fromRatio);
         nk_label_colored(this->context, message->from, NK_TEXT_ALIGN_CENTERED, *fromUsernameColor);
 
-        nk_layout_row_push(this->context, 0.375f);
+        nk_layout_row_push(this->context, textRatio);
         nk_text_wrap(this->context, text, (int) this->maxMessageSize);
 
-        nk_layout_row_push(this->context, 0.375f);
+        nk_layout_row_push(this->context, textRatio);
         nk_spacer(this->context);
     }
 }
@@ -721,7 +726,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     const float messageHeight = (
         (float) this->maxMessageSize/*message size in chars*/ / (
             ((float) this->width * 0.375f)/*width in pixels of a frame in which the text will be drawn*/ /
-            9.3f/*width in pixels of one char (2/3 * _font_size_ ->)*/
+            ((float) FONT_SIZE * 2 / 3)/*9.3 - width in pixels of one char (2/3 * _font_size_ ->)*/
         )
     ) * (float) FONT_SIZE/*14 - height in pixels of one char (current font size)*/; // TODO: decrease size of the text of a message or deal with this height
 
