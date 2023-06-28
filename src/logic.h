@@ -19,4 +19,5 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn);
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant);
 void logicOnServerShutdownRequested(void);
 void logicOnReturnFromConversationPageRequested(void);
+char* logicMillisToDateTime(unsigned long millis); // result deallocation is needed
 void logicClean(void);

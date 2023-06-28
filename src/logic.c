@@ -1,6 +1,7 @@
 
 #include <sdl/SDL.h>
 #include <assert.h>
+#include <time.h>
 #include "render/render.h"
 #include "crypto.h"
 #include "net.h"
@@ -184,7 +185,62 @@ void logicOnReturnFromConversationPageRequested(void) {
     renderShowUsersList();
 }
 
+static void utos(char* buffer, unsigned length, unsigned number) {
+    byte* digits = NULL;
+    unsigned digitsSize = 0;
+
+    while (number > 0) {
+        digits = SDL_realloc(digits, digitsSize++ * sizeof(char));
+        digits[digitsSize - 1] = number % 10;
+        number /= 10;
+    }
+
+    if (length < digitsSize) {
+        assert(false);
+        //return;
+    }
+
+    for (unsigned i = digitsSize, j = 0; i < length; i++, j++)
+        buffer[j] = '0' + 0;
+    for (unsigned i = length - digitsSize, j = digitsSize - 1; i < length; i++, j--)
+        buffer[i] = (char) ('0' + digits[j]);
+}
+
+char* logicMillisToDateTime(unsigned long millis) {
+    struct tm* tm = localtime((long*) &millis);
+    assert(tm);
+
+    // 'ss:mm:hh mm-dd-yyyy'  19 + \0 = 20
+    char* text = SDL_calloc(20, sizeof(char));
+
+    utos(text, 2, tm->tm_sec);
+    text[2] = ':';
+    utos(text + 3, 2, tm->tm_min);
+    text[5] = ':';
+    utos(text + 6, 2, tm->tm_hour);
+    text[8] = ' ';
+
+    utos(text + 9, 2, tm->tm_mon);
+    text[11] = '-';
+    utos(text, 12, tm->tm_mday);
+    text[14] = '-';
+    utos(text, 15, tm->tm_year);
+    text[19] = 0;
+
+    return text;
+}
+
+static unsigned long currentTimeMillis(void) {
+    struct timespec timespec;
+    assert(!clock_gettime(CLOCK_REALTIME, &timespec));
+    return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
+}
+
 void logicClean(void) {
+    char a[4] = {0}; // TODO: test only
+    utos(a, 3, 123);
+    SDL_Log("%s %s", a, logicMillisToDateTime(currentTimeMillis()));
+
     assert(this);
     listDestroy(this->usersList);
     listDestroy(this->messagesList);

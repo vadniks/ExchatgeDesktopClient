@@ -78,7 +78,8 @@ bool lifecycleInit(unsigned argc, const char** argv) { // TODO: expose net modul
         NET_MESSAGE_BODY_SIZE,
         NET_USERNAME_SIZE,
         &logicOnServerShutdownRequested,
-        &logicOnReturnFromConversationPageRequested
+        &logicOnReturnFromConversationPageRequested,
+        &logicMillisToDateTime
     );
     logicInit(argc, argv, &async, &delayed);
     renderSetAdminMode(logicIsAdminMode());

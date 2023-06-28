@@ -16,6 +16,7 @@ typedef void (*RenderCredentialsRandomFiller)(char* credentials, unsigned size);
 typedef void (*RenderLogInRegisterPageQueriedByUserCallback)(bool logIn);
 typedef void (*RenderOnServerShutdownRequested)(void);
 typedef void (*RenderOnReturnFromConversationPageRequested)(void);
+typedef char* (*RenderMillisToDateTimeConverter)(unsigned long); // returns null-terminated formatted string with date & time that must be deallocated by the caller
 
 struct RenderUser_t;
 typedef struct RenderUser_t RenderUser;
@@ -43,7 +44,8 @@ void renderInit(
     unsigned maxMessageSize,
     unsigned conversationNameSize,
     RenderOnServerShutdownRequested onServerShutdownRequested,
-    RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested
+    RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested,
+    RenderMillisToDateTimeConverter millisToDateTimeConverter
 );
 void renderSetAdminMode(bool mode);
 

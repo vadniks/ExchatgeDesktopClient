@@ -44,6 +44,7 @@ STATIC_CONST_STRING SEND = "Send";
 STATIC_CONST_STRING ONLINE = "Online";
 STATIC_CONST_STRING OFFLINE = "Offline";
 STATIC_CONST_STRING BACK = "Back";
+STATIC_CONST_STRING YOU = "You";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -103,6 +104,7 @@ THIS(
     SystemMessage* nullable currentSystemMessage;
     unsigned systemMessageTicks;
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested;
+    RenderMillisToDateTimeConverter millisToDateTimeConverter;
 )
 #pragma clang diagnostic pop
 
@@ -151,7 +153,8 @@ void renderInit(
     unsigned maxMessageSize,
     unsigned conversationNameSize,
     RenderOnServerShutdownRequested onServerShutdownRequested,
-    RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested
+    RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested,
+    RenderMillisToDateTimeConverter millisToDateTimeConverter
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -195,6 +198,7 @@ void renderInit(
     this->currentSystemMessage = NULL;
     this->systemMessageTicks = 0;
     this->onReturnFromConversationPageRequested = onReturnFromConversationPageRequested;
+    this->millisToDateTimeConverter = millisToDateTimeConverter;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -671,21 +675,36 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     if (!nk_group_begin(this->context, title, 0)) return;
     nk_layout_row_dynamic(this->context, 0, 2);
 
+    nk_spacer(this->context);
+    nk_label_colored(this->context, YOU, NK_TEXT_ALIGN_CENTERED, (struct nk_color) {50, 50, 50, 255});
+
     const unsigned size = listSize(this->messagesList);
+    char text[this->maxMessageSize + 1];
+    struct nk_color timestampColor = {0, 128, 0, 255};
+
     for (unsigned i = 0; i < size; i++) {
         RenderMessage* message = listGet(this->messagesList, i);
 
-        char text[this->maxMessageSize + 1];
         SDL_memcpy(text, message->text, this->maxMessageSize);
-        text[this->maxMessageSize] = '\0';
+        text[this->maxMessageSize] = 0;
+
+        char* timestampText = (*(this->millisToDateTimeConverter))(message->timestamp);
 
         if (message->fromThisClient) {
             nk_spacer(this->context);
-            nk_label(this->context, text, NK_TEXT_ALIGN_RIGHT);
+            nk_text_wrap(this->context, text, (int) this->maxMessageSize);
+
+            nk_spacer(this->context);
+            nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, timestampColor);
         } else {
-            nk_label(this->context, text, NK_TEXT_ALIGN_LEFT);
+            nk_text_wrap(this->context, text, (int) this->maxMessageSize);
+            nk_spacer(this->context);
+
+            nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, timestampColor);
             nk_spacer(this->context);
         }
+
+        SDL_free(timestampText);
     }
 
     nk_group_end(this->context);
