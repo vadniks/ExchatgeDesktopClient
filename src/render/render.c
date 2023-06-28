@@ -294,7 +294,7 @@ void renderSetUsersList(const List* usersList) {
 List* renderInitMessagesList(void) { return listInit((ListDeallocator) &renderDestroyMessage); }
 
 RenderMessage* renderCreateMessage(unsigned long timestamp, const char* from, const char* text, unsigned size) {
-    assert(this && size > 0 && size - 1 <= this->maxMessageSize);
+    assert(this && size > 0 && size <= this->maxMessageSize);
 
     RenderMessage* message = SDL_malloc(sizeof *message);
     message->timestamp = timestamp;

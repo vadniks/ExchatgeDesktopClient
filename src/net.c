@@ -5,7 +5,6 @@
 
 #include <sdl_net/SDL_net.h>
 #include <assert.h>
-#include <time.h>
 #include "crypto.h"
 #include "net.h"
 
