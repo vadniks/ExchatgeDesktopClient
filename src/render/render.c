@@ -731,7 +731,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
             ((float) this->width * 0.375f)/*width in pixels of a frame in which the text will be drawn*/ /
             ((float) FONT_SIZE * 2 / 3)/*9.3 - width in pixels of one char (2/3 * _font_size_ ->)*/
         )
-    ) * (float) FONT_SIZE/*14 - height in pixels of one char (current font size)*/; // TODO: decrease size of the text of a message or deal with this height
+    ) * (float) FONT_SIZE/*14 - height in pixels of one char (current font size)*/;
 
     const bool aboveInitialWidth = this->width >= WINDOW_WIDTH * 2;
     const float timestampRatio = aboveInitialWidth ? 0.075f : 0.15f,
