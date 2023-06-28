@@ -45,7 +45,6 @@ STATIC_CONST_STRING ONLINE = "Online";
 STATIC_CONST_STRING OFFLINE = "Offline";
 STATIC_CONST_STRING BACK = "Back";
 STATIC_CONST_STRING YOU = "You";
-STATIC_CONST_STRING FROM_YOU = "From you";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -307,8 +306,7 @@ RenderMessage* renderCreateMessage(unsigned long timestamp, const char* from, co
         message->from = NULL;
 
     message->text = SDL_calloc(size, this->maxMessageSize);
-    SDL_memcpy(message->text, text, size);
-    message->text[this->maxMessageSize - 1] = 0;
+    SDL_memcpy(message->text, text, size); // null-terminator is inserted in drawer (buffer is used)
 
     message->size = size;
 
@@ -656,6 +654,36 @@ static void drawUsersList(void) {
     nk_group_end(this->context);
 }
 
+static void drawConversationMessage(RenderMessage* message, struct nk_color* fromUsernameColor, struct nk_color* timestampColor) {
+    char text[this->maxMessageSize + 1];
+    SDL_memcpy(text, message->text, this->maxMessageSize);
+    text[this->maxMessageSize] = 0;
+
+    char* timestampText = (*(this->millisToDateTimeConverter))(message->timestamp);
+
+    if (!message->from) {
+        nk_spacer(this->context);
+        nk_text_wrap(this->context, text, (int) this->maxMessageSize);
+
+        nk_spacer(this->context);
+        nk_label_colored(this->context, YOU, NK_TEXT_ALIGN_CENTERED, *fromUsernameColor);
+
+        nk_spacer(this->context);
+        nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, *timestampColor);
+    } else {
+        nk_text_wrap(this->context, text, (int) this->maxMessageSize);
+        nk_spacer(this->context);
+
+        nk_label_colored(this->context, message->from, NK_TEXT_ALIGN_CENTERED, *fromUsernameColor);
+        nk_spacer(this->context);
+
+        nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, *timestampColor);
+        nk_spacer(this->context);
+    }
+
+    SDL_free(timestampText);
+}
+
 static void drawConversation(void) { // TODO: generate & sign messages from users on the client side
     const float height = currentHeight();
 
@@ -683,42 +711,14 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     if (!nk_group_begin(this->context, title, 0)) return;
     nk_layout_row_dynamic(this->context, 0, 2);
 
-    const unsigned size = listSize(this->messagesList);
-    char text[this->maxMessageSize + 1];
-
     struct nk_color
         timestampColor = {0, 128, 0, 255},
         fromUsernameColor = {0xff, 0xff, 0xff, 0x88};
 
+    const unsigned size = listSize(this->messagesList);
     for (unsigned i = 0; i < size; i++) {
         RenderMessage* message = listGet(this->messagesList, i);
-
-        SDL_memcpy(text, message->text, this->maxMessageSize);
-        text[this->maxMessageSize] = 0;
-
-        char* timestampText = (*(this->millisToDateTimeConverter))(message->timestamp); // TODO: extract to drawConversationMessage(...)
-
-        if (!message->from) {
-            nk_spacer(this->context);
-            nk_text_wrap(this->context, text, (int) this->maxMessageSize);
-
-            nk_spacer(this->context);
-            nk_label_colored(this->context, FROM_YOU, NK_TEXT_ALIGN_CENTERED, fromUsernameColor);
-
-            nk_spacer(this->context);
-            nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, timestampColor);
-        } else {
-            nk_text_wrap(this->context, text, (int) this->maxMessageSize);
-            nk_spacer(this->context);
-
-            nk_label_colored(this->context, message->from, NK_TEXT_ALIGN_CENTERED, fromUsernameColor);
-            nk_spacer(this->context);
-
-            nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, timestampColor);
-            nk_spacer(this->context);
-        }
-
-        SDL_free(timestampText);
+        drawConversationMessage(message, &fromUsernameColor, &timestampColor);
     }
 
     nk_group_end(this->context);
