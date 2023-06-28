@@ -45,6 +45,7 @@ STATIC_CONST_STRING ONLINE = "Online";
 STATIC_CONST_STRING OFFLINE = "Offline";
 STATIC_CONST_STRING BACK = "Back";
 STATIC_CONST_STRING YOU = "You";
+STATIC_CONST_STRING FROM_YOU = "From you";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -56,9 +57,9 @@ struct RenderUser_t {
     void (*onClicked)(unsigned id);
 };
 
-struct RenderMessage_t {
+struct RenderMessage_t { // conversation message
     unsigned long timestamp;
-    bool fromThisClient;
+    char* nullable from; // null if from this client, the name of the sender otherwise
     char* text;
     unsigned size;
 };
@@ -293,15 +294,21 @@ void renderSetUsersList(const List* usersList) {
 
 List* renderInitMessagesList(void) { return listInit((ListDeallocator) &renderDestroyMessage); }
 
-RenderMessage* renderCreateMessage(unsigned long timestamp, bool fromThisClient, const char* text, unsigned size) {
+RenderMessage* renderCreateMessage(unsigned long timestamp, const char* from, const char* text, unsigned size) {
     assert(this && size > 0 && size - 1 <= this->maxMessageSize);
 
     RenderMessage* message = SDL_malloc(sizeof *message);
     message->timestamp = timestamp;
-    message->fromThisClient = fromThisClient;
 
-    message->text = SDL_calloc(size, this->maxMessageSize); // sets all bytes to zero so the string consists only of null-terminators so no need to insert one
+    if (from) {
+        message->from = SDL_calloc(this->usernameSize, sizeof(char));
+        SDL_memcpy(message->from, from, this->usernameSize);
+    } else
+        message->from = NULL;
+
+    message->text = SDL_calloc(size, this->maxMessageSize);
     SDL_memcpy(message->text, text, size);
+    message->text[this->maxMessageSize - 1] = 0;
 
     message->size = size;
 
@@ -309,6 +316,7 @@ RenderMessage* renderCreateMessage(unsigned long timestamp, bool fromThisClient,
 }
 
 void renderDestroyMessage(RenderMessage* message) {
+    SDL_free(message->from);
     SDL_free(message->text);
     SDL_free(message);
 }
@@ -675,12 +683,12 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     if (!nk_group_begin(this->context, title, 0)) return;
     nk_layout_row_dynamic(this->context, 0, 2);
 
-    nk_spacer(this->context);
-    nk_label_colored(this->context, YOU, NK_TEXT_ALIGN_CENTERED, (struct nk_color) {50, 50, 50, 255});
-
     const unsigned size = listSize(this->messagesList);
     char text[this->maxMessageSize + 1];
-    struct nk_color timestampColor = {0, 128, 0, 255};
+
+    struct nk_color
+        timestampColor = {0, 128, 0, 255},
+        fromUsernameColor = {0xff, 0xff, 0xff, 0x88};
 
     for (unsigned i = 0; i < size; i++) {
         RenderMessage* message = listGet(this->messagesList, i);
@@ -688,16 +696,22 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         SDL_memcpy(text, message->text, this->maxMessageSize);
         text[this->maxMessageSize] = 0;
 
-        char* timestampText = (*(this->millisToDateTimeConverter))(message->timestamp);
+        char* timestampText = (*(this->millisToDateTimeConverter))(message->timestamp); // TODO: extract to drawConversationMessage(...)
 
-        if (message->fromThisClient) {
+        if (!message->from) {
             nk_spacer(this->context);
             nk_text_wrap(this->context, text, (int) this->maxMessageSize);
+
+            nk_spacer(this->context);
+            nk_label_colored(this->context, FROM_YOU, NK_TEXT_ALIGN_CENTERED, fromUsernameColor);
 
             nk_spacer(this->context);
             nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, timestampColor);
         } else {
             nk_text_wrap(this->context, text, (int) this->maxMessageSize);
+            nk_spacer(this->context);
+
+            nk_label_colored(this->context, message->from, NK_TEXT_ALIGN_CENTERED, fromUsernameColor);
             nk_spacer(this->context);
 
             nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, timestampColor);

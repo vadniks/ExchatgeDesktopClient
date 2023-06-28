@@ -19,6 +19,6 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn);
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant);
 void logicOnServerShutdownRequested(void);
 void logicOnReturnFromConversationPageRequested(void);
-char* logicMillisToDateTime(unsigned long millis); // result deallocation is needed
+char* logicMillisToDateTime(unsigned long millis); // result is a null-terminated formatted string deallocation of which must be performed by the caller
 unsigned long logicCurrentTimeMillis(void);
 void logicClean(void);

@@ -163,7 +163,7 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
         for (unsigned i = 0; i < 100; i++) { // TODO: test only
             char text[NET_MESSAGE_BODY_SIZE];
             SDL_memset(text, '0' + (int) i, NET_MESSAGE_BODY_SIZE);
-            listAdd(this->messagesList, renderCreateMessage(i, i % 5 == 0, text, NET_MESSAGE_BODY_SIZE));
+            listAdd(this->messagesList, renderCreateMessage(i, i % 2 == 0 ? "username" : NULL, text, NET_MESSAGE_BODY_SIZE));
         }
 
         char title[NET_USERNAME_SIZE]; // TODO: test only

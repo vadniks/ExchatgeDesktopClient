@@ -55,7 +55,7 @@ void renderDestroyUser(RenderUser* user);
 void renderSetUsersList(const List* usersList); // <RenderUser*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
 
 List* renderInitMessagesList(void);
-RenderMessage* renderCreateMessage(unsigned long timestamp, bool fromThisClient, const char* text, unsigned size); // text (whose length == size and 0 < length <= this->maxMessageSize) is copied
+RenderMessage* renderCreateMessage(unsigned long timestamp, const char* nullable from, const char* text, unsigned size); // from: name of the sender (is copied) (is in range (0, this->usernameSize]), null if from this client; text: text (whose length == size and 0 < length <= this->maxMessageSize) is copied
 void renderDestroyMessage(RenderMessage* message);
 void renderSetMessagesList(const List* messagesList);
 
