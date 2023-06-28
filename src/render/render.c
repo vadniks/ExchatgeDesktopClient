@@ -660,8 +660,8 @@ static void drawConversationMessage(
     float timestampRatio,
     float fromRatio,
     float textRatio,
-    struct nk_color* fromUsernameColor,
-    struct nk_color* timestampColor
+    struct nk_color fromUsernameColor,
+    struct nk_color timestampColor
 ) {
     nk_layout_row_begin(this->context, NK_DYNAMIC, height, 4);
 
@@ -671,12 +671,12 @@ static void drawConversationMessage(
 
     nk_layout_row_push(this->context, timestampRatio);
     char* timestampText = (*(this->millisToDateTimeConverter))(message->timestamp);
-    nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, *timestampColor);
+    nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, timestampColor);
     SDL_free(timestampText);
 
     if (!message->from) {
         nk_layout_row_push(this->context, fromRatio);
-        nk_label_colored(this->context, YOU, NK_TEXT_ALIGN_CENTERED, *fromUsernameColor);
+        nk_label_colored(this->context, YOU, NK_TEXT_ALIGN_CENTERED, fromUsernameColor);
 
         nk_layout_row_push(this->context, textRatio);
         nk_spacer(this->context);
@@ -685,7 +685,7 @@ static void drawConversationMessage(
         nk_text_wrap(this->context, text, (int) this->maxMessageSize);
     } else {
         nk_layout_row_push(this->context, fromRatio);
-        nk_label_colored(this->context, message->from, NK_TEXT_ALIGN_CENTERED, *fromUsernameColor);
+        nk_label_colored(this->context, message->from, NK_TEXT_ALIGN_CENTERED, fromUsernameColor);
 
         nk_layout_row_push(this->context, textRatio);
         nk_text_wrap(this->context, text, (int) this->maxMessageSize);
@@ -748,8 +748,8 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
             timestampRatio,
             fromRatio,
             textRatio,
-            &fromUsernameColor,
-            &timestampColor
+            fromUsernameColor,
+            timestampColor
         );
     }
 
