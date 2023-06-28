@@ -654,34 +654,37 @@ static void drawUsersList(void) {
     nk_group_end(this->context);
 }
 
-static void drawConversationMessage(RenderMessage* message, struct nk_color* fromUsernameColor, struct nk_color* timestampColor) {
+static void drawConversationMessage(float height, RenderMessage* message, struct nk_color* fromUsernameColor, struct nk_color* timestampColor) {
+    nk_layout_row_begin(this->context, NK_DYNAMIC, height, 4);
+
     char text[this->maxMessageSize + 1];
     SDL_memcpy(text, message->text, this->maxMessageSize);
     text[this->maxMessageSize] = 0;
 
+    nk_layout_row_push(this->context, 0.15f);
     char* timestampText = (*(this->millisToDateTimeConverter))(message->timestamp);
+    nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, *timestampColor);
+    SDL_free(timestampText);
 
     if (!message->from) {
-        nk_spacer(this->context);
-        nk_text_wrap(this->context, text, (int) this->maxMessageSize);
-
-        nk_spacer(this->context);
+        nk_layout_row_push(this->context, 0.1f);
         nk_label_colored(this->context, YOU, NK_TEXT_ALIGN_CENTERED, *fromUsernameColor);
 
+        nk_layout_row_push(this->context, 0.375f);
         nk_spacer(this->context);
-        nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, *timestampColor);
-    } else {
+
+        nk_layout_row_push(this->context, 0.375f);
         nk_text_wrap(this->context, text, (int) this->maxMessageSize);
-        nk_spacer(this->context);
-
+    } else {
+        nk_layout_row_push(this->context, 0.1f);
         nk_label_colored(this->context, message->from, NK_TEXT_ALIGN_CENTERED, *fromUsernameColor);
-        nk_spacer(this->context);
 
-        nk_label_colored(this->context, timestampText, NK_TEXT_ALIGN_CENTERED, *timestampColor);
+        nk_layout_row_push(this->context, 0.375f);
+        nk_text_wrap(this->context, text, (int) this->maxMessageSize);
+
+        nk_layout_row_push(this->context, 0.375f);
         nk_spacer(this->context);
     }
-
-    SDL_free(timestampText);
 }
 
 static void drawConversation(void) { // TODO: generate & sign messages from users on the client side
@@ -709,16 +712,17 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
 
     nk_layout_row_dynamic(this->context, height * (0.85f - heightCorrector), 1);
     if (!nk_group_begin(this->context, title, 0)) return;
-    nk_layout_row_dynamic(this->context, 0, 2);
 
     struct nk_color
         timestampColor = {0, 128, 0, 255},
         fromUsernameColor = {0xff, 0xff, 0xff, 0x88};
 
+    const float messageHeight = (float) decreaseHeightIfNeeded((unsigned) height); // TODO: decrease size of the text of a message or deal with this height
+
     const unsigned size = listSize(this->messagesList);
     for (unsigned i = 0; i < size; i++) {
         RenderMessage* message = listGet(this->messagesList, i);
-        drawConversationMessage(message, &fromUsernameColor, &timestampColor);
+        drawConversationMessage(messageHeight, message, &fromUsernameColor, &timestampColor);
     }
 
     nk_group_end(this->context);

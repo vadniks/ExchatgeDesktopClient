@@ -160,10 +160,10 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
     SDL_Log("user for conversation chosen %d for user %u", chooseVariant, id);
 
     if (chooseVariant == RENDER_START_CONVERSATION || chooseVariant == RENDER_CONTINUE_CONVERSATION) {
-        for (unsigned i = 0; i < 100; i++) { // TODO: test only
-            char text[NET_MESSAGE_BODY_SIZE];
-            SDL_memset(text, '0' + (int) i, NET_MESSAGE_BODY_SIZE);
-            listAdd(this->messagesList, renderCreateMessage(i, i % 2 == 0 ? "username" : NULL, text, NET_MESSAGE_BODY_SIZE));
+        for (unsigned i = 0; i < 10; i++) { // TODO: test only
+//            char text[NET_MESSAGE_BODY_SIZE];
+//            SDL_memset(text, '0' + (int) i, NET_MESSAGE_BODY_SIZE);
+            listAdd(this->messagesList, renderCreateMessage(i, i % 2 == 0 ? "username" : NULL, "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum. Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the ci", NET_MESSAGE_BODY_SIZE));
         }
 
         char title[NET_USERNAME_SIZE]; // TODO: test only
