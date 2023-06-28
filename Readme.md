@@ -18,7 +18,7 @@ Client side uses the following libraries:
 
 [The server](https://github.com/vadniks/ExchatgeServer)
 
-## Screenshots
+## Concept screenshots
 
 ![A](screenshots/a.png "A")
 ![B](screenshots/b.png "B")
