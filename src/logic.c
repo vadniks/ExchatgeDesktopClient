@@ -222,7 +222,7 @@ char* logicMillisToDateTime(unsigned long millis) {
     assert(tm);
 
     // 'ss:mm:hh mmm-dd-yyyy'  20 + \0 = 21
-    char* text = SDL_calloc(20, sizeof(char));
+    char* text = SDL_calloc(21, sizeof(char));
 
     utos(text, 2, tm->tm_sec);
     text[2] = ':';
