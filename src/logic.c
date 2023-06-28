@@ -205,6 +205,8 @@ static void utos(char* buffer, unsigned length, unsigned number) { // unsigned t
         buffer[j] = '0' + 0;
     for (unsigned i = length - digitsSize, j = digitsSize - 1; i < length; i++, j--)
         buffer[i] = (char) ('0' + digits[j]);
+
+    SDL_free(digits);
 }
 
 static void monthToName(char* buffer, unsigned monthIndex) {
