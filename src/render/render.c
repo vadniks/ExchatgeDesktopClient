@@ -654,17 +654,20 @@ static void drawUsersList(void) {
     nk_group_end(this->context);
 }
 
-static void drawConversationMessage(float height, RenderMessage* message, struct nk_color* fromUsernameColor, struct nk_color* timestampColor) {
+static void drawConversationMessage(
+    float height,
+    RenderMessage* message,
+    float timestampRatio,
+    float fromRatio,
+    float textRatio,
+    struct nk_color* fromUsernameColor,
+    struct nk_color* timestampColor
+) {
     nk_layout_row_begin(this->context, NK_DYNAMIC, height, 4);
 
     char text[this->maxMessageSize + 1];
     SDL_memcpy(text, message->text, this->maxMessageSize);
     text[this->maxMessageSize] = 0;
-
-    const bool aboveInitialWidth = this->width >= WINDOW_WIDTH * 2;
-    const float timestampRatio = aboveInitialWidth ? 0.075f : 0.15f,
-        fromRatio = aboveInitialWidth ? 0.05f : 0.1f,
-        textRatio = aboveInitialWidth ? 0.4375f : 0.375f;
 
     nk_layout_row_push(this->context, timestampRatio);
     char* timestampText = (*(this->millisToDateTimeConverter))(message->timestamp);
@@ -730,10 +733,24 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         )
     ) * (float) FONT_SIZE/*14 - height in pixels of one char (current font size)*/; // TODO: decrease size of the text of a message or deal with this height
 
+    const bool aboveInitialWidth = this->width >= WINDOW_WIDTH * 2;
+    const float timestampRatio = aboveInitialWidth ? 0.075f : 0.15f,
+        fromRatio = aboveInitialWidth ? 0.05f : 0.1f,
+        textRatio = aboveInitialWidth ? 0.4375f : 0.375f;
+
     const unsigned size = listSize(this->messagesList);
     for (unsigned i = 0; i < size; i++) {
         RenderMessage* message = listGet(this->messagesList, i);
-        drawConversationMessage(messageHeight, message, &fromUsernameColor, &timestampColor);
+
+        drawConversationMessage(
+            messageHeight,
+            message,
+            timestampRatio,
+            fromRatio,
+            textRatio,
+            &fromUsernameColor,
+            &timestampColor
+        );
     }
 
     nk_group_end(this->context);
