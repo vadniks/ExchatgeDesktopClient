@@ -89,13 +89,12 @@ THIS(
     const List* usersList; // allocated elsewhere
     RenderUserForConversationChosenCallback onUserForConversationChosen;
     const List* messagesList; // allocated elsewhere, conversation messages
-    unsigned maxMessageSize;
+    unsigned maxMessageSize; // conversation messages size
     char* conversationName; // conversation name or the name of the recipient
     unsigned conversationNameSize;
     bool adminMode;
     RenderOnServerShutdownRequested onServerShutdownRequested;
-    unsigned conversationMessageSize;
-    char* conversationMessage;
+    char* conversationMessage; // conversation message buffer for current user
     unsigned enteredConversationMessageSize;
     bool loading;
     char infiniteProgressBarAnim;
@@ -152,7 +151,6 @@ void renderInit(
     unsigned maxMessageSize,
     unsigned conversationNameSize,
     RenderOnServerShutdownRequested onServerShutdownRequested,
-    unsigned conversationMessageSize,
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested
 ) {
     assert(!this);
@@ -188,8 +186,7 @@ void renderInit(
 
     this->adminMode = false;
     this->onServerShutdownRequested = onServerShutdownRequested;
-    this->conversationMessageSize = conversationMessageSize;
-    this->conversationMessage = SDL_calloc(this->conversationMessageSize, sizeof(char));
+    this->conversationMessage = SDL_calloc(this->maxMessageSize, sizeof(char));
     this->enteredConversationMessageSize = 0;
     this->loading = false;
     this->infiniteProgressBarAnim = '|';
@@ -701,7 +698,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         NK_EDIT_BOX | NK_EDIT_MULTILINE | NK_EDIT_EDITOR,
         this->conversationMessage,
         (int*) &(this->enteredConversationMessageSize),
-        (int) this->conversationMessageSize,
+        (int) this->maxMessageSize,
         nk_filter_default
     );
 

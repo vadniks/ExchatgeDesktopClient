@@ -43,7 +43,6 @@ void renderInit(
     unsigned maxMessageSize,
     unsigned conversationNameSize,
     RenderOnServerShutdownRequested onServerShutdownRequested,
-    unsigned conversationMessageSize,
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested
 );
 void renderSetAdminMode(bool mode);
