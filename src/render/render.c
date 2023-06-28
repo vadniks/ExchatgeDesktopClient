@@ -717,7 +717,8 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         timestampColor = {0, 128, 0, 255},
         fromUsernameColor = {0xff, 0xff, 0xff, 0x88};
 
-    const float messageHeight = (float) decreaseHeightIfNeeded((unsigned) height); // TODO: decrease size of the text of a message or deal with this height
+    // TODO: this works for a 1920/1080 resolution, no access to devices with higher resolutions to test
+    const float messageHeight = ((float) this->maxMessageSize/*message size in chars*/ / (((float) this->width * 0.375f)/*width in pixels of a frame in which the text will be drawn*/ / 9.3f/*width in pixels of one char (2/3 * 14 ->)*/)) * 14/*height in pixels of one char (font size)*/; // (float) decreaseHeightIfNeeded((unsigned) height); // TODO: decrease size of the text of a message or deal with this height
 
     const unsigned size = listSize(this->messagesList);
     for (unsigned i = 0; i < size; i++) {
