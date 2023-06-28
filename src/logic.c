@@ -186,7 +186,7 @@ void logicOnReturnFromConversationPageRequested(void) {
     renderShowUsersList();
 }
 
-static void utos(char* buffer, unsigned length, unsigned number) {
+static void utos(char* buffer, unsigned length, unsigned number) { // unsigned to string
     byte* digits = NULL;
     unsigned digitsSize = 0;
 
@@ -207,12 +207,21 @@ static void utos(char* buffer, unsigned length, unsigned number) {
         buffer[i] = (char) ('0' + digits[j]);
 }
 
+static void monthToName(char* buffer, unsigned monthIndex) {
+    assert(monthIndex < 12);
+    const char months[12][3] = {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    };
+    SDL_memcpy(buffer, months[monthIndex], 3);
+}
+
 char* logicMillisToDateTime(unsigned long millis) {
     millis /= 1000;
     struct tm* tm = localtime((long*) &millis);
     assert(tm);
 
-    // 'ss:mm:hh mm-dd-yyyy'  19 + \0 = 20
+    // 'ss:mm:hh mmm-dd-yyyy'  20 + \0 = 21
     char* text = SDL_calloc(20, sizeof(char));
 
     utos(text, 2, tm->tm_sec);
@@ -222,12 +231,12 @@ char* logicMillisToDateTime(unsigned long millis) {
     utos(text + 6, 2, tm->tm_hour);
     text[8] = ' ';
 
-    utos(text + 9, 2, tm->tm_mon + 1);
-    text[11] = '-';
-    utos(text + 12, 2, tm->tm_mday);
-    text[14] = '-';
-    utos(text + 15, 4, tm->tm_year + 1900);
-    text[19] = 0;
+    monthToName(text + 9, tm->tm_mon);
+    text[12] = '-';
+    utos(text + 13, 2, tm->tm_mday);
+    text[15] = '-';
+    utos(text + 16, 4, tm->tm_year + 1900);
+    text[20] = 0;
 
     return text;
 }
