@@ -221,27 +221,17 @@ char* logicMillisToDateTime(unsigned long millis) {
     utos(text + 6, 2, tm->tm_hour);
     text[8] = ' ';
 
-    utos(text + 9, 2, tm->tm_mon);
+    utos(text + 9, 2, tm->tm_mon + 1);
     text[11] = '-';
     utos(text + 12, 2, tm->tm_mday);
     text[14] = '-';
-    utos(text + 15, 4, tm->tm_year);
+    utos(text + 15, 4, tm->tm_year + 1900);
     text[19] = 0;
 
     return text;
 }
 
-static unsigned long currentTimeMillis(void) {
-    struct timespec timespec;
-    assert(!clock_gettime(CLOCK_REALTIME, &timespec));
-    return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
-}
-
 void logicClean(void) {
-    char a[4] = {0}; // TODO: test only
-    utos(a, 4, 123);
-    SDL_Log("%s %s", a, logicMillisToDateTime(currentTimeMillis()));
-
     assert(this);
     listDestroy(this->usersList);
     listDestroy(this->messagesList);
