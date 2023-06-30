@@ -191,6 +191,7 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
 
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant) {
     assert(this);
+    this->state = STATE_EXCHANGING_MESSAGES;
     SDL_Log("user for conversation chosen %d for user %u", chooseVariant, id);
 
     if (chooseVariant == RENDER_START_CONVERSATION || chooseVariant == RENDER_CONTINUE_CONVERSATION) {
