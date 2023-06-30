@@ -94,12 +94,8 @@ static void onDisconnected(void) { // TODO: forbid using username 'admin' more t
 }
 
 static void onUsersFetched(NetUserInfo** infos, unsigned size) {
-    SDL_Log("users fetched %u", size); // TODO: test only
-
     for (unsigned i = 0; i < size; i++) {
-        SDL_Log("user: %u %s %s", netUserInfoId(infos[i]), netUserInfoConnected(infos[i]) ? "true" : "false", netUserInfoName(infos[i]));
-
-        listAdd(this->usersList, renderCreateUser(netUserInfoId(infos[i]), (const char*) netUserInfoName(infos[i]), /*client side's business whether a conversation with a particular user exists*/i % 5 == 0, netUserInfoConnected(infos[i])));
+        listAdd(this->usersList, renderCreateUser(netUserInfoId(infos[i]), (const char*) netUserInfoName(infos[i]), /*TODO: client side's business whether a conversation with a particular user exists*/i % 5 == 0, netUserInfoConnected(infos[i])));
         netDestroyUserInfo(infos[i]);
     }
     SDL_free(infos);
