@@ -187,6 +187,7 @@ void logicOnServerShutdownRequested(void) {
 
 void logicOnReturnFromConversationPageRequested(void) {
     assert(this);
+    listClear(this->messagesList);
     renderShowUsersList();
 }
 

@@ -50,6 +50,16 @@ static void destroyValuesIfNotEmpty(List* list) {
     for (unsigned i = 0; i < list->size; (*(list->deallocator))(list->values[i++]));
 }
 
+void listClear(List* list) {
+    assert(list);
+
+    destroyValuesIfNotEmpty(list);
+    list->size = 0;
+
+    SDL_free(list->values);
+    list->values = NULL;
+}
+
 void listDestroy(List* list) {
     assert(list);
     destroyValuesIfNotEmpty(list);
