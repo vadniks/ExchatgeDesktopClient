@@ -46,7 +46,7 @@ FLAG(SUCCESS, 0x00000008)
 FLAG(ERROR, 0x00000009)
 FLAG(UNAUTHENTICATED, 0x0000000a)
 FLAG(ACCESS_DENIED, 0x0000000b)
-FLAG(FETCH_ALL, 0x0000000c)
+FLAG(FETCH_USERS, 0x0000000c)
 FLAG(SHUTDOWN, 0x7fffffff)
 
 STATIC_CONST_UNSIGNED TO_ANONYMOUS = 0x7fffffff;
@@ -79,6 +79,7 @@ THIS(
     NetCallback onDisconnected;
     NetCurrentTimeMillisGetter currentTimeMillisGetter;
     int lastSentFlag;
+    NetOnUsersFetched onUsersFetched;
 )
 #pragma clang diagnostic pop
 
@@ -101,6 +102,16 @@ typedef struct {
 } Message;
 
 staticAssert(sizeof(MessageHead) == 96 && sizeof(Message) == 1024 && sizeof(Message) - sizeof(MessageHead) == 928);
+
+struct NetUserInfo_t {
+    unsigned id;
+    bool connected;
+    byte name[NET_USERNAME_SIZE];
+};
+
+STATIC_CONST_UNSIGNED USER_INFO_SIZE = INT_SIZE + sizeof(bool) + NET_USERNAME_SIZE; // 21
+
+staticAssert(sizeof(bool) == 1 && sizeof(NetUserInfo) == 21);
 
 static void initiateSecuredConnection(void) {
     const unsigned signedPublicKeySize = CRYPTO_SIGNATURE_SIZE + CRYPTO_KEY_SIZE;
@@ -126,7 +137,8 @@ bool netInit(
     NetServiceCallback onErrorReceived,
     NetNotifierCallback onRegisterResult,
     NetCallback onDisconnected,
-    NetCurrentTimeMillisGetter currentTimeMillisGetter
+    NetCurrentTimeMillisGetter currentTimeMillisGetter,
+    NetOnUsersFetched onUsersFetched
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
@@ -148,6 +160,7 @@ bool netInit(
     this->onRegisterResult = onRegisterResult;
     this->onDisconnected = onDisconnected;
     this->currentTimeMillisGetter = currentTimeMillisGetter;
+    this->onUsersFetched = onUsersFetched;
 
     assert(!SDLNet_Init());
 
@@ -245,6 +258,8 @@ static void processErrors(const Message* message) {
     }
 }
 
+static void onUsersFetched(const Message* message);
+
 static void processServerActions(const Message* message) {
     switch (message->flag) {
         case FLAG_LOGGED_IN:
@@ -257,11 +272,17 @@ static void processServerActions(const Message* message) {
         case FLAG_REGISTERED:
             (*(this->onRegisterResult))(true);
             break;
+        case FLAG_FETCH_USERS:
+            onUsersFetched(message);
+            break;
+        default:
+            assert(false);
     }
 }
 
 static void processMessage(const Message* message) {
-    if (message->from == FROM_SERVER) {
+    bool fromServer = message->from == FROM_SERVER;
+    if (fromServer) {
         assert(checkServerToken(message->token));
 
         const int flag = message->flag;
@@ -273,7 +294,10 @@ static void processMessage(const Message* message) {
             processServerActions(message);
             break;
         case STATE_AUTHENTICATED:
-            (*(this->onMessageReceived))(message->body);
+            if (fromServer)
+                processServerActions(message);
+            else
+                (*(this->onMessageReceived))(message->body);
             break;
     }
 }
@@ -340,6 +364,64 @@ void netShutdownServer(void) {
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     netSend(FLAG_SHUTDOWN, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
+}
+
+static NetUserInfo* unpackUserInfo(const byte* bytes) {
+    NetUserInfo* info = SDL_malloc(sizeof *info);
+
+    SDL_memcpy(&(info->id), bytes, 0);
+    SDL_memcpy(&(info->connected), bytes + INT_SIZE, 1);
+    SDL_memcpy(&(info->name), bytes + INT_SIZE + 1, NET_USERNAME_SIZE);
+
+    return info;
+}
+
+static byte* packUserInfo(const NetUserInfo* info) {
+    byte* bytes = SDL_calloc(USER_INFO_SIZE, sizeof(char));
+
+    SDL_memcpy(bytes, &(info->id), INT_SIZE);
+    SDL_memcpy(bytes + INT_SIZE, &(info->connected), 1);
+    SDL_memcpy(bytes + INT_SIZE + 1, &(info->name), NET_USERNAME_SIZE);
+
+    return bytes;
+}
+
+void netFetchUsers(void) {
+
+}
+
+unsigned netUserInfoId(const NetUserInfo* info) {
+    assert(info);
+    return info->id;
+}
+
+bool netUserInfoConnected(const NetUserInfo* info) {
+    assert(info);
+    return info->connected;
+}
+
+const byte* netUserInfoName(const NetUserInfo* info) {
+    assert(info);
+    return info->name;
+}
+
+void netDestroyUserInfo(NetUserInfo* info) {
+    assert(info);
+    SDL_free(info);
+}
+
+static void onUsersFetched(const Message* message) {
+    assert(this);
+
+    unsigned infosCount = 0;
+    SDL_memcpy(&infosCount, message->body, INT_SIZE);
+    assert(infosCount);
+
+    NetUserInfo** infos = SDL_malloc(infosCount * sizeof(NetUserInfo*));
+    for (unsigned i = 0, j = INT_SIZE; i < infosCount; i++, j += USER_INFO_SIZE)
+        infos[i] = unpackUserInfo(message->body + j);
+
+    (*(this->onUsersFetched))(infos, infosCount);
 }
 
 void netClean(void) {
