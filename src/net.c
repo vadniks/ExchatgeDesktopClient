@@ -374,7 +374,7 @@ void netShutdownServer(void) {
 static NetUserInfo* unpackUserInfo(const byte* bytes) {
     NetUserInfo* info = SDL_malloc(sizeof *info);
 
-    SDL_memcpy(&(info->id), bytes, 0);
+    SDL_memcpy(&(info->id), bytes, INT_SIZE);
     SDL_memcpy(&(info->connected), bytes + INT_SIZE, 1);
     SDL_memcpy(&(info->name), bytes + INT_SIZE + 1, NET_USERNAME_SIZE);
 
