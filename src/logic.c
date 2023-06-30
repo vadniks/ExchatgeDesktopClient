@@ -291,7 +291,14 @@ unsigned long logicCurrentTimeMillis(void) {
 }
 
 void logicOnSendClicked(const char* message) {
+    assert(this);
     SDL_Log("send clicked %s", message);
+    // TODO: test only
+
+    byte body[NET_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    SDL_memcpy(body, "Hello World!", 12);
+    netSend(0, body, 12, 2);
 }
 
 void logicClean(void) {
