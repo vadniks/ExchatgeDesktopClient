@@ -381,6 +381,7 @@ static NetUserInfo* unpackUserInfo(const byte* bytes) {
     return info;
 }
 
+__attribute__((deprecated("unused")))
 static byte* packUserInfo(const NetUserInfo* info) {
     byte* bytes = SDL_calloc(USER_INFO_SIZE, sizeof(char));
 
