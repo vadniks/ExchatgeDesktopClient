@@ -387,7 +387,9 @@ static byte* packUserInfo(const NetUserInfo* info) {
 }
 
 void netFetchUsers(void) {
-
+    byte body[NET_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    netSend(FLAG_FETCH_USERS, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
 }
 
 unsigned netUserInfoId(const NetUserInfo* info) {
