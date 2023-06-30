@@ -73,6 +73,7 @@ const List* logicMessagesList(void) {
 
 static void onMessageReceived(const byte* message) {
     assert(this);
+    SDL_Log("message received %s", message);
 }
 
 static void onLogInResult(bool successful) {
@@ -287,6 +288,10 @@ unsigned long logicCurrentTimeMillis(void) {
     struct timespec timespec;
     assert(!clock_gettime(CLOCK_REALTIME, &timespec));
     return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
+}
+
+void logicOnSendClicked(const char* message) {
+    SDL_Log("send clicked %s", message);
 }
 
 void logicClean(void) {

@@ -17,6 +17,7 @@ typedef void (*RenderLogInRegisterPageQueriedByUserCallback)(bool logIn);
 typedef void (*RenderOnServerShutdownRequested)(void);
 typedef void (*RenderOnReturnFromConversationPageRequested)(void);
 typedef char* (*RenderMillisToDateTimeConverter)(unsigned long); // returns null-terminated formatted string with date & time that must be deallocated by the caller
+typedef void (*RenderOnSendClicked)(const char*); // receives an auto deallocated text of the message the user wanna send
 
 struct RenderUser_t;
 typedef struct RenderUser_t RenderUser;
@@ -45,7 +46,8 @@ void renderInit(
     unsigned conversationNameSize,
     RenderOnServerShutdownRequested onServerShutdownRequested,
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested,
-    RenderMillisToDateTimeConverter millisToDateTimeConverter
+    RenderMillisToDateTimeConverter millisToDateTimeConverter,
+    RenderOnSendClicked onSendClicked
 );
 void renderSetAdminMode(bool mode);
 

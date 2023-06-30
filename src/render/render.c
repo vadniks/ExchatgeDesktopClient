@@ -103,6 +103,7 @@ THIS(
     unsigned systemMessageTicks;
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested;
     RenderMillisToDateTimeConverter millisToDateTimeConverter;
+    RenderOnSendClicked onSendClicked;
 )
 #pragma clang diagnostic pop
 
@@ -152,7 +153,8 @@ void renderInit(
     unsigned conversationNameSize,
     RenderOnServerShutdownRequested onServerShutdownRequested,
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested,
-    RenderMillisToDateTimeConverter millisToDateTimeConverter
+    RenderMillisToDateTimeConverter millisToDateTimeConverter,
+    RenderOnSendClicked onSendClicked
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -197,6 +199,7 @@ void renderInit(
     this->systemMessageTicks = 0;
     this->onReturnFromConversationPageRequested = onReturnFromConversationPageRequested;
     this->millisToDateTimeConverter = millisToDateTimeConverter;
+    this->onSendClicked = onSendClicked;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -764,7 +767,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     );
 
     nk_layout_row_push(this->context, 0.15f);
-    if (nk_button_label(this->context, SEND)) SDL_Log("send clicked"); // TODO
+    if (nk_button_label(this->context, SEND)) (*(this->onSendClicked))(this->conversationMessage);
 
     nk_layout_row_end(this->context);
 }

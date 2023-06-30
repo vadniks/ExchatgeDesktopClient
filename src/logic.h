@@ -21,4 +21,5 @@ void logicOnServerShutdownRequested(void);
 void logicOnReturnFromConversationPageRequested(void);
 char* logicMillisToDateTime(unsigned long millis); // result is a null-terminated formatted string deallocation of which must be performed by the caller
 unsigned long logicCurrentTimeMillis(void);
+void logicOnSendClicked(const char* message);
 void logicClean(void);
