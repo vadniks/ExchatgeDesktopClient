@@ -7,6 +7,11 @@
 #include "net.h"
 #include "logic.h"
 
+STATIC_CONST_UNSIGNED STATE_UNAUTHENTICATED = 0;
+STATIC_CONST_UNSIGNED STATE_AWAITING_AUTHENTICATION = 1;
+STATIC_CONST_UNSIGNED STATE_AUTHENTICATED = 2;
+STATIC_CONST_UNSIGNED STATE_EXCHANGING_MESSAGES = 3;
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
@@ -16,6 +21,7 @@ THIS(
     LogicDelayedTask delayedTask;
     List* messagesList;
     bool adminMode;
+    volatile unsigned state;
 )
 #pragma clang diagnostic pop
 
@@ -41,6 +47,7 @@ void logicInit(unsigned argc, const char** argv, LogicAsyncTask asyncTask, Logic
     this->delayedTask = delayedTask;
     this->messagesList = renderInitMessagesList();
     parseArguments(argc, argv);
+    this->state = STATE_UNAUTHENTICATED;
 }
 
 bool logicIsAdminMode(void) {
@@ -65,28 +72,34 @@ const List* logicMessagesList(void) {
 }
 
 static void onMessageReceived(const byte* message) {
-
+    assert(this);
 }
 
 static void onLogInResult(bool successful) {
-    if (successful)
+    assert(this);
+    if (successful) {
+        this->state = STATE_AUTHENTICATED;
         netFetchUsers();
-    else {
+    } else {
+        this->state = STATE_UNAUTHENTICATED;
         renderShowLogIn();
         renderShowSystemError();
     }
 }
 
 static void onErrorReceived(__attribute_maybe_unused__ int flag) {
+    assert(this);
     renderHideInfiniteProgressBar();
     renderShowSystemError();
 }
 
 static void onRegisterResult(bool successful) {
+    assert(this);
     SDL_Log("registration %s", successful ? "succeeded" : "failed");
 }
 
 static void onDisconnected(void) { // TODO: forbid using username 'admin' more than one time on the server side
+    assert(this);
     this->netInitialized = false;
     renderHideInfiniteProgressBar();
     renderShowLogIn();
@@ -94,6 +107,8 @@ static void onDisconnected(void) { // TODO: forbid using username 'admin' more t
 }
 
 static void onUsersFetched(NetUserInfo** infos, unsigned size) {
+    assert(this);
+
     for (unsigned i = 0, id; i < size; i++) {
         id = netUserInfoId(infos[i]);
 
@@ -119,8 +134,8 @@ static void processCredentials(void** data) {
     const char* password = data[1];
     bool logIn = *((bool*) data[2]);
 
-    assert(this); // TODO: thread data race possible when app has been exited but the thread still executes - might cause dereference error
-    this->netInitialized = netInit( // TODO: to solve this issue save references to all threads and wait for them in module's clean function
+    assert(this);
+    this->netInitialized = netInit(
         &onMessageReceived,
         &onLogInResult,
         &onErrorReceived,
@@ -145,7 +160,11 @@ static void processCredentials(void** data) {
 }
 
 void logicOnCredentialsReceived(const char* username, const char* password, bool logIn) {
-    assert(this && !this->netInitialized);
+    assert(this);
+    if (this->state != STATE_UNAUTHENTICATED) return;
+    assert(!this->netInitialized);
+
+    this->state = STATE_AWAITING_AUTHENTICATION;
     renderShowInfiniteProgressBar();
 
     void** data = SDL_malloc(3 * sizeof(void*));
@@ -171,6 +190,7 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
 }
 
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant) {
+    assert(this);
     SDL_Log("user for conversation chosen %d for user %u", chooseVariant, id);
 
     if (chooseVariant == RENDER_START_CONVERSATION || chooseVariant == RENDER_CONTINUE_CONVERSATION) {
