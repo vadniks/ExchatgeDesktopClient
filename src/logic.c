@@ -196,7 +196,7 @@ static void utos(char* buffer, unsigned length, unsigned number) { // unsigned t
     unsigned digitsSize = 0;
 
     while (number > 0) {
-        digits = SDL_realloc(digits, digitsSize++ * sizeof(char));
+        digits = SDL_realloc(digits, ++digitsSize * sizeof(char));
         digits[digitsSize - 1] = number % 10;
         number /= 10;
     }
