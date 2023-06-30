@@ -11,8 +11,6 @@
 
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
 STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
-STATIC_CONST_UNSIGNED WINDOW_MINIMAL_WIDTH = WINDOW_WIDTH / 2;
-STATIC_CONST_UNSIGNED WINDOW_MINIMAL_HEIGHT = WINDOW_HEIGHT / 2;
 STATIC_CONST_UNSIGNED FONT_SIZE = 14;
 STATIC_CONST_UNSIGNED MAX_U32_DEC_DIGITS_COUNT = 10; // 0xffffffff = 4294967295 10 digits
 
@@ -219,8 +217,6 @@ void renderInit(
     this->renderer = SDL_CreateRenderer(this->window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     assert(this->renderer);
 
-    SDL_SetWindowMinimumSize(this->window, (int) WINDOW_MINIMAL_WIDTH, (int) WINDOW_MINIMAL_HEIGHT);
-
     int renderW, renderH, windowW, windowH;
     float scaleX, scaleY, fontScale;
 
@@ -229,6 +225,7 @@ void renderInit(
 
     scaleX = (float) renderW / (float) windowW;
     scaleY = (float) renderH / (float) windowH;
+    SDL_SetWindowMinimumSize(this->window, (int) ((float) WINDOW_WIDTH * scaleX), (int) ((float) WINDOW_HEIGHT * scaleY));
 
     SDL_RenderSetScale(this->renderer, scaleX, scaleY);
     fontScale = scaleY;
@@ -733,9 +730,9 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         fromUsernameColor = {0xff, 0xff, 0xff, 0x88};
 
     const bool aboveInitialWidth = this->width >= WINDOW_WIDTH * 2;
-    const float timestampRatio = aboveInitialWidth ? 0.075f : 0.15f,
+    const float timestampRatio = aboveInitialWidth ? 0.08f : 0.2f,
         fromRatio = aboveInitialWidth ? 0.05f : 0.1f,
-        textRatio = aboveInitialWidth ? 0.4375f : 0.375f;
+        textRatio = aboveInitialWidth ? 0.435f : 0.35f;
 
     const unsigned size = listSize(this->messagesList);
     for (unsigned i = 0; i < size; i++) {
@@ -754,7 +751,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
 
     nk_group_end(this->context);
 
-    nk_layout_row_begin(this->context, NK_DYNAMIC, height * 0.1f, 2);
+    nk_layout_row_begin(this->context, NK_DYNAMIC, (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f, 2);
 
     nk_layout_row_push(this->context, 0.85f);
     nk_edit_string(
