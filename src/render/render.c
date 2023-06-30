@@ -655,7 +655,7 @@ static void drawUsersList(void) {
 }
 
 static void drawConversationMessage(
-    float height,
+    float charHeight,
     RenderMessage* message,
     float timestampRatio,
     float fromRatio,
@@ -663,7 +663,14 @@ static void drawConversationMessage(
     struct nk_color fromUsernameColor,
     struct nk_color timestampColor
 ) {
-    nk_layout_row_begin(this->context, NK_DYNAMIC, height, 4);
+    const float messageHeight = (
+        (float) message->size / (
+            ((float) this->width * 0.375f) /
+            ((float) FONT_SIZE * 2 / 3)
+        )
+    ) * (float) FONT_SIZE;
+
+    nk_layout_row_begin(this->context, NK_DYNAMIC, messageHeight < charHeight ? charHeight : messageHeight, 4);
 
     char text[this->maxMessageSize + 1];
     SDL_memcpy(text, message->text, this->maxMessageSize);
@@ -682,13 +689,13 @@ static void drawConversationMessage(
         nk_spacer(this->context);
 
         nk_layout_row_push(this->context, textRatio);
-        nk_text_wrap(this->context, text, (int) this->maxMessageSize);
+        nk_text_wrap(this->context, text, (int) message->size);
     } else {
         nk_layout_row_push(this->context, fromRatio);
         nk_label_colored(this->context, message->from, NK_TEXT_ALIGN_CENTERED, fromUsernameColor);
 
         nk_layout_row_push(this->context, textRatio);
-        nk_text_wrap(this->context, text, (int) this->maxMessageSize);
+        nk_text_wrap(this->context, text, (int) message->size);
 
         nk_layout_row_push(this->context, textRatio);
         nk_spacer(this->context);
@@ -725,14 +732,6 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         timestampColor = {0, 128, 0, 255},
         fromUsernameColor = {0xff, 0xff, 0xff, 0x88};
 
-    // TODO: this works for a 1920/1080 resolution, no access to devices with higher resolutions to test
-    const float messageHeight = (
-        (float) this->maxMessageSize/*message size in chars*/ / (
-            ((float) this->width * 0.375f)/*width in pixels of a frame in which the text will be drawn*/ /
-            ((float) FONT_SIZE * 2 / 3)/*9.3 - width in pixels of one char (2/3 * _font_size_ ->)*/
-        )
-    ) * (float) FONT_SIZE/*14 - height in pixels of one char (current font size)*/;
-
     const bool aboveInitialWidth = this->width >= WINDOW_WIDTH * 2;
     const float timestampRatio = aboveInitialWidth ? 0.075f : 0.15f,
         fromRatio = aboveInitialWidth ? 0.05f : 0.1f,
@@ -743,7 +742,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         RenderMessage* message = listGet(this->messagesList, i);
 
         drawConversationMessage(
-            messageHeight,
+            height * 0.05f,
             message,
             timestampRatio,
             fromRatio,
