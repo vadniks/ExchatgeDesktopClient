@@ -329,6 +329,11 @@ void netListen(void) {
     SDL_free(message);
 }
 
+unsigned netCurrentUserId(void) {
+    assert(this);
+    return this->userId;
+}
+
 void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     assert(this && size > 0 && size <= NET_MESSAGE_BODY_SIZE);
 

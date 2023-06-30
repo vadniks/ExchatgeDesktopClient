@@ -32,6 +32,7 @@ bool netInit(
 void netLogIn(const char* username, const char* password); // in case of failure the server disconnects client
 void netRegister(const char* username, const char* password); // the server disconnects client regardless of the result, but it sends messages with the result
 void netListen(void);
+unsigned netCurrentUserId(void);
 void netSend(int flag, const byte* body, unsigned size, unsigned xTo);
 void netShutdownServer(void);
 void netFetchUsers(void);

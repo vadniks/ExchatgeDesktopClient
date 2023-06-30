@@ -94,8 +94,19 @@ static void onDisconnected(void) { // TODO: forbid using username 'admin' more t
 }
 
 static void onUsersFetched(NetUserInfo** infos, unsigned size) {
-    for (unsigned i = 0; i < size; i++) {
-        listAdd(this->usersList, renderCreateUser(netUserInfoId(infos[i]), (const char*) netUserInfoName(infos[i]), /*TODO: client side's business whether a conversation with a particular user exists*/i % 5 == 0, netUserInfoConnected(infos[i])));
+    for (unsigned i = 0, id; i < size; i++) {
+        id = netUserInfoId(infos[i]);
+
+        if (id != netCurrentUserId()) listAdd(
+            this->usersList,
+            renderCreateUser(
+                id,
+                (const char*) netUserInfoName(infos[i]),
+                /*TODO: client side's business whether a conversation with a particular user exists*/i % 5 == 0,
+                netUserInfoConnected(infos[i])
+            )
+        );
+
         netDestroyUserInfo(infos[i]);
     }
     SDL_free(infos);
