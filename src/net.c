@@ -431,10 +431,11 @@ static void onUsersFetched(const Message* message) {
     assert(this->userInfosSize);
     this->userInfos = SDL_realloc(this->userInfos, this->userInfosSize * sizeof(NetUserInfo*));
 
-    for (unsigned i = 0; i < message->size; i++)
-        (this->userInfos)[i] = unpackUserInfo(message->body + i * USER_INFO_SIZE);
+    for (unsigned i = 0, j = this->userInfosSize - message->size; i < message->size; i++, j++)
+        (this->userInfos)[j] = unpackUserInfo(message->body + i * USER_INFO_SIZE);
 
     if (message->index < message->count - 1) return;
+
     (*(this->onUsersFetched))(this->userInfos, this->userInfosSize);
 
     for (unsigned i = 0; i < this->userInfosSize; SDL_free((this->userInfos)[i++]));
