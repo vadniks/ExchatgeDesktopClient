@@ -300,7 +300,10 @@ void logicOnSendClicked(const char* message) {
 
 void logicOnUpdateUsersListClicked(void) {
     assert(this);
+
     listClear(this->usersList);
+    renderShowUsersList();
+
     (*(this->asyncTask))(&netFetchUsers);
 }
 
