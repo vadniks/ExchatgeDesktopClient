@@ -122,10 +122,7 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
                 netUserInfoConnected(infos[i])
             )
         );
-
-        netDestroyUserInfo(infos[i]);
     }
-    SDL_free(infos);
 
     renderShowUsersList();
 }

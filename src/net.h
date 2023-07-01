@@ -13,7 +13,7 @@ typedef unsigned long (*NetCurrentTimeMillisGetter)(void);
 struct NetUserInfo_t;
 typedef struct NetUserInfo_t NetUserInfo;
 
-typedef void (*NetOnUsersFetched)(NetUserInfo** infos, unsigned size); // receives an array which is needed to be deallocated (and every item inside it) with length of 'size'
+typedef void (*NetOnUsersFetched)(NetUserInfo** infos, unsigned size); // receives an array with length of 'size', which is deallocated automatically (and every item inside it) after this callback returns
 
 extern const unsigned NET_USERNAME_SIZE;
 extern const unsigned NET_UNHASHED_PASSWORD_SIZE;
@@ -39,5 +39,4 @@ void netFetchUsers(void);
 unsigned netUserInfoId(const NetUserInfo* info);
 bool netUserInfoConnected(const NetUserInfo* info);
 const byte* netUserInfoName(const NetUserInfo* info);
-void netDestroyUserInfo(NetUserInfo* info);
 void netClean(void);

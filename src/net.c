@@ -80,6 +80,8 @@ THIS(
     NetCurrentTimeMillisGetter currentTimeMillisGetter;
     int lastSentFlag;
     NetOnUsersFetched onUsersFetched;
+    NetUserInfo** userInfos;
+    unsigned userInfosSize;
 )
 #pragma clang diagnostic pop
 
@@ -153,7 +155,7 @@ bool netInit(
     this->messageBuffer = NULL;
     SDL_memset(this->tokenAnonymous, 0, TOKEN_SIZE);
     SDL_memset(this->tokenServerUnsignedValue, (1 << 8) - 1, TOKEN_UNSIGNED_VALUE_SIZE);
-    SDL_memcpy(this->token, this->tokenAnonymous, TOKEN_SIZE); // until user is authenticated hist token is anonymous
+    SDL_memcpy(this->token, this->tokenAnonymous, TOKEN_SIZE); // until user is authenticated he has an anonymous token
     this->userId = FROM_ANONYMOUS;
     this->onLogInResult = onLogInResult;
     this->onErrorReceived = onErrorReceived;
@@ -161,6 +163,8 @@ bool netInit(
     this->onDisconnected = onDisconnected;
     this->currentTimeMillisGetter = currentTimeMillisGetter;
     this->onUsersFetched = onUsersFetched;
+    this->userInfos = NULL;
+    this->userInfosSize = 0;
 
     assert(!SDLNet_Init());
 
@@ -413,27 +417,34 @@ const byte* netUserInfoName(const NetUserInfo* info) {
     return info->name;
 }
 
-void netDestroyUserInfo(NetUserInfo* info) {
-    assert(info);
-    SDL_free(info);
+static void resetUserInfos(void) {
+    SDL_free(this->userInfos);
+    this->userInfos = NULL;
+    this->userInfosSize = 0;
 }
 
 static void onUsersFetched(const Message* message) {
     assert(this);
+    if (!(message->index)) resetUserInfos();
 
-    unsigned infosCount = 0;
-    SDL_memcpy(&infosCount, message->body, INT_SIZE);
-    assert(infosCount);
+    this->userInfosSize += message->size;
+    assert(this->userInfosSize);
+    this->userInfos = SDL_realloc(this->userInfos, this->userInfosSize * sizeof(NetUserInfo*));
 
-    NetUserInfo** infos = SDL_malloc(infosCount * sizeof(NetUserInfo*));
-    for (unsigned i = 0, j = INT_SIZE; i < infosCount; i++, j += USER_INFO_SIZE)
-        infos[i] = unpackUserInfo(message->body + j);
+    for (unsigned i = 0; i < message->size; i++)
+        (this->userInfos)[i] = unpackUserInfo(message->body + i * USER_INFO_SIZE);
 
-    (*(this->onUsersFetched))(infos, infosCount);
+    if (message->index < message->count - 1) return;
+    (*(this->onUsersFetched))(this->userInfos, this->userInfosSize);
+
+    for (unsigned i = 0; i < this->userInfosSize; SDL_free((this->userInfos)[i++]));
+    resetUserInfos();
 }
 
 void netClean(void) {
     assert(this);
+
+    SDL_free(this->userInfos);
 
     SDL_free(this->messageBuffer);
     if (this->connectionCrypto) cryptoDestroy(this->connectionCrypto);
