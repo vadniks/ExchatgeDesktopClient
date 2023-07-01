@@ -264,7 +264,9 @@ static void processErrors(const Message* message) {
 
 static void onUsersFetched(const Message* message);
 
-static void processServerActions(const Message* message) {
+static void processMessagesFromServer(const Message* message) {
+    assert(checkServerToken(message->token));
+
     switch (message->flag) {
         case FLAG_LOGGED_IN:
             this->state = STATE_AUTHENTICATED;
@@ -279,6 +281,11 @@ static void processServerActions(const Message* message) {
         case FLAG_FETCH_USERS:
             onUsersFetched(message);
             break;
+        case FLAG_UNAUTHENTICATED:
+        case FLAG_ERROR:
+        case FLAG_ACCESS_DENIED:
+            processErrors(message);
+            break;
         default:
             assert(false);
     }
@@ -286,22 +293,13 @@ static void processServerActions(const Message* message) {
 
 static void processMessage(const Message* message) {
     bool fromServer = message->from == FROM_SERVER;
-    if (fromServer) {
-        assert(checkServerToken(message->token));
-
-        const int flag = message->flag;
-        if (flag == FLAG_UNAUTHENTICATED || flag == FLAG_ERROR || flag == FLAG_ACCESS_DENIED) processErrors(message);
-    }
+    if (fromServer) processMessagesFromServer(message);
 
     switch (this->state) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
-            processServerActions(message);
             break;
         case STATE_AUTHENTICATED:
-            if (fromServer)
-                processServerActions(message);
-            else
-                (*(this->onMessageReceived))(message->body);
+            if (!fromServer) (*(this->onMessageReceived))(message->body);
             break;
     }
 }
