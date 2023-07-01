@@ -386,6 +386,7 @@ static NetUserInfo* unpackUserInfo(const byte* bytes) {
 }
 
 void netFetchUsers(void) {
+    assert(this);
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     netSend(FLAG_FETCH_USERS, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);

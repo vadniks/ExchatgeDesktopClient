@@ -298,6 +298,12 @@ void logicOnSendClicked(const char* message) {
     netSend(0, body, 12, 2);
 }
 
+void logicOnUpdateUsersListClicked(void) {
+    assert(this);
+    listClear(this->usersList);
+    (*(this->asyncTask))(&netFetchUsers);
+}
+
 void logicClean(void) {
     assert(this);
     listDestroy(this->usersList);

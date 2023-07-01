@@ -80,7 +80,8 @@ bool lifecycleInit(unsigned argc, const char** argv) { // TODO: expose net modul
         &logicOnServerShutdownRequested,
         &logicOnReturnFromConversationPageRequested,
         &logicMillisToDateTime,
-        &logicOnSendClicked
+        &logicOnSendClicked,
+        &logicOnUpdateUsersListClicked
     );
     logicInit(argc, argv, &async, &delayed);
     renderSetAdminMode(logicIsAdminMode());

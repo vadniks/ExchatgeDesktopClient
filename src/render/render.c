@@ -43,6 +43,7 @@ STATIC_CONST_STRING ONLINE = "Online";
 STATIC_CONST_STRING OFFLINE = "Offline";
 STATIC_CONST_STRING BACK = "Back";
 STATIC_CONST_STRING YOU = "You";
+STATIC_CONST_STRING UPDATE = "Update";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -104,6 +105,7 @@ THIS(
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested;
     RenderMillisToDateTimeConverter millisToDateTimeConverter;
     RenderOnSendClicked onSendClicked;
+    RenderOnUpdateUsersListClicked onUpdateUsersListClicked;
 )
 #pragma clang diagnostic pop
 
@@ -154,7 +156,8 @@ void renderInit(
     RenderOnServerShutdownRequested onServerShutdownRequested,
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested,
     RenderMillisToDateTimeConverter millisToDateTimeConverter,
-    RenderOnSendClicked onSendClicked
+    RenderOnSendClicked onSendClicked,
+    RenderOnUpdateUsersListClicked onUpdateUsersListClicked
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -200,6 +203,7 @@ void renderInit(
     this->onReturnFromConversationPageRequested = onReturnFromConversationPageRequested;
     this->millisToDateTimeConverter = millisToDateTimeConverter;
     this->onSendClicked = onSendClicked;
+    this->onUpdateUsersListClicked = onUpdateUsersListClicked;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -618,22 +622,22 @@ static void drawUserRow(unsigned id, const char* idString, const char* name, boo
 }
 
 static void drawUsersList(void) {
-    const float height = currentHeight();
+    const float height = currentHeight(), decreasedHeight = (float) decreaseHeightIfNeeded((unsigned) height);
 
     if (this->adminMode) {
-        nk_layout_row_dynamic(this->context, (float) decreaseHeightIfNeeded((unsigned) height) * 0.07f, 2);
+        nk_layout_row_dynamic(this->context, decreasedHeight * 0.1f, 2);
         nk_label(this->context, WELCOME_ADMIN, NK_TEXT_ALIGN_CENTERED);
 
         if (nk_button_label(this->context, SHUTDOWN_SERVER))
             (*(this->onServerShutdownRequested))();
-
-        nk_spacer(this->context);
     }
 
-    nk_layout_row_dynamic(this->context, height * 0.03f, 1);
-    nk_label(this->context, USERS_LIST, NK_TEXT_ALIGN_CENTERED);
+    nk_layout_row_dynamic(this->context, decreasedHeight * 0.1f, 5);
+    nk_label(this->context, USERS_LIST, NK_TEXT_ALIGN_LEFT);
+    for (unsigned i = 0; i < 3; i++) nk_spacer(this->context);
+    if (nk_button_label(this->context, UPDATE)) (*(this->onUpdateUsersListClicked))();
 
-    float heightMultiplier = this->adminMode ? 0.8f : 0.97f;
+    float heightMultiplier = this->adminMode ? 0.8f : 0.9f;
     if (this->loading) heightMultiplier -= 0.05f;
     if (this->currentSystemMessage) heightMultiplier -= 0.05f;
 
