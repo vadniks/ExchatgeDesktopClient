@@ -385,17 +385,6 @@ static NetUserInfo* unpackUserInfo(const byte* bytes) {
     return info;
 }
 
-__attribute__((deprecated("unused")))
-static byte* packUserInfo(const NetUserInfo* info) {
-    byte* bytes = SDL_calloc(USER_INFO_SIZE, sizeof(char));
-
-    SDL_memcpy(bytes, &(info->id), INT_SIZE);
-    SDL_memcpy(bytes + INT_SIZE, &(info->connected), 1);
-    SDL_memcpy(bytes + INT_SIZE + 1, &(info->name), NET_USERNAME_SIZE);
-
-    return bytes;
-}
-
 void netFetchUsers(void) {
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
