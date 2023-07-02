@@ -101,7 +101,10 @@ static void onRegisterResult(bool successful) {
 
 static void onDisconnected(void) { // TODO: forbid using username 'admin' more than one time on the server side
     assert(this);
+
     this->netInitialized = false;
+    this->state = STATE_UNAUTHENTICATED;
+
     renderHideInfiniteProgressBar();
     renderShowLogIn();
     renderShowDisconnectedSystemMessage();
@@ -143,7 +146,10 @@ static void processCredentials(void** data) {
         &onUsersFetched
     );
 
-    if (!this->netInitialized) renderShowUnableToConnectToTheServerSystemMessage();
+    if (!this->netInitialized) {
+        this->state = STATE_UNAUTHENTICATED;
+        renderShowUnableToConnectToTheServerSystemMessage();
+    }
     if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
 
     logicCredentialsRandomFiller(data[0], NET_USERNAME_SIZE);
