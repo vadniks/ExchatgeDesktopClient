@@ -127,7 +127,7 @@ static void initiateSecuredConnection(void) {
     SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize);
     assert(cryptoCheckServerSignedBytes(serverSignedPublicKey, serverKeyStart, CRYPTO_KEY_SIZE));
 
-    if (!SDL_memcmp(serverKeyStart, this->serverKeyStub, CRYPTO_KEY_SIZE)) return;
+    if (!SDL_memcmp(serverKeyStart, this->serverKeyStub, CRYPTO_KEY_SIZE)) return; // denial of service
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
     if (!cryptoExchangeKeys(this->connectionCrypto, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE)) return;
