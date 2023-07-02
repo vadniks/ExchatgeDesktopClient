@@ -82,6 +82,7 @@ THIS(
     NetOnUsersFetched onUsersFetched;
     NetUserInfo** userInfos;
     unsigned userInfosSize;
+    byte* serverKeyStub;
 )
 #pragma clang diagnostic pop
 
@@ -116,15 +117,18 @@ STATIC_CONST_UNSIGNED USER_INFO_SIZE = INT_SIZE + sizeof(bool) + NET_USERNAME_SI
 staticAssert(sizeof(bool) == 1 && sizeof(NetUserInfo) == 21);
 
 static void initiateSecuredConnection(void) {
-    const unsigned signedPublicKeySize = CRYPTO_SIGNATURE_SIZE + CRYPTO_KEY_SIZE;
-    byte serverSignedPublicKey[signedPublicKeySize];
-
-    SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize);
-    assert(cryptoCheckServerSignedBytes(serverSignedPublicKey, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE, CRYPTO_KEY_SIZE));
-    this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
-
     this->connectionCrypto = cryptoInit();
     assert(this->connectionCrypto);
+
+    const unsigned signedPublicKeySize = CRYPTO_SIGNATURE_SIZE + CRYPTO_KEY_SIZE;
+    byte serverSignedPublicKey[signedPublicKeySize];
+    const byte* serverKeyStart = serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE;
+
+    SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize);
+    assert(cryptoCheckServerSignedBytes(serverSignedPublicKey, serverKeyStart, CRYPTO_KEY_SIZE));
+
+    if (!SDL_memcmp(serverKeyStart, this->serverKeyStub, CRYPTO_KEY_SIZE)) return;
+    this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
     if (!cryptoExchangeKeys(this->connectionCrypto, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE)) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
@@ -165,6 +169,7 @@ bool netInit(
     this->onUsersFetched = onUsersFetched;
     this->userInfos = NULL;
     this->userInfosSize = 0;
+    this->serverKeyStub = SDL_calloc(CRYPTO_KEY_SIZE, sizeof(byte));
 
     assert(!SDLNet_Init());
 
@@ -433,9 +438,10 @@ static void onUsersFetched(const Message* message) {
 void netClean(void) {
     assert(this);
 
+    SDL_free(this->serverKeyStub);
     SDL_free(this->userInfos);
-
     SDL_free(this->messageBuffer);
+
     if (this->connectionCrypto) cryptoDestroy(this->connectionCrypto);
 
     SDLNet_FreeSocketSet(this->socketSet);
