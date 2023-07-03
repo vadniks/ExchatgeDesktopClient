@@ -228,22 +228,11 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
 
     SDL_Log("user for conversation chosen %d for user %u", chooseVariant, id);
 
-    if (chooseVariant == RENDER_START_CONVERSATION || chooseVariant == RENDER_CONTINUE_CONVERSATION) {
-//        for (unsigned i = 0; i < 10; i++) { // TODO: test only
-//            char username1[NET_USERNAME_SIZE];
-//            SDL_memset(username1, 0, NET_USERNAME_SIZE);
-//            SDL_memcpy(username1, "username1", 9);
-//
-//            i % 2 == 0
-//                ? listAdd(this->messagesList, renderCreateMessage(i * 1000, username1, "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum. Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the ci", NET_MESSAGE_BODY_SIZE))
-//                : listAdd(this->messagesList, renderCreateMessage(i * 1000, NULL, "Lorem Ipsum", 11));
-//        }
+    const NetUserInfo* info = findUser(id);
+    assert(info);
 
-        char title[NET_USERNAME_SIZE]; // TODO: test only
-        SDL_memcpy(title, "Conversation", 12);
-        SDL_memset(title + 12, 0, NET_USERNAME_SIZE - 12);
-        renderShowConversation(title);
-    }
+    if (chooseVariant == RENDER_START_CONVERSATION || chooseVariant == RENDER_CONTINUE_CONVERSATION)
+        renderShowConversation((const char*) netUserInfoName(info));
 }
 
 void logicOnServerShutdownRequested(void) {
@@ -340,9 +329,6 @@ static void sendMessage(void** params) {
 
 void logicOnSendClicked(const char* text, unsigned size) {
     assert(this);
-    SDL_Log("send clicked %s", text);
-    // TODO: test only
-
     void** params = SDL_malloc(2 * sizeof(void*));
 
     params[0] = SDL_malloc(size * sizeof(char));
@@ -351,6 +337,7 @@ void logicOnSendClicked(const char* text, unsigned size) {
     params[1] = SDL_malloc(sizeof(int));
     *((unsigned*) params[1]) = size;
 
+    listAdd(this->messagesList, renderCreateMessage(logicCurrentTimeMillis(), NULL, text, size));
     SDL_DetachThread(SDL_CreateThread((SDL_ThreadFunction) &sendMessage, "sendThread", params));
 }
 
