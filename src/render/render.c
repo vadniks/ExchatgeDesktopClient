@@ -280,6 +280,26 @@ RenderUser* renderCreateUser(unsigned id, const char* name, bool conversationExi
     return user;
 }
 
+unsigned renderUserId(const RenderUser* user) {
+    assert(user);
+    return user->id;
+}
+
+const char* renderUserName(const RenderUser* user) {
+    assert(user);
+    return user->name;
+}
+
+bool renderUserConversationExists(const RenderUser* user) {
+    assert(user);
+    return user->conversationExists;
+}
+
+bool renderUserOnline(const RenderUser* user) {
+    assert(user);
+    return user->online;
+}
+
 void renderDestroyUser(RenderUser* user) {
     SDL_free(user->name);
     SDL_free(user);

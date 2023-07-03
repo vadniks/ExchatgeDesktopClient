@@ -5,6 +5,9 @@
     typedef struct { x } This; \
     static This* this = NULL;
 
+#define min(x, y) (x < y ? x : y)
+#define max(x, y) (x > y ? x : y)
+
 #define staticAssert(x) _Static_assert(x, "")
 
 #ifdef __clang__
@@ -19,6 +22,3 @@
 
 typedef void* (*Function)(void*);
 typedef unsigned char byte;
-
-#define min(x, y) (x < y ? x : y)
-#define max(x, y) (x > y ? x : y)

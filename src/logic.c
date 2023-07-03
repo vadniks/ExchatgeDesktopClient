@@ -16,10 +16,10 @@ STATIC_CONST_UNSIGNED STATE_EXCHANGING_MESSAGES = 3;
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
     volatile bool netInitialized;
-    List* usersList;
+    List* usersList; // <RenderUser*>
     LogicAsyncTask asyncTask;
     LogicDelayedTask delayedTask;
-    List* messagesList;
+    List* messagesList; // <RenderMessage*>
     bool adminMode;
     volatile unsigned state;
     char* currentUserName; // TODO: the server shouldn't know groups in which users are, so group information stays on clients, the server just transmits messages
@@ -74,16 +74,16 @@ const List* logicMessagesList(void) {
     return this->messagesList;
 }
 
-static const NetUserInfo* nullable findUser(unsigned id) {
+static const RenderUser* nullable findUser(unsigned id) {
     const unsigned size = listSize(this->usersList);
-    const NetUserInfo* info = NULL;
+    const RenderUser* user = NULL;
 
     for (unsigned i = 0; i < size; i++) {
-        info = listGet(this->usersList, i);
-        assert(info);
+        user = listGet(this->usersList, i);
+        assert(user);
 
-        if (netUserInfoId(info) == id)
-            return info;
+        if (renderUserId(user) == id)
+            return user;
     }
 
     return NULL;
@@ -92,12 +92,12 @@ static const NetUserInfo* nullable findUser(unsigned id) {
 static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* message, unsigned size) {
     assert(this);
 
-    const NetUserInfo* info = findUser(fromId);
-    assert(info);
+    const RenderUser* user = findUser(fromId);
+    assert(user);
 
-    SDL_Log("message received from %u %s", fromId, netUserInfoName(info)); // TODO: test only
+    SDL_Log("message received from %u %s", fromId, renderUserName(user)); // TODO: test only
 
-    listAdd(this->messagesList, renderCreateMessage(timestamp, (const char*) netUserInfoName(info), (const char*) message, size));
+    listAdd(this->messagesList, renderCreateMessage(timestamp, renderUserName(user), (const char*) message, size));
 }
 
 static void onLogInResult(bool successful) {
@@ -225,13 +225,13 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
     this->toUserId = id;
     listClear(this->messagesList);
 
+    const RenderUser* user = findUser(id);
+    assert(user);
+
     SDL_Log("user for conversation chosen %d for user %u", chooseVariant, id);
 
-    const NetUserInfo* info = findUser(id);
-    assert(info);
-
     if (chooseVariant == RENDER_START_CONVERSATION || chooseVariant == RENDER_CONTINUE_CONVERSATION)
-        renderShowConversation((const char*) netUserInfoName(info));
+        renderShowConversation(renderUserName(user));
 }
 
 void logicOnServerShutdownRequested(void) {

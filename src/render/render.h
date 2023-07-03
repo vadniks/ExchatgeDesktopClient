@@ -55,6 +55,10 @@ void renderSetAdminMode(bool mode);
 
 List* renderInitUsersList(void);
 RenderUser* renderCreateUser(unsigned id, const char* name, bool conversationExists, bool online); // name (which is null-terminated string with (0, this->usernameSize] range sized length) is copied
+unsigned renderUserId(const RenderUser* user);
+const char* renderUserName(const RenderUser* user);
+bool renderUserConversationExists(const RenderUser* user);
+bool renderUserOnline(const RenderUser* user);
 void renderDestroyUser(RenderUser* user);
 void renderSetUsersList(const List* usersList); // <RenderUser*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
 
