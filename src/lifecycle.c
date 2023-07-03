@@ -44,7 +44,7 @@ static unsigned synchronizeThreadUpdates(void) {
 
 static void async(void (*action)(void)) {
     SDL_DetachThread(SDL_CreateThread(
-        (int (*)(void*)) action, // TODO: thread data race possible when app has been exited but the thread still executes - might cause dereference error on accessing 'this
+        (int (*)(void*)) action,
         "asyncActionThread",
         NULL
     ));
@@ -52,12 +52,12 @@ static void async(void (*action)(void)) {
 
 static void delayed(unsigned seconds, void (*action)(void)) {
     sleep(seconds);
-    (*(action))(); // TODO: thread data race possible when app has been exited but the thread still executes - might cause dereference error on accessing 'this
+    (*(action))();
 }
 
 static void showLogInUiDelayed(void) { delayed(1, &renderShowLogIn); } // causes render module to show splash page until logIn page is queried one second later
 
-bool lifecycleInit(unsigned argc, const char** argv) { // TODO: expose net module's flags in it's header
+bool lifecycleInit(unsigned argc, const char** argv) {
     this = SDL_malloc(sizeof *this);
     this->running = true;
     this->updateThreadCounter = 1;

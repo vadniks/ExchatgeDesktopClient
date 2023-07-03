@@ -34,7 +34,7 @@ STATIC_CONST_STRING DELETE_CONVERSATION = "Delete conversation";
 STATIC_CONST_STRING ID_TEXT = "Id";
 STATIC_CONST_STRING NAME_TEXT = "Name";
 STATIC_CONST_STRING ERROR_TEXT = "Error";
-STATIC_CONST_STRING WELCOME_ADMIN = "Welcome admin!";
+STATIC_CONST_STRING WELCOME = "Welcome ";
 STATIC_CONST_STRING SHUTDOWN_SERVER = "Shutdown the server";
 STATIC_CONST_STRING DISCONNECTED = "Disconnected";
 STATIC_CONST_STRING UNABLE_TO_CONNECT_TO_THE_SERVER = "Unable to connect to the server";
@@ -107,6 +107,7 @@ THIS(
     RenderMillisToDateTimeConverter millisToDateTimeConverter;
     RenderOnSendClicked onSendClicked;
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked;
+    char* currentUserName; // the name of the user who is currently logged in this client
 )
 #pragma clang diagnostic pop
 
@@ -205,6 +206,7 @@ void renderInit(
     this->millisToDateTimeConverter = millisToDateTimeConverter;
     this->onSendClicked = onSendClicked;
     this->onUpdateUsersListClicked = onUpdateUsersListClicked;
+    this->currentUserName = SDL_calloc(this->usernameSize, sizeof(char));
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -361,9 +363,14 @@ void renderShowRegister(void) {
     SYNCHRONIZED(this->state = STATE_REGISTER;)
 }
 
-void renderShowUsersList(void) {
+void renderShowUsersList(const char* currentUserName) {
     assert(this);
-    SYNCHRONIZED(this->state = STATE_USERS_LIST;)
+    SYNCHRONIZED_BEGIN
+
+    SDL_memcpy(this->currentUserName, currentUserName, this->usernameSize);
+    this->state = STATE_USERS_LIST;
+
+    SYNCHRONIZED_END
 }
 
 void renderShowConversation(const char* conversationName) {
@@ -626,20 +633,26 @@ static void drawUserRow(unsigned id, const char* idString, const char* name, boo
 static void drawUsersList(void) {
     const float height = currentHeight(), decreasedHeight = (float) decreaseHeightIfNeeded((unsigned) height);
 
-    if (this->adminMode) {
-        nk_layout_row_dynamic(this->context, decreasedHeight * 0.1f, 2);
-        nk_label(this->context, WELCOME_ADMIN, NK_TEXT_ALIGN_CENTERED);
+    char currentUserName[this->usernameSize + 1];
+    SDL_memcpy(currentUserName, this->currentUserName, this->usernameSize);
+    currentUserName[this->usernameSize] = 0;
 
+    nk_layout_row_dynamic(this->context, decreasedHeight * 0.1f, 3);
+    nk_label(this->context, WELCOME, NK_TEXT_ALIGN_CENTERED);
+    nk_label(this->context, currentUserName, NK_TEXT_ALIGN_CENTERED);
+
+    if (this->adminMode) {
         if (nk_button_label(this->context, SHUTDOWN_SERVER))
             (*(this->onServerShutdownRequested))();
-    }
+    } else
+        nk_spacer(this->context);
 
     nk_layout_row_dynamic(this->context, decreasedHeight * 0.1f, 5);
     nk_label(this->context, USERS_LIST, NK_TEXT_ALIGN_LEFT);
     for (unsigned i = 0; i < 3; i++) nk_spacer(this->context);
     if (nk_button_label(this->context, UPDATE)) (*(this->onUpdateUsersListClicked))();
 
-    float heightMultiplier = this->adminMode ? 0.8f : 0.9f;
+    float heightMultiplier = 0.8f;
     if (this->loading) heightMultiplier -= 0.05f;
     if (this->currentSystemMessage) heightMultiplier -= 0.05f;
 
@@ -862,6 +875,7 @@ void renderClean(void) {
     if (this->currentSystemMessage) destroySystemMessage(this->currentSystemMessage); // if window was closed before pause has been ended
     queueDestroy(this->systemMessagesQueue);
 
+    SDL_free(this->currentUserName);
     SDL_free(this->conversationMessage);
     SDL_free(this->conversationName);
 

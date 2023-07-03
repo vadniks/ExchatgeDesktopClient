@@ -22,6 +22,8 @@ THIS(
     List* messagesList;
     bool adminMode;
     volatile unsigned state;
+    char* currentUserName; // TODO: the server shouldn't know groups in which users are, so group information stays on clients, the server just transmits messages
+    unsigned toUserId; // the id of the user, the current user (logged in via this client) wanna speak to
 )
 #pragma clang diagnostic pop
 
@@ -48,6 +50,7 @@ void logicInit(unsigned argc, const char** argv, LogicAsyncTask asyncTask, Logic
     this->messagesList = renderInitMessagesList();
     parseArguments(argc, argv);
     this->state = STATE_UNAUTHENTICATED;
+    this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
 }
 
 bool logicIsAdminMode(void) {
@@ -71,9 +74,30 @@ const List* logicMessagesList(void) {
     return this->messagesList;
 }
 
-static void onMessageReceived(const byte* message) {
+static const NetUserInfo* nullable findUser(unsigned id) {
+    const unsigned size = listSize(this->usersList);
+    const NetUserInfo* info = NULL;
+
+    for (unsigned i = 0; i < size; i++) {
+        info = listGet(this->usersList, i);
+        assert(info);
+
+        if (netUserInfoId(info) == id)
+            return info;
+    }
+
+    return NULL;
+}
+
+static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* message, unsigned size) {
     assert(this);
-    SDL_Log("message received %s", message);
+
+    const NetUserInfo* info = findUser(fromId);
+    assert(info);
+
+    SDL_Log("message received from %u %s", fromId, netUserInfoName(info)); // TODO: test only
+
+    listAdd(this->messagesList, renderCreateMessage(timestamp, (const char*) netUserInfoName(info), (const char*) message, size));
 }
 
 static void onLogInResult(bool successful) {
@@ -116,18 +140,21 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
     for (unsigned i = 0, id; i < size; i++) {
         id = netUserInfoId(infos[i]);
 
-        if (id != netCurrentUserId()) listAdd(
-            this->usersList,
-            renderCreateUser(
-                id,
-                (const char*) netUserInfoName(infos[i]),
-                /*TODO: client side's business whether a conversation with a particular user exists*/i % 5 == 0,
-                netUserInfoConnected(infos[i])
-            )
-        );
+        if (id != netCurrentUserId())
+            listAdd(
+                this->usersList,
+                renderCreateUser(
+                    id,
+                    (const char*) netUserInfoName(infos[i]),
+                    /*TODO: client side's business whether a conversation with a particular user exists*/i % 5 == 0,
+                    netUserInfoConnected(infos[i])
+                )
+            );
+        else
+            SDL_memcpy(this->currentUserName, netUserInfoName(infos[i]), NET_USERNAME_SIZE);
     }
 
-    renderShowUsersList();
+    renderShowUsersList(this->currentUserName);
 }
 
 static void processCredentials(void** data) {
@@ -196,18 +223,21 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant) {
     assert(this);
     this->state = STATE_EXCHANGING_MESSAGES;
+    this->toUserId = id;
+    listClear(this->messagesList);
+
     SDL_Log("user for conversation chosen %d for user %u", chooseVariant, id);
 
     if (chooseVariant == RENDER_START_CONVERSATION || chooseVariant == RENDER_CONTINUE_CONVERSATION) {
-        for (unsigned i = 0; i < 10; i++) { // TODO: test only
-            char username1[NET_USERNAME_SIZE];
-            SDL_memset(username1, 0, NET_USERNAME_SIZE);
-            SDL_memcpy(username1, "username1", 9);
-
-            i % 2 == 0
-                ? listAdd(this->messagesList, renderCreateMessage(i * 1000, username1, "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum. Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the ci", NET_MESSAGE_BODY_SIZE))
-                : listAdd(this->messagesList, renderCreateMessage(i * 1000, NULL, "Lorem Ipsum", 11));
-        }
+//        for (unsigned i = 0; i < 10; i++) { // TODO: test only
+//            char username1[NET_USERNAME_SIZE];
+//            SDL_memset(username1, 0, NET_USERNAME_SIZE);
+//            SDL_memcpy(username1, "username1", 9);
+//
+//            i % 2 == 0
+//                ? listAdd(this->messagesList, renderCreateMessage(i * 1000, username1, "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum. Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the ci", NET_MESSAGE_BODY_SIZE))
+//                : listAdd(this->messagesList, renderCreateMessage(i * 1000, NULL, "Lorem Ipsum", 11));
+//        }
 
         char title[NET_USERNAME_SIZE]; // TODO: test only
         SDL_memcpy(title, "Conversation", 12);
@@ -226,8 +256,7 @@ void logicOnServerShutdownRequested(void) {
 
 void logicOnReturnFromConversationPageRequested(void) {
     assert(this);
-    listClear(this->messagesList);
-    renderShowUsersList();
+    renderShowUsersList(this->currentUserName);
 }
 
 static void utos(char* buffer, unsigned length, unsigned number) { // unsigned to string
@@ -301,22 +330,27 @@ void logicOnSendClicked(const char* message) {
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, "Hello World!", 12);
-    netSend(0, body, 12, 2);
+
+    netSend(0, body, 12, this->toUserId);
 }
 
 void logicOnUpdateUsersListClicked(void) {
     assert(this);
 
     listClear(this->usersList);
-    renderShowUsersList();
+    renderShowUsersList(this->currentUserName);
 
     (*(this->asyncTask))(&netFetchUsers);
 }
 
 void logicClean(void) {
     assert(this);
+
+    SDL_free(this->currentUserName);
+
     listDestroy(this->usersList);
     listDestroy(this->messagesList);
+
     if (this->netInitialized) netClean();
     SDL_free(this);
 }

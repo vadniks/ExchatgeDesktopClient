@@ -304,7 +304,7 @@ static void processMessage(const Message* message) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
             break;
         case STATE_AUTHENTICATED:
-            if (!fromServer) (*(this->onMessageReceived))(message->body);
+            if (!fromServer) (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
             break;
     }
 }
