@@ -96,7 +96,7 @@ static void onErrorReceived(__attribute_maybe_unused__ int flag) {
 
 static void onRegisterResult(bool successful) {
     assert(this);
-    SDL_Log("registration %s", successful ? "succeeded" : "failed");
+    successful ? renderShowRegistrationSucceededSystemMessage() : renderShowSystemError();
 }
 
 static void onDisconnected(void) { // TODO: forbid using username 'admin' more than one time on the server side

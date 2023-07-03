@@ -77,6 +77,7 @@ void renderHideSystemMessage(void);
 void renderShowSystemError(void); // just shows an error system message with text 'Error'
 void renderShowDisconnectedSystemMessage(void);
 void renderShowUnableToConnectToTheServerSystemMessage(void); // TODO: too long name
+void renderShowRegistrationSucceededSystemMessage(void);
 
 void renderShowInfiniteProgressBar(void); // showed only on pages that support it (log in/register, not splash as it's a special case)
 void renderHideInfiniteProgressBar(void);
