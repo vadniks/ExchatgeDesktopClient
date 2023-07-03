@@ -19,6 +19,8 @@ extern const unsigned NET_USERNAME_SIZE;
 extern const unsigned NET_UNHASHED_PASSWORD_SIZE;
 extern const unsigned NET_MESSAGE_BODY_SIZE;
 
+extern const int NET_FLAG_PROCEED; // just send message to another user
+
 bool netInit(
     NetMessageReceivedCallback onMessageReceived,
     NetNotifierCallback onLogInResult,

@@ -269,14 +269,6 @@ List* renderInitUsersList(void) { return listInit((ListDeallocator) renderDestro
 
 RenderUser* renderCreateUser(unsigned id, const char* name, bool conversationExists, bool online) {
     assert(this);
-    bool foundNullTerminator = false;
-    for (unsigned i = 0; i < this->usernameSize; i++) // TODO: extract this piece of null-terminator finder code into separate function/macro
-        if (name[i] == '\0') {
-            assert(i <= this->usernameSize);
-            foundNullTerminator = true;
-            break;
-        }
-    assert(foundNullTerminator);
 
     RenderUser* user = SDL_malloc(sizeof *user);
     user->id = id;

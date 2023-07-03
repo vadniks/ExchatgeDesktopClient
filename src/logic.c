@@ -137,21 +137,20 @@ static void onDisconnected(void) { // TODO: forbid using username 'admin' more t
 static void onUsersFetched(NetUserInfo** infos, unsigned size) {
     assert(this);
 
+    NetUserInfo* info;
     for (unsigned i = 0, id; i < size; i++) {
-        id = netUserInfoId(infos[i]);
+        info = infos[i];
+        id = netUserInfoId(info);
 
         if (id != netCurrentUserId())
-            listAdd(
-                this->usersList,
-                renderCreateUser(
-                    id,
-                    (const char*) netUserInfoName(infos[i]),
-                    /*TODO: client side's business whether a conversation with a particular user exists*/i % 5 == 0,
-                    netUserInfoConnected(infos[i])
-                )
-            );
+            listAdd(this->usersList,renderCreateUser(
+                id,
+                (const char*) netUserInfoName(info),
+                /*TODO: client side's business whether a conversation with a particular user exists*/i % 5 == 0,
+                netUserInfoConnected(info)
+            ));
         else
-            SDL_memcpy(this->currentUserName, netUserInfoName(infos[i]), NET_USERNAME_SIZE);
+            SDL_memcpy(this->currentUserName, netUserInfoName(info), NET_USERNAME_SIZE);
     }
 
     renderShowUsersList(this->currentUserName);
@@ -320,7 +319,7 @@ static void sendMessage(void** params) {
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, (const char*) params[0], size);
 
-    netSend(0, body, size, this->toUserId);
+    netSend(NET_FLAG_PROCEED, body, size, this->toUserId);
 
     SDL_free(params[0]);
     SDL_free(params[1]);
