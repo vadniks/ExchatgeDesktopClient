@@ -17,7 +17,7 @@ typedef void (*RenderLogInRegisterPageQueriedByUserCallback)(bool logIn);
 typedef void (*RenderOnServerShutdownRequested)(void);
 typedef void (*RenderOnReturnFromConversationPageRequested)(void);
 typedef char* (*RenderMillisToDateTimeConverter)(unsigned long); // returns null-terminated formatted string with date & time that must be deallocated by the caller
-typedef void (*RenderOnSendClicked)(const char*); // receives an auto deallocated text of the message the user wanna send
+typedef void (*RenderOnSendClicked)(const char* text, unsigned size); // receives an auto deallocated text of the message the user wanna send, text length is equal to size which is in range (0, this->maxMessageSize]
 typedef void (*RenderOnUpdateUsersListClicked)(void);
 
 struct RenderUser_t;

@@ -21,6 +21,6 @@ void logicOnServerShutdownRequested(void);
 void logicOnReturnFromConversationPageRequested(void);
 char* logicMillisToDateTime(unsigned long millis); // result is a null-terminated formatted string deallocation of which must be performed by the caller
 unsigned long logicCurrentTimeMillis(void);
-void logicOnSendClicked(const char* message);
+void logicOnSendClicked(const char* text, unsigned size); // expects a string with 'size' in range (0, NET_MESSAGE_BODY_SIZE] which is copied
 void logicOnUpdateUsersListClicked(void);
 void logicClean(void);

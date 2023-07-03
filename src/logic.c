@@ -322,16 +322,36 @@ unsigned long logicCurrentTimeMillis(void) {
     return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
 }
 
-void logicOnSendClicked(const char* message) {
+static void sendMessage(void** params) {
+    assert(this && params);
+
+    unsigned size = *((unsigned*) params[1]);
+    byte body[NET_MESSAGE_BODY_SIZE];
+
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    SDL_memcpy(body, (const char*) params[0], size);
+
+    netSend(0, body, size, this->toUserId);
+
+    SDL_free(params[0]);
+    SDL_free(params[1]);
+    SDL_free(params);
+}
+
+void logicOnSendClicked(const char* text, unsigned size) {
     assert(this);
-    SDL_Log("send clicked %s", message);
+    SDL_Log("send clicked %s", text);
     // TODO: test only
 
-    byte body[NET_MESSAGE_BODY_SIZE];
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
-    SDL_memcpy(body, "Hello World!", 12);
+    void** params = SDL_malloc(2 * sizeof(void*));
 
-    netSend(0, body, 12, this->toUserId);
+    params[0] = SDL_malloc(size * sizeof(char));
+    SDL_memcpy(params[0], text, size);
+
+    params[1] = SDL_malloc(sizeof(int));
+    *((unsigned*) params[1]) = size;
+
+    SDL_DetachThread(SDL_CreateThread((SDL_ThreadFunction) &sendMessage, "sendThread", params));
 }
 
 void logicOnUpdateUsersListClicked(void) {

@@ -786,7 +786,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     );
 
     nk_layout_row_push(this->context, 0.15f);
-    if (nk_button_label(this->context, SEND)) (*(this->onSendClicked))(this->conversationMessage);
+    if (nk_button_label(this->context, SEND)) (*(this->onSendClicked))(this->conversationMessage, this->enteredConversationMessageSize);
 
     nk_layout_row_end(this->context);
 }
