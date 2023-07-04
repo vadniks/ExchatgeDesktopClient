@@ -77,7 +77,7 @@ THIS(
     const List* usersList; // <User*> allocated elsewhere
     RenderUserForConversationChosenCallback onUserForConversationChosen;
     const List* conversationMessagesList; // <ConversationMessage*> allocated elsewhere, conversation messages
-    unsigned maxMessageSize; // conversation messages size
+    unsigned maxMessageSize; // conversation message size // TODO: rename to conversationMessageSize
     char* conversationName; // conversation name or the name of the recipient
     unsigned conversationNameSize;
     bool adminMode;
@@ -652,6 +652,12 @@ static void drawConversationMessage(
     }
 }
 
+static void onSendClicked(void) {
+    (*(this->onSendClicked))(this->conversationMessage, this->enteredConversationMessageSize);
+    SDL_memset(this->conversationMessage, 0, this->maxMessageSize);
+    this->enteredConversationMessageSize = 0;
+}
+
 static void drawConversation(void) { // TODO: generate & sign messages from users on the client side
     const float height = currentHeight();
 
@@ -717,7 +723,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     );
 
     nk_layout_row_push(this->context, 0.15f);
-    if (nk_button_label(this->context, SEND)) (*(this->onSendClicked))(this->conversationMessage, this->enteredConversationMessageSize);
+    if (nk_button_label(this->context, SEND)) onSendClicked();
 
     nk_layout_row_end(this->context);
 }
