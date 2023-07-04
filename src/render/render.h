@@ -20,9 +20,6 @@ typedef char* (*RenderMillisToDateTimeConverter)(unsigned long); // returns null
 typedef void (*RenderOnSendClicked)(const char* text, unsigned size); // receives an auto deallocated text of the message the user wanna send, text length is equal to size which is in range (0, this->maxMessageSize]
 typedef void (*RenderOnUpdateUsersListClicked)(void);
 
-struct RenderUser_t;
-typedef struct RenderUser_t RenderUser;
-
 struct RenderMessage_t;
 typedef struct RenderMessage_t RenderMessage;
 
@@ -51,16 +48,9 @@ void renderInit(
     RenderOnSendClicked onSendClicked,
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked
 );
-void renderSetAdminMode(bool mode);
 
-List* renderInitUsersList(void);
-RenderUser* renderCreateUser(unsigned id, const char* name, bool conversationExists, bool online); // name (which is null-terminated string with (0, this->usernameSize] range sized length) is copied
-unsigned renderUserId(const RenderUser* user);
-const char* renderUserName(const RenderUser* user);
-bool renderUserConversationExists(const RenderUser* user);
-bool renderUserOnline(const RenderUser* user);
-void renderDestroyUser(RenderUser* user);
-void renderSetUsersList(const List* usersList); // <RenderUser*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
+void renderSetAdminMode(bool mode);
+void renderSetUsersList(const List* usersList); // <User*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
 
 List* renderInitMessagesList(void);
 RenderMessage* renderCreateMessage(unsigned long timestamp, const char* nullable from, const char* text, unsigned size); // from: name of the sender (is copied) (is in range (0, this->usernameSize]), null if from this client; text: text (whose length == size and 0 < length <= this->maxMessageSize) is copied

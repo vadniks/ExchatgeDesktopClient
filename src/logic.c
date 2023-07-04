@@ -5,6 +5,7 @@
 #include "render/render.h"
 #include "crypto.h"
 #include "net.h"
+#include "user.h"
 #include "logic.h"
 
 STATIC_CONST_UNSIGNED STATE_UNAUTHENTICATED = 0;
@@ -16,7 +17,7 @@ STATIC_CONST_UNSIGNED STATE_EXCHANGING_MESSAGES = 3;
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
     volatile bool netInitialized;
-    List* usersList; // <RenderUser*>
+    List* usersList; // <User*>
     LogicAsyncTask asyncTask;
     LogicDelayedTask delayedTask;
     List* messagesList; // <RenderMessage*>
@@ -44,7 +45,7 @@ void logicInit(unsigned argc, const char** argv, LogicAsyncTask asyncTask, Logic
     assert(!this);
     this = SDL_malloc(sizeof *this);
     this->netInitialized = false;
-    this->usersList = renderInitUsersList();
+    this->usersList = userInitList();
     this->asyncTask = asyncTask;
     this->delayedTask = delayedTask;
     this->messagesList = renderInitMessagesList();
@@ -74,15 +75,15 @@ const List* logicMessagesList(void) {
     return this->messagesList;
 }
 
-static const RenderUser* nullable findUser(unsigned id) {
+static const User* nullable findUser(unsigned id) {
     const unsigned size = listSize(this->usersList);
-    const RenderUser* user = NULL;
+    const User* user = NULL;
 
     for (unsigned i = 0; i < size; i++) {
         user = listGet(this->usersList, i);
         assert(user);
 
-        if (renderUserId(user) == id)
+        if (user->id == id)
             return user;
     }
 
@@ -92,12 +93,12 @@ static const RenderUser* nullable findUser(unsigned id) {
 static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* message, unsigned size) {
     assert(this);
 
-    const RenderUser* user = findUser(fromId);
+    const User* user = findUser(fromId);
     assert(user);
 
-    SDL_Log("message received from %u %s", fromId, renderUserName(user)); // TODO: test only
+    SDL_Log("message received from %u %s", fromId, user->name); // TODO: test only
 
-    listAdd(this->messagesList, renderCreateMessage(timestamp, renderUserName(user), (const char*) message, size));
+    listAdd(this->messagesList, renderCreateMessage(timestamp, user->name, (const char*) message, size));
 }
 
 static void onLogInResult(bool successful) {
@@ -143,10 +144,11 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
         id = netUserInfoId(info);
 
         if (id != netCurrentUserId())
-            listAdd(this->usersList,renderCreateUser(
+            listAdd(this->usersList,userCreate(
                 id,
                 (const char*) netUserInfoName(info),
-                /*TODO: client side's business whether a conversation with a particular user exists*/i % 5 == 0,
+                NET_USERNAME_SIZE,
+                i % 5 == 0, // TODO: client side's business whether a conversation with a particular user exists
                 netUserInfoConnected(info)
             ));
         else
@@ -225,13 +227,13 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
     this->toUserId = id;
     listClear(this->messagesList);
 
-    const RenderUser* user = findUser(id);
+    const User* user = findUser(id);
     assert(user);
 
     SDL_Log("user for conversation chosen %d for user %u", chooseVariant, id);
 
     if (chooseVariant == RENDER_START_CONVERSATION || chooseVariant == RENDER_CONTINUE_CONVERSATION)
-        renderShowConversation(renderUserName(user));
+        renderShowConversation(user->name);
 }
 
 void logicOnServerShutdownRequested(void) {

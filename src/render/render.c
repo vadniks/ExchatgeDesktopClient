@@ -3,6 +3,7 @@
 //#include "nuklearDefs.h" - cmake automatically includes precompiled version of this header
 #include "../defs.h"
 #include "../collections/queue.h"
+#include "../user.h"
 #include "render.h"
 
 #define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->uiQueriesMutex)); {
@@ -48,14 +49,6 @@ STATIC_CONST_STRING REGISTRATION_SUCCEEDED = "Registration succeeded";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
-struct RenderUser_t {
-    unsigned id;
-    char* name;
-    bool conversationExists; // true if current user (who has logged in via this client) and this user (who displayed in the users list) have already started a conversation
-    bool online;
-    void (*onClicked)(unsigned id);
-};
-
 struct RenderMessage_t { // conversation message
     unsigned long timestamp;
     char* nullable from; // null if from this client, the name of the sender otherwise
@@ -87,9 +80,9 @@ THIS(
     char* enteredCredentialsBuffer;
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser;
     SDL_mutex* uiQueriesMutex;
-    const List* usersList; // allocated elsewhere
+    const List* usersList; // <User*> allocated elsewhere
     RenderUserForConversationChosenCallback onUserForConversationChosen;
-    const List* messagesList; // allocated elsewhere, conversation messages
+    const List* messagesList; // <RenderMessage*> allocated elsewhere, conversation messages
     unsigned maxMessageSize; // conversation messages size
     char* conversationName; // conversation name or the name of the recipient
     unsigned conversationNameSize;
@@ -263,46 +256,6 @@ void renderInit(
 void renderSetAdminMode(bool mode) {
     assert(this);
     this->adminMode = mode;
-}
-
-List* renderInitUsersList(void) { return listInit((ListDeallocator) renderDestroyUser); }
-
-RenderUser* renderCreateUser(unsigned id, const char* name, bool conversationExists, bool online) {
-    assert(this);
-
-    RenderUser* user = SDL_malloc(sizeof *user);
-    user->id = id;
-    user->name = SDL_calloc(this->usernameSize, sizeof(char));
-    SDL_memcpy(user->name, name, this->usernameSize);
-    user->conversationExists = conversationExists;
-    user->online = online;
-
-    return user;
-}
-
-unsigned renderUserId(const RenderUser* user) {
-    assert(user);
-    return user->id;
-}
-
-const char* renderUserName(const RenderUser* user) {
-    assert(user);
-    return user->name;
-}
-
-bool renderUserConversationExists(const RenderUser* user) {
-    assert(user);
-    return user->conversationExists;
-}
-
-bool renderUserOnline(const RenderUser* user) {
-    assert(user);
-    return user->online;
-}
-
-void renderDestroyUser(RenderUser* user) {
-    SDL_free(user->name);
-    SDL_free(user);
 }
 
 void renderSetUsersList(const List* usersList) {
@@ -674,7 +627,7 @@ static void drawUsersList(void) {
 
     const unsigned size = listSize(this->usersList);
     for (unsigned i = 0; i < size; i++) {
-        RenderUser* user = (RenderUser*) listGet(this->usersList, i);
+        User* user = (User*) listGet(this->usersList, i);
 
         char idString[MAX_U32_DEC_DIGITS_COUNT];
         assert(SDL_snprintf(idString, MAX_U32_DEC_DIGITS_COUNT, "%u", user->id) <= (int) MAX_U32_DEC_DIGITS_COUNT);
