@@ -20,9 +20,6 @@ typedef char* (*RenderMillisToDateTimeConverter)(unsigned long); // returns null
 typedef void (*RenderOnSendClicked)(const char* text, unsigned size); // receives an auto deallocated text of the message the user wanna send, text length is equal to size which is in range (0, this->maxMessageSize]
 typedef void (*RenderOnUpdateUsersListClicked)(void);
 
-struct RenderMessage_t;
-typedef struct RenderMessage_t RenderMessage;
-
 typedef enum {
     RENDER_DELETE_CONVERSATION = -1,
     RENDER_START_CONVERSATION = false, // 0
@@ -51,11 +48,7 @@ void renderInit(
 
 void renderSetAdminMode(bool mode);
 void renderSetUsersList(const List* usersList); // <User*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
-
-List* renderInitMessagesList(void);
-RenderMessage* renderCreateMessage(unsigned long timestamp, const char* nullable from, const char* text, unsigned size); // from: name of the sender (is copied) (is in range (0, this->usernameSize]), null if from this client; text: text (whose length == size and 0 < length <= this->maxMessageSize) is copied
-void renderDestroyMessage(RenderMessage* message);
-void renderSetMessagesList(const List* messagesList);
+void renderSetMessagesList(const List* messagesList); // <ConversationMessage*> must be deallocated by the caller after this module gets shut down
 
 void renderInputBegan(void);
 void renderProcessEvent(SDL_Event* event);

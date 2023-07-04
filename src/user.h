@@ -11,7 +11,7 @@ typedef struct {
     bool online;
 } User;
 
-List* userInitList(void);
+List* userInitList(void); // the list must be deallocated via the listDestroy(...), elements in it will be deallocated automatically by the list's deallocater which is set here
 User* userCreate(
     unsigned id,
     const char* name,

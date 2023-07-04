@@ -4,6 +4,7 @@
 #include "../defs.h"
 #include "../collections/queue.h"
 #include "../user.h"
+#include "../conversationMessage.h"
 #include "render.h"
 
 #define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->uiQueriesMutex)); {
@@ -49,13 +50,6 @@ STATIC_CONST_STRING REGISTRATION_SUCCEEDED = "Registration succeeded";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
-struct RenderMessage_t { // conversation message
-    unsigned long timestamp;
-    char* nullable from; // null if from this client, the name of the sender otherwise
-    char* text;
-    unsigned size;
-};
-
 typedef struct {
     char text[RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE]; // TODO: rename constant
     bool error;
@@ -82,7 +76,7 @@ THIS(
     SDL_mutex* uiQueriesMutex;
     const List* usersList; // <User*> allocated elsewhere
     RenderUserForConversationChosenCallback onUserForConversationChosen;
-    const List* messagesList; // <RenderMessage*> allocated elsewhere, conversation messages
+    const List* conversationMessagesList; // <ConversationMessage*> allocated elsewhere, conversation messages
     unsigned maxMessageSize; // conversation messages size
     char* conversationName; // conversation name or the name of the recipient
     unsigned conversationNameSize;
@@ -178,7 +172,7 @@ void renderInit(
 
     this->usersList = NULL;
     this->onUserForConversationChosen = onUserForConversationChosen;
-    this->messagesList = NULL;
+    this->conversationMessagesList = NULL;
     this->maxMessageSize = maxMessageSize;
     this->conversationName = SDL_calloc(this->usernameSize, sizeof(char));
 
@@ -263,37 +257,9 @@ void renderSetUsersList(const List* usersList) {
     this->usersList = usersList;
 }
 
-List* renderInitMessagesList(void) { return listInit((ListDeallocator) &renderDestroyMessage); }
-
-RenderMessage* renderCreateMessage(unsigned long timestamp, const char* nullable from, const char* text, unsigned size) {
-    assert(this && size > 0 && size <= this->maxMessageSize);
-
-    RenderMessage* message = SDL_malloc(sizeof *message);
-    message->timestamp = timestamp;
-
-    if (from) {
-        message->from = SDL_calloc(this->usernameSize, sizeof(char));
-        SDL_memcpy(message->from, from, this->usernameSize);
-    } else
-        message->from = NULL;
-
-    message->text = SDL_calloc(size, this->maxMessageSize);
-    SDL_memcpy(message->text, text, size); // null-terminator is inserted in drawer (buffer is used)
-
-    message->size = size;
-
-    return message;
-}
-
-void renderDestroyMessage(RenderMessage* message) {
-    SDL_free(message->from);
-    SDL_free(message->text);
-    SDL_free(message);
-}
-
 void renderSetMessagesList(const List* messagesList) {
     assert(this);
-    this->messagesList = messagesList;
+    this->conversationMessagesList = messagesList;
 }
 
 void renderInputBegan(void) {
@@ -640,7 +606,7 @@ static void drawUsersList(void) {
 
 static void drawConversationMessage(
     float charHeight,
-    RenderMessage* message,
+    ConversationMessage* message,
     float timestampRatio,
     float fromRatio,
     float textRatio,
@@ -721,9 +687,9 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         fromRatio = aboveInitialWidth ? 0.05f : 0.1f,
         textRatio = aboveInitialWidth ? 0.435f : 0.35f;
 
-    const unsigned size = listSize(this->messagesList);
+    const unsigned size = listSize(this->conversationMessagesList);
     for (unsigned i = 0; i < size; i++) {
-        RenderMessage* message = listGet(this->messagesList, i);
+        ConversationMessage* message = listGet(this->conversationMessagesList, i);
 
         drawConversationMessage(
             height * 0.05f,

@@ -6,6 +6,7 @@
 #include "crypto.h"
 #include "net.h"
 #include "user.h"
+#include "conversationMessage.h"
 #include "logic.h"
 
 STATIC_CONST_UNSIGNED STATE_UNAUTHENTICATED = 0;
@@ -20,7 +21,7 @@ THIS(
     List* usersList; // <User*>
     LogicAsyncTask asyncTask;
     LogicDelayedTask delayedTask;
-    List* messagesList; // <RenderMessage*>
+    List* messagesList; // <ConversationMessage*>
     bool adminMode;
     volatile unsigned state;
     char* currentUserName; // TODO: the server shouldn't know groups in which users are, so group information stays on clients, the server just transmits messages
@@ -48,7 +49,7 @@ void logicInit(unsigned argc, const char** argv, LogicAsyncTask asyncTask, Logic
     this->usersList = userInitList();
     this->asyncTask = asyncTask;
     this->delayedTask = delayedTask;
-    this->messagesList = renderInitMessagesList();
+    this->messagesList = conversationMessageInitList();
     parseArguments(argc, argv);
     this->state = STATE_UNAUTHENTICATED;
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
@@ -98,7 +99,7 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
 
     SDL_Log("message received from %u %s", fromId, user->name); // TODO: test only
 
-    listAdd(this->messagesList, renderCreateMessage(timestamp, user->name, (const char*) message, size));
+    listAdd(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
 }
 
 static void onLogInResult(bool successful) {
@@ -338,7 +339,7 @@ void logicOnSendClicked(const char* text, unsigned size) {
     params[1] = SDL_malloc(sizeof(int));
     *((unsigned*) params[1]) = size;
 
-    listAdd(this->messagesList, renderCreateMessage(logicCurrentTimeMillis(), NULL, text, size));
+    listAdd(this->messagesList, conversationMessageCreate(logicCurrentTimeMillis(), NULL, 0, text, size));
     SDL_DetachThread(SDL_CreateThread((SDL_ThreadFunction) &sendMessage, "sendThread", params));
 }
 
