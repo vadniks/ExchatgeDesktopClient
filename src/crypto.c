@@ -55,11 +55,6 @@ bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
     return !result;
 }
 
-const byte* cryptoEncryptionKey(const Crypto* crypto) {
-    assert(crypto);
-    return crypto->encryptionKey;
-}
-
 unsigned cryptoEncryptedSize(unsigned unencryptedSize)
 { return MAC_SIZE + unencryptedSize + NONCE_SIZE; }
 
@@ -68,8 +63,8 @@ const byte* cryptoClientPublicKey(const Crypto* crypto) {
     return crypto->clientPublicKey;
 }
 
-byte* nullable cryptoEncrypt(const byte* key, const byte* bytes, unsigned bytesSize) {
-    assert(key && bytes);
+byte* nullable cryptoEncrypt(const Crypto* crypto, const byte* bytes, unsigned bytesSize) {
+    assert(crypto && bytes);
 
     const unsigned encryptedSize = cryptoEncryptedSize(bytesSize);
     byte* encrypted = SDL_calloc(encryptedSize, sizeof(char));
@@ -82,15 +77,15 @@ byte* nullable cryptoEncrypt(const byte* key, const byte* bytes, unsigned bytesS
         bytes,
         bytesSize,
         nonceStart,
-        key
+        crypto->encryptionKey
     ) == 0 ? encrypted : NULL;
 
     if (!result) SDL_free(encrypted);
     return result;
 }
 
-byte* nullable cryptoDecrypt(const byte* key, const byte* bytes, unsigned bytesSize) {
-    assert(key && bytes);
+byte* nullable cryptoDecrypt(const Crypto* crypto, const byte* bytes, unsigned bytesSize) {
+    assert(crypto && bytes);
 
     const unsigned decryptedSize = bytesSize - MAC_SIZE - NONCE_SIZE;
     byte* decrypted = SDL_calloc(decryptedSize, sizeof(char));
@@ -101,7 +96,7 @@ byte* nullable cryptoDecrypt(const byte* key, const byte* bytes, unsigned bytesS
         bytes,
         encryptedAndTagSize,
         bytes + encryptedAndTagSize,
-        key
+        crypto->encryptionKey
     ) == 0 ? decrypted : NULL;
 
     if (!result) SDL_free(decrypted);
