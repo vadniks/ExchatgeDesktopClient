@@ -47,6 +47,7 @@ STATIC_CONST_STRING BACK = "Back";
 STATIC_CONST_STRING YOU = "You";
 STATIC_CONST_STRING UPDATE = "Update";
 STATIC_CONST_STRING REGISTRATION_SUCCEEDED = "Registration succeeded";
+STATIC_CONST_STRING USER_IS_OFFLINE = "User is offline";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -351,9 +352,10 @@ void renderHideSystemMessage(void) {
 }
 
 void renderShowSystemError(void) { postSystemMessage(ERROR_TEXT, true); }
-void renderShowDisconnectedSystemMessage(void) { postSystemMessage(DISCONNECTED, true); }
-void renderShowUnableToConnectToTheServerSystemMessage(void) { postSystemMessage(UNABLE_TO_CONNECT_TO_THE_SERVER, true); }
+void renderShowDisconnectedError(void) { postSystemMessage(DISCONNECTED, true); }
+void renderShowUnableToConnectToTheServerError(void) { postSystemMessage(UNABLE_TO_CONNECT_TO_THE_SERVER, true); }
 void renderShowRegistrationSucceededSystemMessage(void) { postSystemMessage(REGISTRATION_SUCCEEDED, false); }
+void renderShowUserIsOfflineError(void) { postSystemMessage(USER_IS_OFFLINE, true); }
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);

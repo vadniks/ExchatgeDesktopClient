@@ -7,7 +7,7 @@
 extern const unsigned CRYPTO_KEY_SIZE;
 extern const unsigned CRYPTO_SIGNATURE_SIZE;
 
-struct Crypto_t; // implementation is hidden
+struct Crypto_t;
 typedef struct Crypto_t Crypto;
 
 Crypto* nullable cryptoInit(void);

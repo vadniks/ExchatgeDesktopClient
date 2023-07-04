@@ -14,6 +14,10 @@ STATIC_CONST_UNSIGNED STATE_AWAITING_AUTHENTICATION = 1;
 STATIC_CONST_UNSIGNED STATE_AUTHENTICATED = 2;
 STATIC_CONST_UNSIGNED STATE_EXCHANGING_MESSAGES = 3;
 
+STATIC_CONST_INT FLAG_INVITE = (int) 0xa0000000;
+STATIC_CONST_INT FLAG_EXCHANGE = (int) 0xb0000000;
+STATIC_CONST_INT FLAG_PROCEED = (int) 0xc0000000;
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
@@ -133,7 +137,7 @@ static void onDisconnected(void) { // TODO: forbid using username 'admin' more t
 
     renderHideInfiniteProgressBar();
     renderShowLogIn();
-    renderShowDisconnectedSystemMessage();
+    renderShowDisconnectedError();
 }
 
 static void onUsersFetched(NetUserInfo** infos, unsigned size) {
@@ -177,7 +181,7 @@ static void processCredentials(void** data) {
 
     if (!this->netInitialized) {
         this->state = STATE_UNAUTHENTICATED;
-        renderShowUnableToConnectToTheServerSystemMessage();
+        renderShowUnableToConnectToTheServerError();
     }
     if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
 
@@ -222,19 +226,45 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
     logIn ? renderShowLogIn() : renderShowRegister();
 }
 
+static void startConversation(unsigned id) {
+    const User* user = findUser(id);
+    assert(user);
+
+    if (!(user->online)) {
+        renderShowUserIsOfflineError();
+        return;
+    }
+
+    renderShowConversation(user->name);
+}
+
+static void continueConversation(unsigned id) {
+
+}
+
+static void deleteConversation(unsigned id) {
+
+}
+
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant) {
     assert(this);
     this->state = STATE_EXCHANGING_MESSAGES;
     this->toUserId = id;
     listClear(this->messagesList);
 
-    const User* user = findUser(id);
-    assert(user);
-
-    SDL_Log("user for conversation chosen %d for user %u", chooseVariant, id);
-
-    if (chooseVariant == RENDER_START_CONVERSATION || chooseVariant == RENDER_CONTINUE_CONVERSATION)
-        renderShowConversation(user->name);
+    switch (chooseVariant) {
+        case RENDER_START_CONVERSATION:
+            startConversation(id);
+            break;
+        case RENDER_CONTINUE_CONVERSATION:
+            continueConversation(id);
+            break;
+        case RENDER_DELETE_CONVERSATION:
+            deleteConversation(id);
+            break;
+        default:
+            assert(false);
+    }
 }
 
 void logicOnServerShutdownRequested(void) {
