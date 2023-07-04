@@ -321,7 +321,7 @@ void netListen(void) {
     if (SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0) {
 
         if (SDLNet_TCP_Recv(this->socket, this->messageBuffer, (int) this->encryptedMessageSize) == (int) this->encryptedMessageSize) {
-            byte* decrypted = cryptoDecrypt(this->connectionCrypto, this->messageBuffer, this->encryptedMessageSize);
+            byte* decrypted = cryptoDecrypt(cryptoEncryptionKey(this->connectionCrypto), this->messageBuffer, this->encryptedMessageSize);
             assert(decrypted);
 
             message = unpackMessage(decrypted);
@@ -361,7 +361,7 @@ void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     SDL_memcpy(&(message.token), this->token, TOKEN_SIZE);
 
     byte* packedMessage = packMessage(&message);
-    byte* encryptedMessage = cryptoEncrypt(this->connectionCrypto, packedMessage, MESSAGE_SIZE);
+    byte* encryptedMessage = cryptoEncrypt(cryptoEncryptionKey(this->connectionCrypto), packedMessage, MESSAGE_SIZE);
     SDL_free(packedMessage);
     if (!encryptedMessage) return;
 
