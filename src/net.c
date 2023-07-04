@@ -124,7 +124,7 @@ static void initiateSecuredConnection(void) {
     byte serverSignedPublicKey[signedPublicKeySize];
     const byte* serverKeyStart = serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE;
 
-    SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize);
+    SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize); // TODO: add timeout, wait for a constant millis count and then if no response received drop connection; add timeout to server too
     assert(cryptoCheckServerSignedBytes(serverSignedPublicKey, serverKeyStart, CRYPTO_KEY_SIZE));
 
     if (!SDL_memcmp(serverKeyStart, this->serverKeyStub, CRYPTO_KEY_SIZE)) return; // denial of service
