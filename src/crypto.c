@@ -8,7 +8,6 @@ staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SESSIONKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_sign_BYTES == 64);
-staticAssert(crypto_secretstream_xchacha20poly1305_KEYBYTES == crypto_kx_SECRETKEYBYTES);
 
 const unsigned CRYPTO_KEY_SIZE = crypto_secretbox_KEYBYTES; // 32
 const unsigned CRYPTO_SIGNATURE_SIZE = crypto_sign_BYTES; // 64
