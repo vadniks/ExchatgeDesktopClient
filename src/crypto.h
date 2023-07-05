@@ -15,8 +15,8 @@ Crypto* nullable cryptoInit(void);
 byte* nullable cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey); // returns header bytes on success
 unsigned cryptoEncryptedSize(unsigned unencryptedSize);
 const byte* cryptoClientPublicKey(const Crypto* crypto);
-byte* nullable cryptoEncrypt(Crypto* crypto, const byte* bytes, unsigned bytesSize); // returns mac (tag) + encrypted bytes + nonce
-byte* nullable cryptoDecrypt(Crypto* crypto, const byte* bytes, unsigned bytesSize); // consumes what is returned by encrypt
+byte* nullable cryptoEncrypt(Crypto* crypto, const byte* bytes, unsigned bytesSize);
+byte* nullable cryptoDecrypt(Crypto* crypto, const byte* bytes, unsigned bytesSize);
 bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedBytes, unsigned unsignedSize);
 void cryptoFillWithRandomBytes(byte* filled, unsigned size);
 void cryptoDestroy(Crypto* crypto);
