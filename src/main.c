@@ -42,10 +42,10 @@ int main(int argc, const char** argv) {
 
     SDL_Log("%.*s", len, decrypted1);
 
-    crypto_secretstream_xchacha20poly1305_push(&encryptState, encrypted2, &generatedEncryptedLen, (const byte*) text2, len, NULL, 0, crypto_secretstream_xchacha20poly1305_TAG_FINAL);
+    crypto_secretstream_xchacha20poly1305_push(&decryptState, encrypted2, &generatedEncryptedLen, (const byte*) text2, len, NULL, 0, crypto_secretstream_xchacha20poly1305_TAG_FINAL);
     assert(generatedEncryptedLen == encryptedLen);
 
-    assert(!crypto_secretstream_xchacha20poly1305_pull(&decryptState, (byte*) decrypted2, &generatedDecryptedLen, &tag, encrypted2, encryptedLen, NULL, 0));
+    assert(!crypto_secretstream_xchacha20poly1305_pull(&encryptState, (byte*) decrypted2, &generatedDecryptedLen, &tag, encrypted2, encryptedLen, NULL, 0));
     assert(generatedDecryptedLen == len);
     assert(tag == crypto_secretstream_xchacha20poly1305_TAG_FINAL);
 
