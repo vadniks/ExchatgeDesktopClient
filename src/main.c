@@ -21,11 +21,14 @@ int main(int argc, const char** argv) {
     crypto_secretstream_xchacha20poly1305_init_push(&encryptState, header, key);
 
     unsigned encryptedLen = len + crypto_secretstream_xchacha20poly1305_ABYTES;
+    unsigned long long generatedEncryptedLen;
+    unsigned long long generatedDecryptedLen;
     byte tag = 0;
     byte encrypted1[encryptedLen];
     byte encrypted2[encryptedLen];
 
-    crypto_secretstream_xchacha20poly1305_push(&encryptState, encrypted1, NULL, (const byte*) text1, len, NULL, 0, tag);
+    crypto_secretstream_xchacha20poly1305_push(&encryptState, encrypted1, &generatedEncryptedLen, (const byte*) text1, len, NULL, 0, tag);
+    assert(generatedEncryptedLen == encryptedLen);
 
     crypto_secretstream_xchacha20poly1305_state decryptState;
     assert(!crypto_secretstream_xchacha20poly1305_init_pull(&decryptState, header, key));
@@ -33,14 +36,17 @@ int main(int argc, const char** argv) {
     char decrypted1[len];
     char decrypted2[len];
 
-    assert(!crypto_secretstream_xchacha20poly1305_pull(&decryptState, (byte*) decrypted1, NULL, &tag, encrypted1, encryptedLen, NULL, 0));
+    assert(!crypto_secretstream_xchacha20poly1305_pull(&decryptState, (byte*) decrypted1, &generatedDecryptedLen, &tag, encrypted1, encryptedLen, NULL, 0));
+    assert(generatedDecryptedLen == len);
     assert(!tag);
 
     SDL_Log("%.*s", len, decrypted1);
 
-    crypto_secretstream_xchacha20poly1305_push(&encryptState, encrypted2, NULL, (const byte*) text2, len, NULL, 0, crypto_secretstream_xchacha20poly1305_TAG_FINAL);
+    crypto_secretstream_xchacha20poly1305_push(&encryptState, encrypted2, &generatedEncryptedLen, (const byte*) text2, len, NULL, 0, crypto_secretstream_xchacha20poly1305_TAG_FINAL);
+    assert(generatedEncryptedLen == encryptedLen);
 
-    assert(!crypto_secretstream_xchacha20poly1305_pull(&decryptState, (byte*) decrypted2, NULL, &tag, encrypted2, encryptedLen, NULL, 0));
+    assert(!crypto_secretstream_xchacha20poly1305_pull(&decryptState, (byte*) decrypted2, &generatedDecryptedLen, &tag, encrypted2, encryptedLen, NULL, 0));
+    assert(generatedDecryptedLen == len);
     assert(tag == crypto_secretstream_xchacha20poly1305_TAG_FINAL);
 
     SDL_Log("%.*s", len, decrypted2);
