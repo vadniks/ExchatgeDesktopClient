@@ -55,6 +55,8 @@ bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
     return !result;
 }
 
+//void cryptoSetUpStream() // TODO: use stream encryption
+
 unsigned cryptoEncryptedSize(unsigned unencryptedSize)
 { return MAC_SIZE + unencryptedSize + NONCE_SIZE; }
 
