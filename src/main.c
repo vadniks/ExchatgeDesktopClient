@@ -10,6 +10,7 @@ int main(int argc, const char** argv) {
     unsigned len = 10;
     const char* text1 = "aaaaaaaaaa";
     const char* text2 = "bbbbbbbbbb";
+    const char* text3 = "cccccccccc";
 
     assert(sodium_init() >= 0);
 
@@ -18,7 +19,7 @@ int main(int argc, const char** argv) {
 
     byte header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
     crypto_secretstream_xchacha20poly1305_state encryptState;
-    crypto_secretstream_xchacha20poly1305_init_push(&encryptState, header, key);
+    assert(!crypto_secretstream_xchacha20poly1305_init_push(&encryptState, header, key));
 
     unsigned encryptedLen = len + crypto_secretstream_xchacha20poly1305_ABYTES;
     unsigned long long generatedEncryptedLen;
@@ -26,8 +27,9 @@ int main(int argc, const char** argv) {
     byte tag = 0;
     byte encrypted1[encryptedLen];
     byte encrypted2[encryptedLen];
+    byte encrypted3[encryptedLen];
 
-    crypto_secretstream_xchacha20poly1305_push(&encryptState, encrypted1, &generatedEncryptedLen, (const byte*) text1, len, NULL, 0, tag);
+    assert(!crypto_secretstream_xchacha20poly1305_push(&encryptState, encrypted1, &generatedEncryptedLen, (const byte*) text1, len, NULL, 0, tag));
     assert(generatedEncryptedLen == encryptedLen);
 
     crypto_secretstream_xchacha20poly1305_state decryptState;
@@ -35,6 +37,7 @@ int main(int argc, const char** argv) {
 
     char decrypted1[len];
     char decrypted2[len];
+    char decrypted3[len];
 
     assert(!crypto_secretstream_xchacha20poly1305_pull(&decryptState, (byte*) decrypted1, &generatedDecryptedLen, &tag, encrypted1, encryptedLen, NULL, 0));
     assert(generatedDecryptedLen == len);
@@ -42,16 +45,25 @@ int main(int argc, const char** argv) {
 
     SDL_Log("%.*s", len, decrypted1);
 
-    crypto_secretstream_xchacha20poly1305_push(&decryptState, encrypted2, &generatedEncryptedLen, (const byte*) text2, len, NULL, 0, crypto_secretstream_xchacha20poly1305_TAG_FINAL);
+    assert(!crypto_secretstream_xchacha20poly1305_push(&decryptState, encrypted2, &generatedEncryptedLen, (const byte*) text2, len, NULL, 0, tag));
     assert(generatedEncryptedLen == encryptedLen);
 
     assert(!crypto_secretstream_xchacha20poly1305_pull(&encryptState, (byte*) decrypted2, &generatedDecryptedLen, &tag, encrypted2, encryptedLen, NULL, 0));
     assert(generatedDecryptedLen == len);
-    assert(tag == crypto_secretstream_xchacha20poly1305_TAG_FINAL);
+    assert(!tag);
 
     SDL_Log("%.*s", len, decrypted2);
 
+    assert(!crypto_secretstream_xchacha20poly1305_push(&decryptState, encrypted3, &generatedEncryptedLen, (const byte*) text3, len, NULL, 0, crypto_secretstream_xchacha20poly1305_TAG_FINAL));
+    assert(generatedEncryptedLen == encryptedLen);
 
+    assert(!crypto_secretstream_xchacha20poly1305_pull(&encryptState, (byte*) decrypted3, &generatedDecryptedLen, &tag, encrypted3, encryptedLen, NULL, 0));
+    assert(generatedDecryptedLen == len);
+    assert(tag == crypto_secretstream_xchacha20poly1305_TAG_FINAL);
+
+    // crypto_secretstream_xchacha20poly1305_TAG_FINAL
+
+    SDL_Log("%.*s", len, decrypted3);
 
 //    if (!lifecycleInit(argc, argv)) return EXIT_FAILURE;
 //    lifecycleLoop();
