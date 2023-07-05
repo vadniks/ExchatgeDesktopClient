@@ -6,7 +6,7 @@
 #include <sodium/sodium.h>
 #include "defs.h"
 #include <sdl/SDL_log.h>
-int main(int argc, const char** argv) {
+int main(int argc, const char** argv) { // TODO: test only
     unsigned len = 10;
     const char* text1 = "aaaaaaaaaa";
     const char* text2 = "bbbbbbbbbb";
