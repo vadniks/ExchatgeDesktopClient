@@ -38,8 +38,8 @@ int main(int argc, const char** argv) { // TODO: test only
     assert(!crypto_secretstream_xchacha20poly1305_init_pull(&serverDecryptionState, (const byte*) clientHeader, (const byte*) clientKey));
 
     // at this point both client & server have their encoder/decoder streams to send/receive data
-    const unsigned msgLen = 5;
-    byte ciphered[msgLen];
+    const unsigned msgLen = 5, cipheredLen = msgLen + crypto_secretstream_xchacha20poly1305_ABYTES;
+    byte ciphered[cipheredLen];
     byte msg[msgLen];
     byte xTag = 0;
     unsigned long long generatedLen;
@@ -50,10 +50,10 @@ int main(int argc, const char** argv) { // TODO: test only
     SDL_memset(msg, '1', msgLen);
     assert(!crypto_secretstream_xchacha20poly1305_push(&clientEncryptionState, ciphered, &generatedLen, (const byte*) msg, (unsigned long long) msgLen, NULL, 0, xTag));
     SDL_Log("aa %u", generatedLen);
-    assert((unsigned) generatedLen == msgLen); // TODO: not working // why the f*** you aren't working? all seems to be well set...
+    assert((unsigned) generatedLen == cipheredLen);
 
     // server receives smth
-    assert(!crypto_secretstream_xchacha20poly1305_pull(&serverDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, (unsigned long long) msgLen, NULL, 0));
+    assert(!crypto_secretstream_xchacha20poly1305_pull(&serverDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, (unsigned long long) cipheredLen, NULL, 0));
     assert((unsigned) generatedLen == msgLen);
     assert(!xTag);
     SDL_Log("%.*s", msgLen, msg); // 11111
@@ -62,16 +62,16 @@ int main(int argc, const char** argv) { // TODO: test only
     // server sends smth
     SDL_memset(msg, '2', msgLen);
     assert(!crypto_secretstream_xchacha20poly1305_push(&serverEncryptionState, ciphered, &generatedLen, (const byte*) msg, (unsigned long long) msgLen, NULL, 0, xTag));
-    assert((unsigned) generatedLen == msgLen);
+    assert((unsigned) generatedLen == cipheredLen);
 
     // client receives smth
-    assert(!crypto_secretstream_xchacha20poly1305_pull(&clientDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, (unsigned long long) msgLen, NULL, 0));
+    assert(!crypto_secretstream_xchacha20poly1305_pull(&clientDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, (unsigned long long) cipheredLen, NULL, 0));
     assert((unsigned) generatedLen == msgLen);
     assert(!xTag);
     SDL_Log("%.*s", msgLen, msg); // 22222
     CHECK('2')
 
-    // ...
+    // TODO: reached this point so this shit actually works! Now... how the f*** am I supposed to implement this in Go?
 
     ////////////////////////////////////////////////////////////////////////////////////////////
 
