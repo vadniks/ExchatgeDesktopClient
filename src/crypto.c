@@ -5,18 +5,15 @@
 #include "crypto.h"
 
 staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_secretbox_KEYBYTES);
+staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SESSIONKEYBYTES == crypto_secretbox_KEYBYTES);
-staticAssert(crypto_secretstream_xchacha20poly1305_KEYBYTES == crypto_secretbox_KEYBYTES);
-staticAssert(crypto_secretbox_KEYBYTES == 32);
 staticAssert(crypto_sign_BYTES == 64);
 
-const unsigned CRYPTO_KEY_SIZE = crypto_secretstream_xchacha20poly1305_KEYBYTES; // 32
-const unsigned CRYPTO_HEADER_SIZE = crypto_secretstream_xchacha20poly1305_HEADERBYTES; // 24
+const unsigned CRYPTO_KEY_SIZE = crypto_secretbox_KEYBYTES; // 32
 const unsigned CRYPTO_SIGNATURE_SIZE = crypto_sign_BYTES; // 64
-STATIC_CONST_UNSIGNED ENCRYPTED_ADDITIONAL_BYTES_SIZE = crypto_secretstream_xchacha20poly1305_ABYTES; // 17
+STATIC_CONST_UNSIGNED MAC_SIZE = crypto_secretbox_MACBYTES; // 16
+STATIC_CONST_UNSIGNED NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
 STATIC_CONST_UNSIGNED SERVER_SIGN_PUBLIC_KEY_SIZE = CRYPTO_KEY_SIZE;
-static const byte INTERMEDIATE_TAG = crypto_secretstream_xchacha20poly1305_TAG_MESSAGE; // 0
-static const byte END_TAG = crypto_secretstream_xchacha20poly1305_TAG_FINAL; // 3
 
 static const byte serverSignPublicKey[SERVER_SIGN_PUBLIC_KEY_SIZE] = {
     255, 23, 21, 243, 148, 177, 186, 0, 73, 34, 173, 130, 234, 251, 83, 130,
@@ -27,8 +24,7 @@ struct Crypto_t {
     byte serverPublicKey[CRYPTO_KEY_SIZE];
     byte clientPublicKey[CRYPTO_KEY_SIZE];
     byte clientSecretKey[CRYPTO_KEY_SIZE];
-    crypto_secretstream_xchacha20poly1305_state encryptState; // send
-    crypto_secretstream_xchacha20poly1305_state decryptState; // receive
+    byte encryptionKey[CRYPTO_KEY_SIZE];
 };
 
 Crypto* cryptoInit(void) {
@@ -38,95 +34,72 @@ Crypto* cryptoInit(void) {
     SDL_memset(crypto->serverPublicKey, 0, CRYPTO_KEY_SIZE);
     SDL_memset(crypto->clientPublicKey, 0, CRYPTO_KEY_SIZE);
     SDL_memset(crypto->clientSecretKey, 0, CRYPTO_KEY_SIZE);
+    SDL_memset(crypto->encryptionKey, 0, CRYPTO_KEY_SIZE);
 
     return crypto;
 }
 
-byte* nullable cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
+bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
     assert(crypto);
     crypto_kx_keypair(crypto->clientPublicKey, crypto->clientSecretKey);
     SDL_memcpy(crypto->serverPublicKey, serverPublicKey, CRYPTO_KEY_SIZE);
 
-    byte encryptionKey[CRYPTO_KEY_SIZE];
-    byte decryptionKey[CRYPTO_KEY_SIZE];
-    byte* headers = SDL_calloc(2 * CRYPTO_HEADER_SIZE, sizeof(char));
-
     int result = crypto_kx_client_session_keys(
-        decryptionKey, // receive key
-        encryptionKey, // send key
+        crypto->encryptionKey,
+        NULL,
         crypto->clientPublicKey,
         crypto->clientSecretKey,
         crypto->serverPublicKey
     );
 
-    if (result != 0) {
-        SDL_free(headers);
-        return NULL;
-    }
-
-    result = crypto_secretstream_xchacha20poly1305_init_push(&(crypto->encryptState), headers, encryptionKey);
-    if (result != 0) SDL_free(headers);
-
-    result = crypto_secretstream_xchacha20poly1305_init_pull(&(crypto->decryptState), headers + CRYPTO_HEADER_SIZE, encryptionKey);
-    if (result != 0) SDL_free(headers);
-
-    return !result ? headers : NULL;
+    return !result;
 }
 
 unsigned cryptoEncryptedSize(unsigned unencryptedSize)
-{ return unencryptedSize + ENCRYPTED_ADDITIONAL_BYTES_SIZE; }
+{ return MAC_SIZE + unencryptedSize + NONCE_SIZE; }
 
 const byte* cryptoClientPublicKey(const Crypto* crypto) {
     assert(crypto);
     return crypto->clientPublicKey;
 }
 
-byte* nullable cryptoEncrypt(Crypto* crypto, const byte* bytes, unsigned bytesSize) {
+byte* nullable cryptoEncrypt(const Crypto* crypto, const byte* bytes, unsigned bytesSize) {
     assert(crypto && bytes);
 
     const unsigned encryptedSize = cryptoEncryptedSize(bytesSize);
-    unsigned long long generatedEncryptedSize = 0;
     byte* encrypted = SDL_calloc(encryptedSize, sizeof(char));
 
-    byte* result = !crypto_secretstream_xchacha20poly1305_push(
-        &(crypto->encryptState),
+    byte* nonceStart = encrypted + encryptedSize - NONCE_SIZE;
+    randombytes_buf(nonceStart, NONCE_SIZE);
+
+    byte* result = crypto_secretbox_easy(
         encrypted,
-        &generatedEncryptedSize,
         bytes,
         bytesSize,
-        NULL,
-        0,
-        INTERMEDIATE_TAG
-    ) ? encrypted : NULL;
+        nonceStart,
+        crypto->encryptionKey
+    ) == 0 ? encrypted : NULL;
 
-    if (result) assert((unsigned) generatedEncryptedSize == encryptedSize);
-    else SDL_free(encrypted);
-
+    if (!result) SDL_free(encrypted);
     return result;
 }
 
-byte* nullable cryptoDecrypt(Crypto* crypto, const byte* bytes, unsigned bytesSize) {
+byte* nullable cryptoDecrypt(const Crypto* crypto, const byte* bytes, unsigned bytesSize) {
     assert(crypto && bytes);
 
-    const unsigned decryptedSize = bytesSize - ENCRYPTED_ADDITIONAL_BYTES_SIZE;
-    unsigned long long generatedDecryptedSize = 0;
-    byte tag;
+    const unsigned decryptedSize = bytesSize - MAC_SIZE - NONCE_SIZE;
     byte* decrypted = SDL_calloc(decryptedSize, sizeof(char));
+    const unsigned encryptedAndTagSize = bytesSize - NONCE_SIZE;
 
-    byte* result = !crypto_secretstream_xchacha20poly1305_pull(
-        &(crypto->decryptState),
+    byte* result = crypto_secretbox_open_easy(
         decrypted,
-        &generatedDecryptedSize,
-        &tag,
         bytes,
-        bytesSize,
-        NULL,
-        0
-    ) ? decrypted : NULL;
+        encryptedAndTagSize,
+        bytes + encryptedAndTagSize,
+        crypto->encryptionKey
+    ) == 0 ? decrypted : NULL;
 
-    if (result) assert((unsigned) generatedDecryptedSize == decryptedSize);
-    else SDL_free(decrypted);
-
+    if (!result) SDL_free(decrypted);
     return result;
 }
 
@@ -157,7 +130,7 @@ bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedByt
 }
 
 void cryptoFillWithRandomBytes(byte* filled, unsigned size) {
-    assert(filled && size > 0);
+    assert(size > 0);
     randombytes_buf(filled, size);
 }
 
