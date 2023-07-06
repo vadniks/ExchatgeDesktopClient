@@ -27,7 +27,8 @@ struct Crypto_t {
     byte serverPublicKey[CRYPTO_KEY_SIZE];
     byte clientPublicKey[CRYPTO_KEY_SIZE];
     byte clientSecretKey[CRYPTO_KEY_SIZE];
-    crypto_secretstream_xchacha20poly1305_state state;
+    crypto_secretstream_xchacha20poly1305_state encryptState; // send
+    crypto_secretstream_xchacha20poly1305_state decryptState; // receive
 };
 
 Crypto* cryptoInit(void) {
@@ -47,25 +48,29 @@ byte* nullable cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
     SDL_memcpy(crypto->serverPublicKey, serverPublicKey, CRYPTO_KEY_SIZE);
 
     byte encryptionKey[CRYPTO_KEY_SIZE];
-    byte* header = SDL_calloc(CRYPTO_HEADER_SIZE, sizeof(char));
+    byte decryptionKey[CRYPTO_KEY_SIZE];
+    byte* headers = SDL_calloc(2 * CRYPTO_HEADER_SIZE, sizeof(char));
 
     int result = crypto_kx_client_session_keys(
-        encryptionKey,
-        NULL,
+        decryptionKey, // receive key
+        encryptionKey, // send key
         crypto->clientPublicKey,
         crypto->clientSecretKey,
         crypto->serverPublicKey
     );
 
     if (result != 0) {
-        SDL_free(header);
+        SDL_free(headers);
         return NULL;
     }
 
-    result = crypto_secretstream_xchacha20poly1305_init_push(&(crypto->state), header, encryptionKey);
-    if (result != 0) SDL_free(header);
+    result = crypto_secretstream_xchacha20poly1305_init_push(&(crypto->encryptState), headers, encryptionKey);
+    if (result != 0) SDL_free(headers);
 
-    return !result ? header : NULL;
+    result = crypto_secretstream_xchacha20poly1305_init_push(&(crypto->decryptState), headers + CRYPTO_HEADER_SIZE, encryptionKey);
+    if (result != 0) SDL_free(headers);
+
+    return !result ? headers : NULL;
 }
 
 unsigned cryptoEncryptedSize(unsigned unencryptedSize)
@@ -84,7 +89,7 @@ byte* nullable cryptoEncrypt(Crypto* crypto, const byte* bytes, unsigned bytesSi
     byte* encrypted = SDL_calloc(encryptedSize, sizeof(char));
 
     byte* result = !crypto_secretstream_xchacha20poly1305_push(
-        &(crypto->state),
+        &(crypto->encryptState),
         encrypted,
         &generatedEncryptedSize,
         bytes,
@@ -109,7 +114,7 @@ byte* nullable cryptoDecrypt(Crypto* crypto, const byte* bytes, unsigned bytesSi
     byte* decrypted = SDL_calloc(decryptedSize, sizeof(char));
 
     byte* result = !crypto_secretstream_xchacha20poly1305_pull(
-        &(crypto->state),
+        &(crypto->decryptState),
         decrypted,
         &generatedDecryptedSize,
         &tag,

@@ -12,7 +12,7 @@ struct Crypto_t;
 typedef struct Crypto_t Crypto;
 
 Crypto* nullable cryptoInit(void);
-byte* nullable cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey); // returns header bytes on success
+byte* nullable cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey); // returns headers bytes of size 2 * HEADER_SIZE for encryption and decryption on success
 unsigned cryptoEncryptedSize(unsigned unencryptedSize);
 const byte* cryptoClientPublicKey(const Crypto* crypto);
 byte* nullable cryptoEncrypt(Crypto* crypto, const byte* bytes, unsigned bytesSize);
