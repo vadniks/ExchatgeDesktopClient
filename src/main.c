@@ -79,7 +79,6 @@ int main(int argc, const char** argv) { // TODO: test only
     // client sends smth
     SDL_memset(msg, '1', msgLen);
     assert(!crypto_secretstream_xchacha20poly1305_push(&clientEncryptionState, ciphered, &generatedLen, (const byte*) msg, (unsigned long long) msgLen, NULL, 0, xTag));
-    SDL_Log("aa %u", generatedLen);
     assert((unsigned) generatedLen == cipheredLen);
 
     // server receives smth
