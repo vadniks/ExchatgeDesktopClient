@@ -40,6 +40,9 @@ int main(int argc, const char** argv) { // TODO: test only
     PRINT(clientKey) PRINT(serverKey)
     // then client sends his public key to server
 
+    SDL_memset(clientKey, 0, keySize);
+    SDL_memset(serverKey, 0, keySize);
+
     // server receives client's public key & generates two shared keys based on client's public key
     assert(!crypto_kx_server_session_keys(serverKey, clientKey, serverPublicKey, serverSecretKey, clientPublicKey));
     PRINT(clientKey) PRINT(serverKey)
