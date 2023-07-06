@@ -68,7 +68,7 @@ int main(int argc, const char** argv) { // TODO: test only
     assert(!crypto_secretstream_xchacha20poly1305_init_pull(&serverDecryptionState, (const byte*) clientHeader, (const byte*) clientKey));
 
     // at this point both client & server have their encoder/decoder streams to send/receive data
-    const unsigned msgLen = 5, cipheredLen = msgLen + crypto_secretstream_xchacha20poly1305_ABYTES;
+    const unsigned long long msgLen = 5, cipheredLen = msgLen + crypto_secretstream_xchacha20poly1305_ABYTES;
     byte ciphered[cipheredLen];
     byte msg[msgLen];
     byte xTag = 0;
@@ -78,24 +78,24 @@ int main(int argc, const char** argv) { // TODO: test only
 
     // client sends smth
     SDL_memset(msg, '1', msgLen);
-    assert(!crypto_secretstream_xchacha20poly1305_push(&clientEncryptionState, ciphered, &generatedLen, (const byte*) msg, (unsigned long long) msgLen, NULL, 0, xTag));
-    assert((unsigned) generatedLen == cipheredLen);
+    assert(!crypto_secretstream_xchacha20poly1305_push(&clientEncryptionState, ciphered, &generatedLen, (const byte*) msg, msgLen, NULL, 0, xTag));
+    assert(generatedLen == cipheredLen);
 
     // server receives smth
-    assert(!crypto_secretstream_xchacha20poly1305_pull(&serverDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, (unsigned long long) cipheredLen, NULL, 0));
-    assert((unsigned) generatedLen == msgLen);
+    assert(!crypto_secretstream_xchacha20poly1305_pull(&serverDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, cipheredLen, NULL, 0));
+    assert(generatedLen == msgLen);
     assert(!xTag);
     SDL_Log("%.*s", msgLen, msg); // 11111
     CHECK('1')
 
     // server sends smth
     SDL_memset(msg, '2', msgLen);
-    assert(!crypto_secretstream_xchacha20poly1305_push(&serverEncryptionState, ciphered, &generatedLen, (const byte*) msg, (unsigned long long) msgLen, NULL, 0, xTag));
-    assert((unsigned) generatedLen == cipheredLen);
+    assert(!crypto_secretstream_xchacha20poly1305_push(&serverEncryptionState, ciphered, &generatedLen, (const byte*) msg, msgLen, NULL, 0, xTag));
+    assert(generatedLen == cipheredLen);
 
     // client receives smth
-    assert(!crypto_secretstream_xchacha20poly1305_pull(&clientDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, (unsigned long long) cipheredLen, NULL, 0));
-    assert((unsigned) generatedLen == msgLen);
+    assert(!crypto_secretstream_xchacha20poly1305_pull(&clientDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, cipheredLen, NULL, 0));
+    assert(generatedLen == msgLen);
     assert(!xTag);
     SDL_Log("%.*s", msgLen, msg); // 22222
     CHECK('2')
