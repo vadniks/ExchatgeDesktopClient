@@ -1,4 +1,13 @@
 
+
+
+
+// ---------------------------------------------- TODO -----------------------------------------------------------------
+
+
+
+
+
 #include <stdlib.h>
 #include <sdl/SDL_stdinc.h>
 #include <assert.h>
@@ -6,17 +15,38 @@
 #include <sodium/sodium.h>
 #include "defs.h"
 #include <sdl/SDL_log.h>
+#include <stdio.h>
 int main(int argc, const char** argv) { // TODO: test only
     assert(sodium_init() >= 0); // TODO: ------------------------------- this shit is too complex to design & implement it improvising, so let's make a concept first ----------------------
 
     const unsigned keySize = crypto_secretstream_xchacha20poly1305_KEYBYTES;
     const unsigned headerSize = crypto_secretstream_xchacha20poly1305_HEADERBYTES;
 
-    // client and server exchange their public keys to generate two shared keys
-    byte serverKey[keySize];
+    // client and server create buffers for encryption/decryption shared keys via key exchanging
     byte clientKey[keySize];
-    randombytes_buf(serverKey, keySize);
-    randombytes_buf(clientKey, keySize);
+    byte serverKey[keySize];
+
+    // server generates his key pair
+    byte serverPublicKey[keySize], serverSecretKey[keySize];
+    crypto_kx_keypair(serverPublicKey, serverSecretKey);
+    // then server sends his public key to client
+
+#   define PRINT(x) printf(#x ": "); for (unsigned i = 0; i < keySize; printf("%u ", ((const byte*) (x))[i++])); printf("\n");
+
+    // client generates his key pair, receives server's public key & generates two shared keys based on server's public key
+    byte clientPublicKey[keySize], clientSecretKey[keySize];
+    crypto_kx_keypair(clientPublicKey, clientSecretKey);
+    assert(!crypto_kx_client_session_keys(clientKey, serverKey, clientPublicKey, clientSecretKey, serverPublicKey));
+    PRINT(clientKey) PRINT(serverKey)
+    // then client sends his public key to server
+
+    // server receives client's public key & generates two shared keys based on client's public key
+    assert(!crypto_kx_server_session_keys(serverKey, clientKey, serverPublicKey, serverSecretKey, clientPublicKey));
+    PRINT(clientKey) PRINT(serverKey)
+
+    // TODO: reached this point - key exchange successful, we can proceed to the next part
+
+    // now client & server create encoder/decoder streams
 
     // server (A) generates encoder stream (A doesn't need to decrypt what A encrypted)
     byte serverHeader[headerSize];
