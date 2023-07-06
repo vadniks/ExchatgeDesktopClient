@@ -83,6 +83,7 @@ int main(int argc, const char** argv) { // TODO: test only
     SDL_memset(msg, '1', msgLen);
     assert(!crypto_secretstream_xchacha20poly1305_push(&clientEncryptionState, ciphered, &generatedLen, (const byte*) msg, msgLen, NULL, 0, xTag));
     assert(generatedLen == cipheredLen);
+    SDL_Log("%.*s", cipheredLen, ciphered);
 
     // server receives smth
     assert(!crypto_secretstream_xchacha20poly1305_pull(&serverDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, cipheredLen, NULL, 0));
@@ -95,6 +96,7 @@ int main(int argc, const char** argv) { // TODO: test only
     SDL_memset(msg, '2', msgLen);
     assert(!crypto_secretstream_xchacha20poly1305_push(&serverEncryptionState, ciphered, &generatedLen, (const byte*) msg, msgLen, NULL, 0, xTag));
     assert(generatedLen == cipheredLen);
+    SDL_Log("%.*s", cipheredLen, ciphered);
 
     // client receives smth
     assert(!crypto_secretstream_xchacha20poly1305_pull(&clientDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, cipheredLen, NULL, 0));
@@ -107,6 +109,7 @@ int main(int argc, const char** argv) { // TODO: test only
     SDL_memset(msg, '3', msgLen);
     assert(!crypto_secretstream_xchacha20poly1305_push(&serverEncryptionState, ciphered, &generatedLen, (const byte*) msg, msgLen, NULL, 0, xTag));
     assert(generatedLen == cipheredLen);
+    SDL_Log("%.*s", cipheredLen, ciphered);
 
     // client receives smth
     assert(!crypto_secretstream_xchacha20poly1305_pull(&clientDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, cipheredLen, NULL, 0));
@@ -119,6 +122,7 @@ int main(int argc, const char** argv) { // TODO: test only
     SDL_memset(msg, '4', msgLen);
     assert(!crypto_secretstream_xchacha20poly1305_push(&clientEncryptionState, ciphered, &generatedLen, (const byte*) msg, msgLen, NULL, 0, crypto_secretstream_xchacha20poly1305_TAG_FINAL));
     assert(generatedLen == cipheredLen);
+    SDL_Log("%.*s", cipheredLen, ciphered);
 
     // server receives smth
     assert(!crypto_secretstream_xchacha20poly1305_pull(&serverDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, cipheredLen, NULL, 0));
