@@ -8,15 +8,22 @@
 
 
 
+//#define CONCEPT
+
 #include <stdlib.h>
 #include <sdl/SDL_stdinc.h>
 #include <assert.h>
 #include "lifecycle.h"
+
+#ifdef CONCEPT
 #include <sodium/sodium.h>
 #include "defs.h"
 #include <sdl/SDL_log.h>
 #include <stdio.h>
+#endif
+
 int main(int argc, const char** argv) { // TODO: test only
+#ifdef CONCEPT
     assert(sodium_init() >= 0); // TODO: ------------------------------- this shit is too complex to design & implement it improvising, so let's make a concept first ----------------------
 
     const unsigned keySize = crypto_secretstream_xchacha20poly1305_KEYBYTES;
@@ -133,9 +140,11 @@ int main(int argc, const char** argv) { // TODO: test only
 
     // TODO: reached this point so this shit actually works! Now... how the f*** am I supposed to implement this in Go?
 
-//    if (!lifecycleInit(argc, argv)) return EXIT_FAILURE;
-//    lifecycleLoop();
-//    lifecycleClean();
-//    assert(!SDL_GetNumAllocations());
+#else
+    if (!lifecycleInit(argc, argv)) return EXIT_FAILURE;
+    lifecycleLoop();
+    lifecycleClean();
+    assert(!SDL_GetNumAllocations());
+#endif
     return EXIT_SUCCESS;
 }
