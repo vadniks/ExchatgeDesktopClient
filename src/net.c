@@ -134,13 +134,15 @@ static void initiateSecuredConnection(void) {
     if (!header) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
-    const unsigned clientPublicKeyAndHeaderSize = CRYPTO_KEY_SIZE + CRYPTO_HEADER_SIZE;
-    byte clientPublicKeyAndHeader[clientPublicKeyAndHeaderSize];
-    SDL_memcpy(clientPublicKeyAndHeader, cryptoClientPublicKey(this->connectionCrypto), CRYPTO_KEY_SIZE);
-    SDL_memcpy(clientPublicKeyAndHeader, header, CRYPTO_HEADER_SIZE);
+    const unsigned headersSize = 2 * CRYPTO_HEADER_SIZE;
+    const unsigned clientPublicKeyAndHeadersSize = CRYPTO_KEY_SIZE + headersSize;
+    byte clientPublicKeyAndHeaders[clientPublicKeyAndHeadersSize];
+
+    SDL_memcpy(clientPublicKeyAndHeaders, cryptoClientPublicKey(this->connectionCrypto), CRYPTO_KEY_SIZE);
+    SDL_memcpy(clientPublicKeyAndHeaders, header, headersSize);
     SDL_free(header);
 
-    SDLNet_TCP_Send(this->socket, clientPublicKeyAndHeader, (int) clientPublicKeyAndHeaderSize);
+    SDLNet_TCP_Send(this->socket, clientPublicKeyAndHeaders, (int) clientPublicKeyAndHeadersSize);
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
 }
 
