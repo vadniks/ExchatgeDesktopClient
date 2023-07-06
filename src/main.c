@@ -71,7 +71,7 @@ int main(int argc, const char** argv) { // TODO: test only
     const unsigned long long msgLen = 5, cipheredLen = msgLen + crypto_secretstream_xchacha20poly1305_ABYTES;
     byte ciphered[cipheredLen];
     byte msg[msgLen];
-    byte xTag = 0;
+    byte xTag = crypto_secretstream_xchacha20poly1305_TAG_MESSAGE;
     unsigned long long generatedLen;
 
 #   define CHECK(x) for (unsigned i = 0; i < msgLen; msg[i++] == (byte) (x) ? (void) 0 : assert(0));
@@ -99,6 +99,30 @@ int main(int argc, const char** argv) { // TODO: test only
     assert(!xTag);
     SDL_Log("%.*s", msgLen, msg); // 22222
     CHECK('2')
+
+    // server sends smth
+    SDL_memset(msg, '3', msgLen);
+    assert(!crypto_secretstream_xchacha20poly1305_push(&serverEncryptionState, ciphered, &generatedLen, (const byte*) msg, msgLen, NULL, 0, xTag));
+    assert(generatedLen == cipheredLen);
+
+    // client receives smth
+    assert(!crypto_secretstream_xchacha20poly1305_pull(&clientDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, cipheredLen, NULL, 0));
+    assert(generatedLen == msgLen);
+    assert(!xTag);
+    SDL_Log("%.*s", msgLen, msg); // 33333
+    CHECK('3')
+
+    // client sends smth
+    SDL_memset(msg, '4', msgLen);
+    assert(!crypto_secretstream_xchacha20poly1305_push(&clientEncryptionState, ciphered, &generatedLen, (const byte*) msg, msgLen, NULL, 0, crypto_secretstream_xchacha20poly1305_TAG_FINAL));
+    assert(generatedLen == cipheredLen);
+
+    // server receives smth
+    assert(!crypto_secretstream_xchacha20poly1305_pull(&serverDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, cipheredLen, NULL, 0));
+    assert(generatedLen == msgLen);
+    assert(xTag == crypto_secretstream_xchacha20poly1305_TAG_FINAL);
+    SDL_Log("%.*s", msgLen, msg); // 44444
+    CHECK('4')
 
     // TODO: reached this point so this shit actually works! Now... how the f*** am I supposed to implement this in Go?
 
