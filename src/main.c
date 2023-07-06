@@ -8,12 +8,15 @@
 
 
 
-//#define CONCEPT
+#define CONCEPT
 
 #include <stdlib.h>
 #include <sdl/SDL_stdinc.h>
 #include <assert.h>
+
+#ifndef CONCEPT
 #include "lifecycle.h"
+#endif
 
 #ifdef CONCEPT
 #include <sodium/sodium.h>
