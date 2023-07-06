@@ -67,7 +67,7 @@ byte* nullable cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
     result = crypto_secretstream_xchacha20poly1305_init_push(&(crypto->encryptState), headers, encryptionKey);
     if (result != 0) SDL_free(headers);
 
-    result = crypto_secretstream_xchacha20poly1305_init_push(&(crypto->decryptState), headers + CRYPTO_HEADER_SIZE, encryptionKey);
+    result = crypto_secretstream_xchacha20poly1305_init_pull(&(crypto->decryptState), headers + CRYPTO_HEADER_SIZE, encryptionKey);
     if (result != 0) SDL_free(headers);
 
     return !result ? headers : NULL;
