@@ -10,6 +10,14 @@
 
 #define staticAssert(x) _Static_assert(x, "")
 
+#if !defined(__GNUC__) // && !defined(__clang__) as clang defines __GNUC__ too
+#   error "Don't go any further"
+#endif
+
+#ifndef __LINUX__
+#   warning "Project targets linux systems"
+#endif
+
 #ifdef __clang__
 #   define nullable _Nullable // all pointers without nullable attribute in their declarations are treated as non-nullable pointers in this project
 #else
