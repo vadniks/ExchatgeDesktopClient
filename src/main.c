@@ -28,14 +28,14 @@ int main(int argc, const char** argv) { // TODO: test only
 
     // server generates his key pair
     byte serverPublicKey[keySize], serverSecretKey[keySize];
-    crypto_kx_keypair(serverPublicKey, serverSecretKey);
+    assert(!crypto_kx_keypair(serverPublicKey, serverSecretKey));
     // then server sends his public key to client
 
 #   define PRINT(x) printf(#x ": "); for (unsigned i = 0; i < keySize; printf("%u ", ((const byte*) (x))[i++])); printf("\n");
 
     // client generates his key pair, receives server's public key & generates two shared keys based on server's public key
     byte clientPublicKey[keySize], clientSecretKey[keySize];
-    crypto_kx_keypair(clientPublicKey, clientSecretKey);
+    assert(!crypto_kx_keypair(clientPublicKey, clientSecretKey));
     assert(!crypto_kx_client_session_keys(clientKey, serverKey, clientPublicKey, clientSecretKey, serverPublicKey));
     PRINT(clientKey) PRINT(serverKey)
     // then client sends his public key to server
