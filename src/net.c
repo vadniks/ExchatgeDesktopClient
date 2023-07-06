@@ -117,7 +117,7 @@ STATIC_CONST_UNSIGNED USER_INFO_SIZE = INT_SIZE + sizeof(bool) + NET_USERNAME_SI
 staticAssert(sizeof(bool) == 1 && sizeof(NetUserInfo) == 21);
 
 static void initiateSecuredConnection(void) {
-    this->connectionCrypto = cryptoInit();
+    this->connectionCrypto = cryptoInit(); // TODO: crypto api changed
     assert(this->connectionCrypto);
 
     const unsigned signedPublicKeySize = CRYPTO_SIGNATURE_SIZE + CRYPTO_KEY_SIZE;
