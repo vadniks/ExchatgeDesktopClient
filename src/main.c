@@ -48,11 +48,12 @@ int main(int argc, const char** argv) { // TODO: test only
 
     // client sends smth
     SDL_memset(msg, '1', msgLen);
-    assert(!crypto_secretstream_xchacha20poly1305_push(&clientEncryptionState, ciphered, &generatedLen, (const byte*) msg, msgLen, NULL, 0, xTag));
-    assert((unsigned) generatedLen == msgLen); // TODO: not working
+    assert(!crypto_secretstream_xchacha20poly1305_push(&clientEncryptionState, ciphered, &generatedLen, (const byte*) msg, (unsigned long long) msgLen, NULL, 0, xTag));
+    SDL_Log("aa %u", generatedLen);
+    assert((unsigned) generatedLen == msgLen); // TODO: not working // why the f*** you aren't working? all seems to be well set...
 
     // server receives smth
-    assert(!crypto_secretstream_xchacha20poly1305_pull(&serverDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, msgLen, NULL, 0)); // TODO: not working
+    assert(!crypto_secretstream_xchacha20poly1305_pull(&serverDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, (unsigned long long) msgLen, NULL, 0));
     assert((unsigned) generatedLen == msgLen);
     assert(!xTag);
     SDL_Log("%.*s", msgLen, msg); // 11111
@@ -60,11 +61,11 @@ int main(int argc, const char** argv) { // TODO: test only
 
     // server sends smth
     SDL_memset(msg, '2', msgLen);
-    assert(!crypto_secretstream_xchacha20poly1305_push(&serverEncryptionState, ciphered, &generatedLen, (const byte*) msg, msgLen, NULL, 0, xTag));
+    assert(!crypto_secretstream_xchacha20poly1305_push(&serverEncryptionState, ciphered, &generatedLen, (const byte*) msg, (unsigned long long) msgLen, NULL, 0, xTag));
     assert((unsigned) generatedLen == msgLen);
 
     // client receives smth
-    assert(!crypto_secretstream_xchacha20poly1305_pull(&clientDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, msgLen, NULL, 0));
+    assert(!crypto_secretstream_xchacha20poly1305_pull(&clientDecryptionState, msg, &generatedLen, &xTag, (const byte*) ciphered, (unsigned long long) msgLen, NULL, 0));
     assert((unsigned) generatedLen == msgLen);
     assert(!xTag);
     SDL_Log("%.*s", msgLen, msg); // 22222
