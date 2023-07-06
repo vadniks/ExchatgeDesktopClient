@@ -130,10 +130,17 @@ static void initiateSecuredConnection(void) {
     if (!SDL_memcmp(serverKeyStart, this->serverKeyStub, CRYPTO_KEY_SIZE)) return; // denial of service
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
-    if (!/*TODO: send header to server*/cryptoExchangeKeys(this->connectionCrypto, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE)) return;
+    byte* header = cryptoExchangeKeys(this->connectionCrypto, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE);
+    if (!header) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
-    SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE);
+    const unsigned clientPublicKeyAndHeaderSize = CRYPTO_KEY_SIZE + CRYPTO_HEADER_SIZE;
+    byte clientPublicKeyAndHeader[clientPublicKeyAndHeaderSize];
+    SDL_memcpy(clientPublicKeyAndHeader, cryptoClientPublicKey(this->connectionCrypto), CRYPTO_KEY_SIZE);
+    SDL_memcpy(clientPublicKeyAndHeader, header, CRYPTO_HEADER_SIZE);
+    SDL_free(header);
+
+    SDLNet_TCP_Send(this->socket, clientPublicKeyAndHeader, (int) clientPublicKeyAndHeaderSize);
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
 }
 

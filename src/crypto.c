@@ -56,7 +56,11 @@ byte* nullable cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
         crypto->clientSecretKey,
         crypto->serverPublicKey
     );
-    if (result != 0) return NULL;
+
+    if (result != 0) {
+        SDL_free(header);
+        return NULL;
+    }
 
     result = crypto_secretstream_xchacha20poly1305_init_push(&(crypto->state), header, encryptionKey);
     if (result != 0) SDL_free(header);
@@ -148,7 +152,7 @@ bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedByt
 }
 
 void cryptoFillWithRandomBytes(byte* filled, unsigned size) {
-    assert(size > 0);
+    assert(filled && size > 0);
     randombytes_buf(filled, size);
 }
 
