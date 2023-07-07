@@ -1,5 +1,5 @@
 
-# Exchatge - a secured message exchanger
+# Exchatge - a secured message exchanger (client)
 
 The purpose of this project is to easily exchange messages using an 
 encrypted communication channel in the realtime.
@@ -17,7 +17,7 @@ Client side uses the following libraries:
 [LibSodium](https://github.com/jedisct1/libsodium), 
 [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear).
 
-## The project is in early development stage
+## The project is in development stage
 
 [The server](https://github.com/vadniks/ExchatgeServer)
 
