@@ -126,7 +126,8 @@ static void initiateSecuredConnection(void) {
     byte serverSignedPublicKey[signedPublicKeySize];
     const byte* serverKeyStart = serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE;
 
-    SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize); // TODO: add timeout, wait for a constant millis count and then if no response received drop connection; add timeout to server too
+    int received = SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize); // TODO: add timeout, wait for a constant millis count and then if no response received drop connection; add timeout to server too
+    assert(received == (int) signedPublicKeySize);
     bool signedChecked = cryptoCheckServerSignedBytes(serverSignedPublicKey, serverKeyStart, CRYPTO_KEY_SIZE);
     assert(signedChecked);
 
@@ -136,14 +137,16 @@ static void initiateSecuredConnection(void) {
     if (!cryptoExchangeKeys(this->connectionCrypto, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE)) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
-    SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE);
+    int sent = SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE);
+    assert(sent == (int) CRYPTO_KEY_SIZE);
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
 
     const unsigned serverSignedCoderHeaderSize = CRYPTO_SIGNATURE_SIZE + CRYPTO_HEADER_SIZE;
     byte serverSignedCoderHeader[serverSignedCoderHeaderSize];
     const byte* serverCoderHeaderStart = serverSignedCoderHeader + CRYPTO_SIGNATURE_SIZE;
 
-    SDLNet_TCP_Recv(this->socket, serverSignedCoderHeader, (int) serverSignedCoderHeaderSize);
+    received = SDLNet_TCP_Recv(this->socket, serverSignedCoderHeader, (int) serverSignedCoderHeaderSize);
+    assert(received == (int) serverSignedCoderHeaderSize);
     signedChecked = cryptoCheckServerSignedBytes(
         serverSignedCoderHeader, serverCoderHeaderStart, CRYPTO_HEADER_SIZE
     );
@@ -152,7 +155,8 @@ static void initiateSecuredConnection(void) {
 
     byte* clientCoderHeader = cryptoInitializeCoderStreams(this->connectionCrypto, serverCoderHeaderStart);
     if (clientCoderHeader) {
-        SDLNet_TCP_Send(this->socket, clientCoderHeader, (int) CRYPTO_HEADER_SIZE);
+        sent = SDLNet_TCP_Send(this->socket, clientCoderHeader, (int) CRYPTO_HEADER_SIZE);
+        assert(sent == (int) CRYPTO_HEADER_SIZE);
         this->state = STATE_CLIENT_CODER_HEADER_SENT;
     }
 
