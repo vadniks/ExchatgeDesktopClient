@@ -42,7 +42,7 @@ Crypto* cryptoInit(void) {
 bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
     assert(crypto);
     int ckxk = crypto_kx_keypair(crypto->clientPublicKey, crypto->clientSecretKey);
-    assert(ckxk);
+    assert(!ckxk);
     SDL_memcpy(crypto->serverPublicKey, serverPublicKey, CRYPTO_KEY_SIZE);
 
     int result = crypto_kx_client_session_keys(

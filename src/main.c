@@ -8,7 +8,7 @@
 
 
 
-#define CONCEPT
+//#define CONCEPT
 
 #include <stdlib.h>
 #include <sdl/SDL_stdinc.h>
