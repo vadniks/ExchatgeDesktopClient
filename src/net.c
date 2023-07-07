@@ -13,13 +13,15 @@ staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8 && sizeo
 #define STATE(x, y)  STATIC_CONST_UNSIGNED STATE_ ## x = y;
 #define FLAG(x, y) STATIC_CONST_INT FLAG_ ## x = y;
 
-STATE(DISCONNECTED, 0)
+//STATE(DISCONNECTED, 0)
 STATE(SERVER_PUBLIC_KEY_RECEIVED, 1)
 STATE(CLIENT_PUBLIC_KEY_SENT, 2)
-STATE(SECURE_CONNECTION_ESTABLISHED, STATE_CLIENT_PUBLIC_KEY_SENT)
-STATE(AUTHENTICATED, 3)
-STATE(FINISHED, 4)
-STATE(FINISHED_WITH_ERROR, 5)
+STATE(SERVER_CODER_HEADER_RECEIVED, 3)
+STATE(CLIENT_CODER_HEADER_SENT, 4)
+STATE(SECURE_CONNECTION_ESTABLISHED, STATE_CLIENT_CODER_HEADER_SENT)
+STATE(AUTHENTICATED, 5)
+//STATE(FINISHED, 6)
+STATE(FINISHED_WITH_ERROR, 7)
 
 static const char* HOST = "127.0.0.1";
 STATIC_CONST_UNSIGNED PORT = 8080;
@@ -35,21 +37,21 @@ STATIC_CONST_UNSIGNED MESSAGE_HEAD_SIZE = INT_SIZE * 6 + LONG_SIZE + TOKEN_SIZE;
 const unsigned NET_MESSAGE_BODY_SIZE = MESSAGE_SIZE - MESSAGE_HEAD_SIZE; // 928
 
 const int NET_FLAG_PROCEED = 0x00000000;
-FLAG(FINISH, 0x00000001)
-FLAG(FINISH_WITH_ERROR, 0x00000002)
-FLAG(FINISH_TO_RECONNECT, 0x00000003)
+//FLAG(FINISH, 0x00000001)
+//FLAG(FINISH_WITH_ERROR, 0x00000002)
+//FLAG(FINISH_TO_RECONNECT, 0x00000003)
 FLAG(LOG_IN, 0x00000004)
 FLAG(LOGGED_IN, 0x00000005)
 FLAG(REGISTER, 0x00000006)
 FLAG(REGISTERED, 0x00000007)
-FLAG(SUCCESS, 0x00000008)
+//FLAG(SUCCESS, 0x00000008)
 FLAG(ERROR, 0x00000009)
 FLAG(UNAUTHENTICATED, 0x0000000a)
 FLAG(ACCESS_DENIED, 0x0000000b)
 FLAG(FETCH_USERS, 0x0000000c)
 FLAG(SHUTDOWN, 0x7fffffff)
 
-STATIC_CONST_UNSIGNED TO_ANONYMOUS = 0x7fffffff;
+//STATIC_CONST_UNSIGNED TO_ANONYMOUS = 0x7fffffff;
 STATIC_CONST_UNSIGNED TO_SERVER = 0x7ffffffe;
 
 const unsigned NET_USERNAME_SIZE = 16;
@@ -125,7 +127,8 @@ static void initiateSecuredConnection(void) {
     const byte* serverKeyStart = serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE;
 
     SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize); // TODO: add timeout, wait for a constant millis count and then if no response received drop connection; add timeout to server too
-    assert(cryptoCheckServerSignedBytes(serverSignedPublicKey, serverKeyStart, CRYPTO_KEY_SIZE));
+    bool signedChecked = cryptoCheckServerSignedBytes(serverSignedPublicKey, serverKeyStart, CRYPTO_KEY_SIZE);
+    assert(signedChecked);
 
     if (!SDL_memcmp(serverKeyStart, this->serverKeyStub, CRYPTO_KEY_SIZE)) return; // denial of service
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
@@ -135,6 +138,25 @@ static void initiateSecuredConnection(void) {
 
     SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE);
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
+
+    const unsigned serverSignedCoderHeaderSize = CRYPTO_SIGNATURE_SIZE + CRYPTO_HEADER_SIZE;
+    byte serverSignedCoderHeader[serverSignedCoderHeaderSize];
+    const byte* serverCoderHeaderStart = serverSignedCoderHeader + CRYPTO_SIGNATURE_SIZE;
+
+    SDLNet_TCP_Recv(this->socket, serverSignedCoderHeader, (int) serverSignedCoderHeaderSize);
+    signedChecked = cryptoCheckServerSignedBytes(
+        serverSignedCoderHeader, serverCoderHeaderStart, CRYPTO_HEADER_SIZE
+    );
+    assert(signedChecked);
+    this->state = STATE_SERVER_CODER_HEADER_RECEIVED;
+
+    byte* clientCoderHeader = cryptoInitializeCoderStreams(this->connectionCrypto, serverCoderHeaderStart);
+    if (clientCoderHeader) {
+        SDLNet_TCP_Send(this->socket, clientCoderHeader, (int) CRYPTO_HEADER_SIZE);
+        this->state = STATE_CLIENT_CODER_HEADER_SENT;
+    }
+
+    SDL_free(clientCoderHeader);
 }
 
 bool netInit(
