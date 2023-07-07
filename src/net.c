@@ -117,7 +117,7 @@ struct NetUserInfo_t {
 STATIC_CONST_UNSIGNED USER_INFO_SIZE = INT_SIZE + sizeof(bool) + NET_USERNAME_SIZE; // 21
 
 staticAssert(sizeof(bool) == 1 && sizeof(NetUserInfo) == 21);
-
+#include <stdio.h>
 static void initiateSecuredConnection(void) {
     this->connectionCrypto = cryptoInit(); // TODO: crypto api changed
     assert(this->connectionCrypto);
@@ -159,6 +159,11 @@ static void initiateSecuredConnection(void) {
         assert(sent == (int) CRYPTO_HEADER_SIZE);
         this->state = STATE_CLIENT_CODER_HEADER_SENT;
     }
+
+    puts("server public key"); for (unsigned i = 0; i < CRYPTO_KEY_SIZE; printf("%d ", serverKeyStart[i++])); puts("");
+    puts("client public key"); for (unsigned i = 0; i < CRYPTO_KEY_SIZE; printf("%d ", cryptoClientPublicKey(this->connectionCrypto)[i++])); puts("");
+    puts("server header"); for (unsigned i = 0; i < CRYPTO_HEADER_SIZE; printf("%d ", serverCoderHeaderStart[i++])); puts("");
+    puts("client header"); for (unsigned i = 0; i < CRYPTO_HEADER_SIZE; printf("%d ", clientCoderHeader[i++])); puts("");
 
     SDL_free(clientCoderHeader);
 }

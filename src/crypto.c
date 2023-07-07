@@ -38,7 +38,7 @@ Crypto* cryptoInit(void) {
     if (sodium_init() < 0) return NULL;
     return (Crypto*) SDL_malloc(sizeof(Crypto));
 }
-
+#include <stdio.h>
 bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
     assert(crypto);
     int ckxk = crypto_kx_keypair(crypto->clientPublicKey, crypto->clientSecretKey);
@@ -52,6 +52,10 @@ bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
         crypto->clientSecretKey,
         crypto->serverPublicKey
     );
+
+    printf("result %s\n", result ? "true" : "false");
+    puts("server key"); for (unsigned i = 0; i < CRYPTO_KEY_SIZE; printf("%d ", crypto->serverKey[i++])); puts("");
+    puts("client key"); for (unsigned i = 0; i < CRYPTO_KEY_SIZE; printf("%d ", crypto->clientKey[i++])); puts("");
 
     return !result;
 }
