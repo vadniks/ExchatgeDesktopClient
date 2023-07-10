@@ -279,6 +279,8 @@ void renderInputEnded(void) {
 }
 
 void renderSetWindowTitle(const char* title) {
+    assert(this);
+
     const unsigned winTitleSize = SDL_strlen(TITLE), separatorSize = 2,
         size = winTitleSize + separatorSize + this->usernameSize + 1;
 
