@@ -7,7 +7,7 @@
 struct List_t;
 typedef struct List_t List;
 
-typedef void (*ListDeallocator)(void*);
+typedef void (*ListDeallocator)(void* nullable);
 
 List* listInit(ListDeallocator nullable deallocator);
 void listAdd(List* list, void* nullable value);

@@ -138,7 +138,10 @@ static void setStyle(void) {
     nk_style_from_table(this->context, table);
 }
 
-static void destroySystemMessage(SystemMessage* message) { SDL_free(message); }
+static void destroySystemMessage(SystemMessage* nullable message) {
+    if (!message) return;
+    SDL_free(message);
+}
 
 void renderInit(
     unsigned usernameSize,

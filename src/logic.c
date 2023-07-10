@@ -39,6 +39,8 @@ THIS(
     unsigned toUserId; // the id of the user, the current user (logged in via this client) wanna speak to
     List* conversationsKeyPairsList; // <KeyPair*>, stores key pair for each conversation
     volatile bool respondingToInvite; // true when invite had been received and the dialog has been popped up to the user, but he hasn't answered yet; this is to avoid multiple simultaneous popups - when one is shown others cannot be received, inviters will receive declines
+    Crypto* nullable* nullable conversationsCryptos; // array (with size equal to size of fetched usersList and array is null until fetched) of nullable cryptos, one per each conversation, holds keys & headers for it
+    unsigned conversationsCryptosSize;
 )
 #pragma clang diagnostic pop
 
@@ -55,7 +57,8 @@ static void parseArguments(unsigned argc, const char** argv) {
     this->adminMode = !SDL_memcmp(argv[1], pattern, patternSize);
 }
 
-static void conversationKeyPairDeallocator(KeyPair* keyPair) {
+static void conversationKeyPairDeallocator(KeyPair* nullable keyPair) {
+    if (!keyPair) return;
     SDL_free(keyPair->key1);
     SDL_free(keyPair->key2);
     SDL_free(keyPair);
@@ -72,6 +75,8 @@ void logicInit(unsigned argc, const char** argv) {
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
     this->conversationsKeyPairsList = listInit((ListDeallocator) &conversationKeyPairDeallocator);
     this->respondingToInvite = false;
+    this->conversationsCryptos = NULL;
+    this->conversationsCryptosSize = 0;
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
@@ -142,7 +147,7 @@ static void onUnusualMessageReceived(int flag, unsigned fromId) {
         case FLAG_INVITE:
             onInviteReceived(fromId);
             break;
-        case FLAG_EXCHANGE_KEYS:
+        case FLAG_EXCHANGE_KEYS: // TODO: -----\/
 
             break;
         case FLAG_EXCHANGE_KEYS_DONE:
@@ -231,6 +236,10 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
             renderSetWindowTitle(this->currentUserName);
         }
     }
+
+    assert(size >= this->conversationsCryptosSize);
+    this->conversationsCryptosSize = size;
+    this->conversationsCryptos = SDL_realloc(this->conversationsCryptos, size * sizeof(Crypto*));
 
     renderShowUsersList(this->currentUserName);
 }
@@ -473,6 +482,9 @@ void logicOnUpdateUsersListClicked(void) {
 
 void logicClean(void) {
     assert(this);
+
+    for (unsigned i = 0; i < this->conversationsCryptosSize; SDL_free(this->conversationsCryptos[i++]));
+    SDL_free(this->conversationsCryptos);
 
     listDestroy(this->conversationsKeyPairsList);
 

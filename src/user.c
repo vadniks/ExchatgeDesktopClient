@@ -20,7 +20,8 @@ User* userCreate(
     return user;
 }
 
-void userDestroy(User* user) {
+void userDestroy(User* nullable user) {
+    if (!user) return;
     SDL_free(user->name);
     SDL_free(user);
 }

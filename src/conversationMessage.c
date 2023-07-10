@@ -31,7 +31,8 @@ ConversationMessage* conversationMessageCreate( // from: name of the sender (is 
     return message;
 }
 
-void conversationMessageDestroy(ConversationMessage* message) {
+void conversationMessageDestroy(ConversationMessage* nullable message) {
+    if (!message) return;
     SDL_free(message->from);
     SDL_free(message->text);
     SDL_free(message);

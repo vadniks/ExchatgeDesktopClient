@@ -6,7 +6,7 @@
 struct Queue_t;
 typedef struct Queue_t Queue;
 
-typedef void (*QueueDeallocator)(void*);
+typedef void (*QueueDeallocator)(void* nullable);
 
 Queue* queueInit(QueueDeallocator nullable deallocator);
 void queuePush(Queue* queue, void* nullable value);
