@@ -129,9 +129,9 @@ static void showInviteDialog(unsigned* fromId) {
         const byte* akaServerPublicKey = cryptoGenerateKeyPairAsServer(crypto);
         SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
 
-        assert(*fromId >= this->conversationsCryptosSize);
         this->conversationsCryptosSize = max(this->conversationsCryptosSize, *fromId);
-        this->conversationsCryptos = SDL_realloc(this->conversationsCryptos, this->conversationsCryptosSize * sizeof(Crypto*));
+        if (*fromId >= this->conversationsCryptosSize)
+            this->conversationsCryptos = SDL_realloc(this->conversationsCryptos, this->conversationsCryptosSize * sizeof(Crypto*));
         this->conversationsCryptos[*fromId] = crypto;
 
         netSend(FLAG_INVITE, body, 0xff, *fromId); // size == 0 - declined, size == == 0b11111111 - accepted
