@@ -16,11 +16,14 @@ STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
 STATIC_CONST_UNSIGNED FONT_SIZE = 14;
 STATIC_CONST_UNSIGNED MAX_U32_DEC_DIGITS_COUNT = 10; // 0xffffffff = 4294967295 10 digits
 
-STATIC_CONST_UNSIGNED STATE_INITIAL = 0;
-STATIC_CONST_UNSIGNED STATE_LOG_IN = 1;
-STATIC_CONST_UNSIGNED STATE_REGISTER = 2;
-STATIC_CONST_UNSIGNED STATE_USERS_LIST = 3;
-STATIC_CONST_UNSIGNED STATE_CONVERSATION = 4;
+typedef enum : unsigned {
+    STATE_INITIAL = 0,
+    STATE_LOG_IN = 1,
+    STATE_REGISTER = 2,
+    STATE_USERS_LIST = 3,
+    STATE_CONVERSATION_SET_UP = 4,
+    STATE_CONVERSATION = 5
+} States;
 
 STATIC_CONST_STRING TITLE = "Exchatge";
 STATIC_CONST_STRING SUBTITLE = "A secured text exchanger";
@@ -65,7 +68,7 @@ THIS(
     SDL_Renderer* renderer;
     struct nk_context* context;
     struct nk_colorf colorf;
-    unsigned state;
+    States state;
     unsigned usernameSize;
     unsigned passwordSize;
     RenderCredentialsReceivedCallback onCredentialsReceived;
@@ -318,6 +321,11 @@ void renderShowUsersList(const char* currentUserName) {
     this->state = STATE_USERS_LIST;
 
     SYNCHRONIZED_END
+}
+
+void renderShowConversationSetUp(void) {
+    assert(this);
+    SYNCHRONIZED(this->state = STATE_CONVERSATION_SET_UP;)
 }
 
 void renderShowConversation(const char* conversationName) {
@@ -788,6 +796,9 @@ static void drawPage(void) {
             break;
         case STATE_USERS_LIST:
             drawUsersList();
+            break;
+        case STATE_CONVERSATION_SET_UP:
+            // TODO
             break;
         case STATE_CONVERSATION:
             drawConversation();
