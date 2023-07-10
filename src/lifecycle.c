@@ -8,7 +8,12 @@
 #include "collections/queue.h"
 #include "lifecycle.h"
 
-#define ASYNC_ACTIONS_QUEUE_SYNCHRONIZED(x) SDL_LockMutex(this->asyncActionsQueueMutex); x SDL_UnlockMutex(this->asyncActionsQueueMutex);
+#define ASYNC_ACTIONS_QUEUE_SYNCHRONIZED(x) \
+    int slmsum = SDL_LockMutex(this->asyncActionsQueueMutex); \
+    assert(!slmsum); \
+    x \
+    slmsum = SDL_UnlockMutex(this->asyncActionsQueueMutex); \
+    assert(!slmsum);
 
 static const unsigned UI_UPDATE_PERIOD = 1000 / 60;
 static const unsigned NET_UPDATE_PERIOD = 60 / 15;
