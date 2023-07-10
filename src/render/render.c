@@ -50,6 +50,10 @@ STATIC_CONST_STRING YOU = "You";
 STATIC_CONST_STRING UPDATE = "Update";
 STATIC_CONST_STRING REGISTRATION_SUCCEEDED = "Registration succeeded";
 STATIC_CONST_STRING USER_IS_OFFLINE = "User is offline";
+STATIC_CONST_STRING INVITATION_RECEIVED = "Invitation received";
+STATIC_CONST_STRING YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER = "You are invited to create conversation by user ";
+STATIC_CONST_STRING ACCEPT = "Accept";
+STATIC_CONST_STRING DECLINE = "Decline";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -330,6 +334,38 @@ void renderShowConversation(const char* conversationName) {
     this->state = STATE_CONVERSATION;
 
     SYNCHRONIZED_END
+}
+
+bool renderShowInviteDialog(const char* fromUserName) {
+    assert(this);
+
+    const unsigned messageSize = SDL_strlen(YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER),
+        xMessageSize = messageSize + 1 + this->usernameSize + 1;
+
+    char xMessage[xMessageSize];
+    SDL_memcpy(xMessage, YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER, messageSize);
+    xMessage[messageSize] = ' ';
+    SDL_memcpy(xMessage + messageSize + 1, fromUserName, this->usernameSize);
+    xMessage[xMessageSize - 1] = 0;
+
+    const SDL_MessageBoxButtonData buttons[2] = {
+        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, ACCEPT },
+        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, DECLINE }
+    };
+
+    SDL_MessageBoxData data = {
+        SDL_MESSAGEBOX_INFORMATION,
+        this->window,
+        INVITATION_RECEIVED,
+        xMessage,
+        2,
+        buttons,
+        NULL
+    };
+
+    int buttonId;
+    SDL_ShowMessageBox(&data, &buttonId); // blocks the thread until user pressed any button or closed the dialog window
+    return !buttonId;
 }
 
 static void postSystemMessage(const char* text, bool error) { // expects a null-terminated string with length in range (0, SYSTEM_MESSAGE_SIZE_MAX]
