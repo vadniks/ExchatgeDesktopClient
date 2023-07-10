@@ -54,6 +54,8 @@ void renderInputBegan(void);
 void renderProcessEvent(SDL_Event* event);
 void renderInputEnded(void);
 
+void renderSetWindowTitle(const char* title); // expects a this->usernameSize-sized string, functions creates a formatted string like '<WINDOW_TITLE>, <title>' ('Exchatge, user1')
+
 void renderShowLogIn(void);
 void renderShowRegister(void);
 void renderShowUsersList(const char* currentUserName); // the name of the user who is currently logged in via this client, this->usernameSize-sized, copied

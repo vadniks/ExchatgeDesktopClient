@@ -70,6 +70,8 @@ void lifecycleAsync(LifecycleAsyncActionFunction function, void* nullable parame
 }
 
 static void sleep(unsigned long delayMillis) {
+    assert(delayMillis > 0 && delayMillis <= 10000);
+
 #   define X_MILLIS(x) (long) delayMillis x (long) 1e3f
     struct timespec timespec;
     timespec.tv_sec = X_MILLIS(/);

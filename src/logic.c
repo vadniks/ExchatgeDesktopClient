@@ -155,8 +155,10 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
                 i % 5 == 0, // TODO: client side's business whether a conversation with a particular user exists
                 netUserInfoConnected(info)
             ));
-        else
+        else {
             SDL_memcpy(this->currentUserName, netUserInfoName(info), NET_USERNAME_SIZE);
+            renderSetWindowTitle(this->currentUserName);
+        }
     }
 
     renderShowUsersList(this->currentUserName);

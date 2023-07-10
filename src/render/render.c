@@ -278,6 +278,19 @@ void renderInputEnded(void) {
     nk_input_end(this->context);
 }
 
+void renderSetWindowTitle(const char* title) {
+    const unsigned winTitleSize = SDL_strlen(TITLE), separatorSize = 2,
+        size = winTitleSize + separatorSize + this->usernameSize + 1;
+
+    char xTitle[size];
+    SDL_memcpy(xTitle, TITLE, winTitleSize);
+    SDL_memcpy(xTitle + winTitleSize, ", ", separatorSize);
+    SDL_memcpy(xTitle + winTitleSize + separatorSize, title, this->usernameSize);
+    xTitle[size - 1] = 0;
+
+    SDL_SetWindowTitle(this->window, xTitle);
+}
+
 void renderShowLogIn(void) {
     assert(this);
     SYNCHRONIZED_BEGIN
