@@ -290,7 +290,7 @@ void renderSetWindowTitle(const char* title) {
     SDL_memcpy(xTitle + winTitleSize + separatorSize, title, this->usernameSize);
     xTitle[size - 1] = 0;
 
-    SDL_SetWindowTitle(this->window, xTitle);
+    SYNCHRONIZED(SDL_SetWindowTitle(this->window, xTitle);)
 }
 
 void renderShowLogIn(void) {
@@ -602,7 +602,7 @@ static void drawUsersList(void) {
 
     float heightMultiplier = 0.8f;
     if (this->loading) heightMultiplier -= 0.05f;
-    if (this->currentSystemMessage) heightMultiplier -= 0.05f;
+    if (this->currentSystemMessage) heightMultiplier -= 0.1f;
 
     nk_layout_row_dynamic(this->context, height * heightMultiplier, 1);
     char groupName[2] = {1, 0};
