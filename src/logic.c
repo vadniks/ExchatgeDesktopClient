@@ -55,7 +55,7 @@ void logicInit(unsigned argc, const char** argv) {
     this->state = STATE_UNAUTHENTICATED;
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
 
-    lifecycleAsync((AsyncActionFunction) &renderShowLogIn, NULL, 1000);
+    lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
 
 bool logicIsAdminMode(void) {
@@ -212,7 +212,7 @@ void logicOnCredentialsReceived(const char* username, const char* password, bool
     SDL_memcpy(data[1], password, NET_UNHASHED_PASSWORD_SIZE);
     *((bool*) data[2]) = logIn;
 
-    lifecycleAsync((AsyncActionFunction) &processCredentials, data, 0);
+    lifecycleAsync((LifecycleAsyncActionFunction) &processCredentials, data, 0);
 }
 
 void logicCredentialsRandomFiller(char* credentials, unsigned size) {
@@ -271,7 +271,7 @@ void logicOnServerShutdownRequested(void) {
     if (!this->netInitialized) return;
 
     renderShowInfiniteProgressBar();
-    lifecycleAsync((AsyncActionFunction) &netShutdownServer, NULL, 0);
+    lifecycleAsync((LifecycleAsyncActionFunction) &netShutdownServer, NULL, 0);
 }
 
 void logicOnReturnFromConversationPageRequested(void) {
@@ -369,7 +369,7 @@ void logicOnSendClicked(const char* text, unsigned size) {
     *((unsigned*) params[1]) = size;
 
     listAdd(this->messagesList, conversationMessageCreate(logicCurrentTimeMillis(), NULL, 0, text, size));
-    lifecycleAsync((AsyncActionFunction) &sendMessage, params, 0);
+    lifecycleAsync((LifecycleAsyncActionFunction) &sendMessage, params, 0);
 }
 
 void logicOnUpdateUsersListClicked(void) {
@@ -378,7 +378,7 @@ void logicOnUpdateUsersListClicked(void) {
     listClear(this->usersList);
     renderShowUsersList(this->currentUserName);
 
-    lifecycleAsync((AsyncActionFunction) &netFetchUsers, NULL, 0);
+    lifecycleAsync((LifecycleAsyncActionFunction) &netFetchUsers, NULL, 0);
 }
 
 void logicClean(void) {

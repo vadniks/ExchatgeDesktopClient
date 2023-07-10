@@ -12,7 +12,7 @@ static const unsigned UI_UPDATE_PERIOD = 1000 / 60;
 static const unsigned NET_UPDATE_PERIOD = 60 / 15;
 
 typedef struct {
-    AsyncActionFunction function;
+    LifecycleAsyncActionFunction function;
     void* nullable parameter;
     unsigned long delayMillis; // delay is happened when the queue pushes this action, so if there are many waiting actions in the queue, the delay may be longer then expected, delay can be zero
 } AsyncAction;
@@ -55,7 +55,7 @@ static unsigned synchronizeThreadUpdates(void) {
 static void lockAsyncActionsQueue(void) { SDL_LockMutex(this->asyncActionsQueueMutex); }
 static void unlockAsyncActionsQueue(void) { SDL_UnlockMutex(this->asyncActionsQueueMutex); }
 
-void lifecycleAsync(AsyncActionFunction function, void* nullable parameter, unsigned long delayMillis) {
+void lifecycleAsync(LifecycleAsyncActionFunction function, void* nullable parameter, unsigned long delayMillis) {
     assert(this);
     if (!(this->running)) return;
 
