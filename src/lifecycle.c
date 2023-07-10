@@ -8,6 +8,8 @@
 #include "collections/queue.h"
 #include "lifecycle.h"
 
+#define ASYNC_ACTIONS_QUEUE_SYNCHRONIZED(x) SDL_LockMutex(this->asyncActionsQueueMutex); x SDL_UnlockMutex(this->asyncActionsQueueMutex);
+
 static const unsigned UI_UPDATE_PERIOD = 1000 / 60;
 static const unsigned NET_UPDATE_PERIOD = 60 / 15;
 
@@ -52,9 +54,6 @@ static unsigned synchronizeThreadUpdates(void) {
     return this->running ? UI_UPDATE_PERIOD : 0;
 }
 
-static void lockAsyncActionsQueue(void) { SDL_LockMutex(this->asyncActionsQueueMutex); }
-static void unlockAsyncActionsQueue(void) { SDL_UnlockMutex(this->asyncActionsQueueMutex); }
-
 void lifecycleAsync(LifecycleAsyncActionFunction function, void* nullable parameter, unsigned long delayMillis) {
     assert(this);
     if (!(this->running)) return;
@@ -64,9 +63,7 @@ void lifecycleAsync(LifecycleAsyncActionFunction function, void* nullable parame
     action->parameter = parameter;
     action->delayMillis = delayMillis;
 
-    lockAsyncActionsQueue();
-    queuePush(this->asyncActionsQueue, action);
-    unlockAsyncActionsQueue();
+    ASYNC_ACTIONS_QUEUE_SYNCHRONIZED(queuePush(this->asyncActionsQueue, action);)
 }
 
 static void sleep(unsigned long delayMillis) {
@@ -85,14 +82,9 @@ static void asyncActionDeallocator(AsyncAction* action) { SDL_free(action); }
 
 static void asyncActionsThreadLooper(void) {
     while (this->running) {
-        lockAsyncActionsQueue();
-        if (!queueSize(this->asyncActionsQueue)) {
-            unlockAsyncActionsQueue();
-            continue;
-        }
+        if (!queueSize(this->asyncActionsQueue)) continue;
 
-        AsyncAction* action = queuePop(this->asyncActionsQueue);
-        unlockAsyncActionsQueue();
+        ASYNC_ACTIONS_QUEUE_SYNCHRONIZED(AsyncAction* action = queuePop(this->asyncActionsQueue);)
 
         if (action->delayMillis > 0) sleep(action->delayMillis);
         (*(action->function))(action->parameter);
