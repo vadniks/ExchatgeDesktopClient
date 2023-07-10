@@ -15,9 +15,17 @@ STATIC_CONST_UNSIGNED STATE_AWAITING_AUTHENTICATION = 1;
 STATIC_CONST_UNSIGNED STATE_AUTHENTICATED = 2;
 STATIC_CONST_UNSIGNED STATE_EXCHANGING_MESSAGES = 3;
 
-STATIC_CONST_INT FLAG_INVITE = (int) 0xa0000000;
-STATIC_CONST_INT FLAG_EXCHANGE = (int) 0xb0000000;
-STATIC_CONST_INT FLAG_PROCEED = (int) 0xc0000000;
+STATIC_CONST_INT FLAG_INVITE = (int) 0xa0000000; // firstly current user (A, is treated as a client) invites another user (B, is treated as a server) by sending him an invite; if B denies the invite he replies with a message containing this flag and body size = 0
+STATIC_CONST_INT FLAG_EXCHANGE_KEYS = (int) 0xb0000000; // if B accepts the invite, he replies with his public key, which A treats as a server key (allowing not to rewrite the crypto api)
+STATIC_CONST_INT FLAG_EXCHANGE_KEYS_DONE = (int) 0xc0000000; // A receives the B's key, generates his key, computes shared keys and sends his public key to B; B receives it and computes shared keys too
+STATIC_CONST_INT FLAG_EXCHANGE_HEADERS = (int) 0xd0000000; // Next part, B generates encoder stream and sends his header to A
+STATIC_CONST_INT FLAG_EXCHANGE_HEADERS_DONE = (int) 0xd0000000; // A receives the B's encoder header, creates decoder and encoder, then A sends his encoder header to B
+STATIC_CONST_INT FLAG_MESSAGING = (int) 0xf0000000; // B receives A's header and creates decoder stream. After that, both A and B have keys and working encoders/decoders to begin an encrypted conversation
+
+typedef struct {
+    byte* key1;
+    byte* key2;
+} KeyPair;
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
@@ -29,6 +37,7 @@ THIS(
     volatile unsigned state;
     char* currentUserName; // TODO: the server shouldn't know groups in which users are, so group information stays on clients, the server just transmits messages
     unsigned toUserId; // the id of the user, the current user (logged in via this client) wanna speak to
+    List* conversationsKeyPairsList; // <KeyPair*>, stores key pair for each conversation
 )
 #pragma clang diagnostic pop
 
@@ -45,6 +54,12 @@ static void parseArguments(unsigned argc, const char** argv) {
     this->adminMode = !SDL_memcmp(argv[1], pattern, patternSize);
 }
 
+static void conversationKeyPairDeallocator(KeyPair* keyPair) {
+    SDL_free(keyPair->key1);
+    SDL_free(keyPair->key2);
+    SDL_free(keyPair);
+}
+
 void logicInit(unsigned argc, const char** argv) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -54,6 +69,7 @@ void logicInit(unsigned argc, const char** argv) {
     parseArguments(argc, argv);
     this->state = STATE_UNAUTHENTICATED;
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
+    this->conversationsKeyPairsList = listInit((ListDeallocator) &conversationKeyPairDeallocator);
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
@@ -94,8 +110,19 @@ static const User* nullable findUser(unsigned id) {
     return NULL;
 }
 
-static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* message, unsigned size) {
+static void onUnusualMessageReceived(int flag, unsigned fromId) {
+    switch (flag) {
+
+    }
+}
+
+static void onMessageReceived(int flag, unsigned long timestamp, unsigned fromId, const byte* message, unsigned size) {
     assert(this);
+
+    if (flag != NET_FLAG_PROCEED) {
+        onUnusualMessageReceived(flag, fromId);
+        return;
+    }
 
     const User* user = findUser(fromId);
     assert(user);
@@ -227,6 +254,16 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
     logIn ? renderShowLogIn() : renderShowRegister();
 }
 
+static void requestKeyExchangeWithAnotherUser(unsigned* id) {
+    assert(this);
+
+    byte body[NET_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    netSend(FLAG_EXCHANGE_KEYS, body, 0, *id);
+
+    SDL_free(id);
+}
+
 static void startConversation(unsigned id) {
     const User* user = findUser(id);
     assert(user);
@@ -236,7 +273,13 @@ static void startConversation(unsigned id) {
         return;
     }
 
-    renderShowConversation(user->name);
+    renderShowInfiniteProgressBar();
+
+    unsigned* xId = SDL_malloc(sizeof(int));
+    *xId = id;
+    lifecycleAsync((LifecycleAsyncActionFunction) &requestKeyExchangeWithAnotherUser, xId, 0);
+
+//    renderShowConversation(user->name);
 }
 
 static void continueConversation(unsigned id) {
@@ -386,6 +429,8 @@ void logicOnUpdateUsersListClicked(void) {
 
 void logicClean(void) {
     assert(this);
+
+    listDestroy(this->conversationsKeyPairsList);
 
     SDL_free(this->currentUserName);
 
