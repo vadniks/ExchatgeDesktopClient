@@ -124,10 +124,10 @@ static void showInviteDialog(unsigned* fromId) {
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
-    if (!renderShowInviteDialog(fromUser->name))
-        netSend(FLAG_INVITE, body, 0, *fromId); // size == 0 - declined, size == == 0b11111111 - accepted
+    if (renderShowInviteDialog(fromUser->name))
+        netSend(FLAG_INVITE, body, 0xff, *fromId); // size == 0 - declined, size == == 0b11111111 - accepted
     else
-        netSend(FLAG_INVITE, body, 0xff, *fromId);
+        netSend(FLAG_INVITE, body, 0, *fromId);
 
     this->respondingToInvite = false;
     SDL_free(fromId);
