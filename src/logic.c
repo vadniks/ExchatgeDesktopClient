@@ -124,9 +124,18 @@ static void showInviteDialog(unsigned* fromId) {
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
-    if (renderShowInviteDialog(fromUser->name))
+    if (renderShowInviteDialog(fromUser->name)) {
+        Crypto* crypto = cryptoInit();
+        const byte* akaServerPublicKey = cryptoGenerateKeyPairAsServer(crypto);
+        SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
+
+        assert(*fromId >= this->conversationsCryptosSize);
+        this->conversationsCryptosSize = max(this->conversationsCryptosSize, *fromId);
+        this->conversationsCryptos = SDL_realloc(this->conversationsCryptos, this->conversationsCryptosSize * sizeof(Crypto*));
+        this->conversationsCryptos[*fromId] = crypto;
+
         netSend(FLAG_INVITE, body, 0xff, *fromId); // size == 0 - declined, size == == 0b11111111 - accepted
-    else
+    } else
         netSend(FLAG_INVITE, body, 0, *fromId);
 
     this->respondingToInvite = false;
@@ -236,10 +245,6 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
             renderSetWindowTitle(this->currentUserName);
         }
     }
-
-    assert(size >= this->conversationsCryptosSize);
-    this->conversationsCryptosSize = size;
-    this->conversationsCryptos = SDL_realloc(this->conversationsCryptos, size * sizeof(Crypto*));
 
     renderShowUsersList(this->currentUserName);
 }
