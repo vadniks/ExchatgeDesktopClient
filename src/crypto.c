@@ -158,9 +158,10 @@ bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedByt
     ) != 0)
         return false;
 
+    int sm = SDL_memcmp(unsignedBytes, generatedUnsigned, unsignedSize);
     assert(
         unsignedSize == (unsigned) generatedUnsignedSize &&
-        !SDL_memcmp(unsignedBytes, generatedUnsigned, unsignedSize)
+        !sm
     );
     return true;
 }

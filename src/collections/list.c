@@ -36,15 +36,6 @@ unsigned listSize(const List* list) {
     return list->size;
 }
 
-void listIterateOver(const List* list, bool fromStart, void (*action)(void*)) {
-    assert(list && action);
-
-    if (fromStart)
-        for (unsigned i = 0; i < list->size; (*action)(list->values[i++]));
-    else
-        for (unsigned i = list->size > 0 ? list->size - 1 : 0; i > 0; (*action)(list->values[i--]));
-}
-
 static void destroyValuesIfNotEmpty(List* list) {
     if (!list->deallocator) return;
     for (unsigned i = 0; i < list->size; (*(list->deallocator))(list->values[i++]));

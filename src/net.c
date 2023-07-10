@@ -197,10 +197,12 @@ bool netInit(
     this->userInfosSize = 0;
     this->serverKeyStub = SDL_calloc(CRYPTO_KEY_SIZE, sizeof(byte));
 
-    assert(!SDLNet_Init());
+    int sni = SDLNet_Init();
+    assert(!sni);
 
     IPaddress address;
-    assert(!SDLNet_ResolveHost(&address, HOST, PORT));
+    int snrh = SDLNet_ResolveHost(&address, HOST, PORT);
+    assert(!snrh);
 
     this->socket = SDLNet_TCP_OpenClient(&address);
     if (!this->socket) {
@@ -210,7 +212,8 @@ bool netInit(
 
     this->socketSet = SDLNet_AllocSocketSet(1);
     assert(this->socketSet);
-    assert(SDLNet_TCP_AddSocket(this->socketSet, this->socket) == 1);
+    int sntas = SDLNet_TCP_AddSocket(this->socketSet, this->socket);
+    assert(sntas == 1);
 
     initiateSecuredConnection();
     this->messageBuffer = SDL_malloc(this->encryptedMessageSize);
@@ -296,7 +299,8 @@ static void processErrors(const Message* message) {
 static void onUsersFetched(const Message* message);
 
 static void processMessagesFromServer(const Message* message) {
-    assert(checkServerToken(message->token));
+    int cst = checkServerToken(message->token);
+    assert(cst);
 
     switch (message->flag) {
         case FLAG_LOGGED_IN:
