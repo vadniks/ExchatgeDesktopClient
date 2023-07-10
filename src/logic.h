@@ -5,10 +5,7 @@
 #include "defs.h"
 #include "collections/list.h"
 
-typedef void (*LogicAsyncTask)(void (*action)(void));
-typedef void (*LogicDelayedTask)(unsigned seconds, void (*action)(void));
-
-void logicInit(unsigned argc, const char** argv, LogicAsyncTask asyncTask, LogicDelayedTask delayedTask);
+void logicInit(unsigned argc, const char** argv);
 bool logicIsAdminMode(void);
 void logicNetListen(void); // causes net module to listen for connection updates
 const List* logicUsersList(void); // returns permanent users list in which actual user objects will be inserted/updated/removed later by the net module

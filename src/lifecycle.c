@@ -1,14 +1,21 @@
 
 #include <assert.h>
-#include <unistd.h>
+#include <time.h>
 #include "render/render.h"
 #include "defs.h"
 #include "net.h"
 #include "logic.h"
+#include "collections/queue.h"
 #include "lifecycle.h"
 
 static const unsigned UI_UPDATE_PERIOD = 1000 / 60;
 static const unsigned NET_UPDATE_PERIOD = 60 / 15;
+
+typedef struct {
+    AsyncActionFunction function;
+    void* nullable parameter;
+    unsigned long delayMillis; // delay is happened when the queue pushes this action, so if there are many waiting actions in the queue, the delay may be longer then expected, delay can be zero
+} AsyncAction;
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
@@ -19,6 +26,9 @@ THIS(
     SDL_cond* netUpdateCond;
     SDL_mutex* netUpdateLock;
     SDL_Thread* netThread;
+    Queue* asyncActionsQueue; // <AsyncAction*>
+    SDL_mutex* asyncActionsQueueMutex;
+    SDL_Thread* asyncActionsThread;
 )
 #pragma clang diagnostic pop
 
@@ -42,20 +52,52 @@ static unsigned synchronizeThreadUpdates(void) {
     return this->running ? UI_UPDATE_PERIOD : 0;
 }
 
-static void async(void (*action)(void)) {
-    SDL_DetachThread(SDL_CreateThread(
-        (int (*)(void*)) action,
-        "asyncActionThread",
-        NULL
-    ));
+static void lockAsyncActionsQueue(void) { SDL_LockMutex(this->asyncActionsQueueMutex); }
+static void unlockAsyncActionsQueue(void) { SDL_UnlockMutex(this->asyncActionsQueueMutex); }
+
+void lifecycleAsync(AsyncActionFunction function, void* nullable parameter, unsigned long delayMillis) {
+    assert(this);
+    if (!(this->running)) return;
+
+    AsyncAction* action = SDL_malloc(sizeof *action);
+    action->function = function;
+    action->parameter = parameter;
+    action->delayMillis = delayMillis;
+
+    lockAsyncActionsQueue();
+    queuePush(this->asyncActionsQueue, action);
+    unlockAsyncActionsQueue();
 }
 
-static void delayed(unsigned seconds, void (*action)(void)) {
-    sleep(seconds);
-    (*(action))();
+static void sleep(unsigned long delayMillis) {
+#   define X_MILLIS(x) (long) delayMillis x (long) 1e3f
+    struct timespec timespec;
+    timespec.tv_sec = X_MILLIS(/);
+    timespec.tv_nsec = (X_MILLIS(%)) * (long) 1e6f;
+#   undef X_MILLIS
+
+    nanosleep(&timespec, NULL);
 }
 
-static void showLogInUiDelayed(void) { delayed(1, &renderShowLogIn); } // causes render module to show splash page until logIn page is queried one second later
+static void asyncActionDeallocator(AsyncAction* action) { SDL_free(action); }
+
+static void asyncActionsThreadLooper(void) {
+    while (this->running) {
+        lockAsyncActionsQueue();
+        if (!queueSize(this->asyncActionsQueue)) {
+            unlockAsyncActionsQueue();
+            continue;
+        }
+
+        AsyncAction* action = queuePop(this->asyncActionsQueue);
+        unlockAsyncActionsQueue();
+
+        if (action->delayMillis > 0) sleep(action->delayMillis);
+        (*(action->function))(action->parameter);
+
+        asyncActionDeallocator(action);
+    }
+}
 
 bool lifecycleInit(unsigned argc, const char** argv) {
     this = SDL_malloc(sizeof *this);
@@ -64,6 +106,9 @@ bool lifecycleInit(unsigned argc, const char** argv) {
     this->netUpdateCond = SDL_CreateCond();
     this->netUpdateLock = SDL_CreateMutex();
     this->netThread = SDL_CreateThread((int (*)(void*)) &netThread, "netThread", NULL);
+    this->asyncActionsQueue = queueInit((QueueDeallocator) &asyncActionDeallocator);
+    this->asyncActionsQueueMutex = SDL_CreateMutex();
+    this->asyncActionsThread = SDL_CreateThread((SDL_ThreadFunction) &asyncActionsThreadLooper, "asyncActionsThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
     assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
@@ -83,11 +128,10 @@ bool lifecycleInit(unsigned argc, const char** argv) {
         &logicOnSendClicked,
         &logicOnUpdateUsersListClicked
     );
-    logicInit(argc, argv, &async, &delayed);
+    logicInit(argc, argv);
     renderSetAdminMode(logicIsAdminMode());
     renderSetUsersList(logicUsersList());
     renderSetMessagesList(logicMessagesList());
-    async(&showLogInUiDelayed);
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(
         UI_UPDATE_PERIOD,
@@ -131,6 +175,10 @@ void lifecycleLoop(void) {
 
 void lifecycleClean(void) {
     if (!this) return;
+
+    SDL_WaitThread(this->asyncActionsThread, NULL);
+    SDL_DestroyMutex(this->asyncActionsQueueMutex);
+    queueDestroy(this->asyncActionsQueue);
 
     logicClean();
 

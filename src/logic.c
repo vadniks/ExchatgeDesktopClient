@@ -7,6 +7,7 @@
 #include "net.h"
 #include "user.h"
 #include "conversationMessage.h"
+#include "lifecycle.h"
 #include "logic.h"
 
 STATIC_CONST_UNSIGNED STATE_UNAUTHENTICATED = 0;
@@ -23,8 +24,6 @@ STATIC_CONST_INT FLAG_PROCEED = (int) 0xc0000000;
 THIS(
     volatile bool netInitialized;
     List* usersList; // <User*>
-    LogicAsyncTask asyncTask;
-    LogicDelayedTask delayedTask;
     List* messagesList; // <ConversationMessage*>
     bool adminMode;
     volatile unsigned state;
@@ -46,17 +45,17 @@ static void parseArguments(unsigned argc, const char** argv) {
     this->adminMode = !SDL_memcmp(argv[1], pattern, patternSize);
 }
 
-void logicInit(unsigned argc, const char** argv, LogicAsyncTask asyncTask, LogicDelayedTask delayedTask) {
+void logicInit(unsigned argc, const char** argv) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
     this->netInitialized = false;
     this->usersList = userInitList();
-    this->asyncTask = asyncTask;
-    this->delayedTask = delayedTask;
     this->messagesList = conversationMessageInitList();
     parseArguments(argc, argv);
     this->state = STATE_UNAUTHENTICATED;
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
+
+    lifecycleAsync((AsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
 
 bool logicIsAdminMode(void) {
@@ -213,7 +212,7 @@ void logicOnCredentialsReceived(const char* username, const char* password, bool
     SDL_memcpy(data[1], password, NET_UNHASHED_PASSWORD_SIZE);
     *((bool*) data[2]) = logIn;
 
-    SDL_DetachThread(SDL_CreateThread((int (*)(void*)) &processCredentials, "credentialsProcessThread", data));
+    lifecycleAsync((AsyncActionFunction) &processCredentials, data, 0);
 }
 
 void logicCredentialsRandomFiller(char* credentials, unsigned size) {
@@ -272,7 +271,7 @@ void logicOnServerShutdownRequested(void) {
     if (!this->netInitialized) return;
 
     renderShowInfiniteProgressBar();
-    (*(this->asyncTask))(&netShutdownServer);
+    lifecycleAsync((AsyncActionFunction) &netShutdownServer, NULL, 0);
 }
 
 void logicOnReturnFromConversationPageRequested(void) {
@@ -370,7 +369,7 @@ void logicOnSendClicked(const char* text, unsigned size) {
     *((unsigned*) params[1]) = size;
 
     listAdd(this->messagesList, conversationMessageCreate(logicCurrentTimeMillis(), NULL, 0, text, size));
-    SDL_DetachThread(SDL_CreateThread((SDL_ThreadFunction) &sendMessage, "sendThread", params));
+    lifecycleAsync((AsyncActionFunction) &sendMessage, params, 0);
 }
 
 void logicOnUpdateUsersListClicked(void) {
@@ -379,7 +378,7 @@ void logicOnUpdateUsersListClicked(void) {
     listClear(this->usersList);
     renderShowUsersList(this->currentUserName);
 
-    (*(this->asyncTask))(&netFetchUsers);
+    lifecycleAsync((AsyncActionFunction) &netFetchUsers, NULL, 0);
 }
 
 void logicClean(void) {
