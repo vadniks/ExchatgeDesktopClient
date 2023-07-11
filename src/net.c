@@ -574,7 +574,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
     return crypto;
 }
 
-bool netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
+Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     assert(this);
     assert(this->settingUpConversation);
 

@@ -170,7 +170,8 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     const User* user = findUser(xFromId);
     assert(user);
 
-    netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
+    Crypto* crypto = netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
+    SDL_free(crypto); // TODO: test only
     renderSetControlsBlocking(false);
 }
 
