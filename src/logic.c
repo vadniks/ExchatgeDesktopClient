@@ -246,6 +246,15 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
     logIn ? renderShowLogIn() : renderShowRegister();
 }
 
+static void createConversation(unsigned* id) {
+    assert(id);
+    Crypto* crypto = netCreateConversation(*id);
+    SDL_free(id);
+    renderHideInfiniteProgressBar();
+
+    SDL_free(crypto); // TODO: test only
+}
+
 static void startConversation(unsigned id) {
     const User* user = findUser(id);
     assert(user);
@@ -257,7 +266,9 @@ static void startConversation(unsigned id) {
 
     renderShowInfiniteProgressBar();
 
-//    renderShowConversation(user->name);
+    unsigned* xId = SDL_malloc(sizeof(int));
+    *xId = id;
+    lifecycleAsync((LifecycleAsyncActionFunction) &createConversation, xId, 0);
 }
 
 static void continueConversation(unsigned id) {
