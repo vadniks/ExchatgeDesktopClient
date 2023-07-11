@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "defs.h"
 
-typedef void (*NetMessageReceivedCallback)(unsigned long/*timestamp*/, unsigned/*fromId*/, const byte*/*message*/, unsigned/*size*/);
+typedef void (*NetMessageReceivedCallback)(int/*flag*/, unsigned long/*timestamp*/, unsigned/*fromId*/, const byte*/*message*/, unsigned/*size*/);
 typedef void (*NetNotifierCallback)(bool); // true on success
 typedef void (*NetServiceCallback)(int); // receives message's flag
 typedef void (*NetCallback)(void);

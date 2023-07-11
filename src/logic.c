@@ -94,7 +94,7 @@ static const User* nullable findUser(unsigned id) {
     return NULL;
 }
 
-static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* message, unsigned size) {
+static void onMessageReceived(int flag, unsigned long timestamp, unsigned fromId, const byte* message, unsigned size) {
     assert(this);
 
     const User* user = findUser(fromId);
