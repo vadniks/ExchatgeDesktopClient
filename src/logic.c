@@ -171,13 +171,16 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     assert(user);
 
     Crypto* crypto = netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
+    SDL_Log("establishing secured connection with inviter %s", crypto ? "succeeded" : "failed");
     SDL_free(crypto); // TODO: test only
     renderSetControlsBlocking(false);
+    renderHideInfiniteProgressBar();
 }
 
 static void onConversationSetUpInviteReceived(unsigned fromId) {
     unsigned* xFromId = SDL_malloc(sizeof(int));
     *xFromId = fromId;
+    renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);
     lifecycleAsync((LifecycleAsyncActionFunction) &replyToConversationSetUpInvite, xFromId, 0);
 }
@@ -252,6 +255,7 @@ static void createConversation(unsigned* id) {
     SDL_free(id);
     renderHideInfiniteProgressBar();
 
+    SDL_Log("establishing secured connection with invited user %s", crypto ? "succeeded" : "failed");
     SDL_free(crypto); // TODO: test only
 }
 
