@@ -595,6 +595,7 @@ bool netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         cryptoDestroy(crypto);
         return NULL;
     }
+
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, CRYPTO_KEY_SIZE, fromId)) {
