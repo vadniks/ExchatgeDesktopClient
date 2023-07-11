@@ -162,6 +162,10 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
     renderShowUsersList(this->currentUserName);
 }
 
+static void onConversationSetUpInviteReceived(unsigned fromId) {
+
+}
+
 static void processCredentials(void** data) {
     const char* username = data[0];
     const char* password = data[1];
@@ -175,7 +179,8 @@ static void processCredentials(void** data) {
         &onRegisterResult,
         &onDisconnected,
         &logicCurrentTimeMillis,
-        &onUsersFetched
+        &onUsersFetched,
+        &onConversationSetUpInviteReceived
     );
 
     if (!this->netInitialized) {

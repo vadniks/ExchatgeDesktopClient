@@ -92,6 +92,8 @@ THIS(
     NetUserInfo** userInfos;
     unsigned userInfosSize;
     byte* serverKeyStub;
+    volatile bool settingUpConversation;
+    NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived;
 )
 #pragma clang diagnostic pop
 
@@ -177,7 +179,8 @@ bool netInit(
     NetNotifierCallback onRegisterResult,
     NetCallback onDisconnected,
     NetCurrentTimeMillisGetter currentTimeMillisGetter,
-    NetOnUsersFetched onUsersFetched
+    NetOnUsersFetched onUsersFetched,
+    NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
@@ -203,6 +206,8 @@ bool netInit(
     this->userInfos = NULL;
     this->userInfosSize = 0;
     this->serverKeyStub = SDL_calloc(CRYPTO_KEY_SIZE, sizeof(byte));
+    this->settingUpConversation = false;
+    this->onConversationSetUpInviteReceived = onConversationSetUpInviteReceived;
 
     int sni = SDLNet_Init();
     assert(!sni);
@@ -333,7 +338,17 @@ static void processMessagesFromServer(const Message* message) {
     }
 }
 
+static void processConversationSetUpMessage(const Message* message) {
+    if (message->flag != FLAG_EXCHANGE_KEYS) assert(false);
+    assert(!(this->settingUpConversation));
+
+    this->settingUpConversation = true;
+    (*(this->onConversationSetUpInviteReceived))(message->from);
+}
+
 static void processMessage(const Message* message) {
+    if (this->settingUpConversation) return;
+
     bool fromServer = message->from == FROM_SERVER;
     if (fromServer) processMessagesFromServer(message);
 
@@ -341,7 +356,12 @@ static void processMessage(const Message* message) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
             break;
         case STATE_AUTHENTICATED:
-            if (!fromServer) (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
+            if (fromServer) break;
+
+            if (message->flag != NET_FLAG_PROCEED)
+                processConversationSetUpMessage(message);
+            else
+                (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
             break;
     }
 }
@@ -482,9 +502,12 @@ static void onUsersFetched(const Message* message) {
 }
 
 Crypto* nullable netCreateConversation(unsigned id) {
-    byte body[NET_MESSAGE_BODY_SIZE];
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    assert(this);
+    this->settingUpConversation = true;
 
+    byte body[NET_MESSAGE_BODY_SIZE];
+
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     if (!netSend(NET_FLAG_PROCEED, body, 0, id)) return NULL;
 
     Message* message;
@@ -493,6 +516,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
         || message->flag != FLAG_EXCHANGE_KEYS
         || message->size != CRYPTO_KEY_SIZE)
     {
+        this->settingUpConversation = false;
         SDL_free(message);
         return NULL;
     }
@@ -504,6 +528,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
     Crypto* crypto = cryptoInit();
 
     if (!cryptoExchangeKeys(crypto, akaServerPublicKey)) {
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -511,6 +536,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, cryptoClientPublicKey(crypto), CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS_DONE, body, CRYPTO_KEY_SIZE, id)) {
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -519,6 +545,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
         || message->flag != FLAG_EXCHANGE_HEADERS
         || message->size != CRYPTO_HEADER_SIZE)
     {
+        this->settingUpConversation = false;
         SDL_free(message);
         cryptoDestroy(crypto);
         return NULL;
@@ -530,6 +557,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
 
     byte* akaClientStreamHeader = cryptoInitializeCoderStreams(crypto, akaServerStreamHeader);
     if (!akaClientStreamHeader) {
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -538,10 +566,100 @@ Crypto* nullable netCreateConversation(unsigned id) {
     SDL_memcpy(body, akaClientStreamHeader, CRYPTO_HEADER_SIZE);
     SDL_free(akaClientStreamHeader);
     if (!netSend(FLAG_EXCHANGE_HEADERS_DONE, body, CRYPTO_HEADER_SIZE, id)) {
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
 
+    return crypto;
+}
+
+bool netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
+    assert(this);
+    assert(this->settingUpConversation);
+
+    byte body[NET_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+
+    if (!accept) {
+        this->settingUpConversation = true;
+        netSend(FLAG_EXCHANGE_KEYS, body, 0, fromId);
+        return NULL;
+    }
+
+    Crypto* crypto = cryptoInit();
+
+    const byte* akaServerPublicKey = cryptoGenerateKeyPairAsServer(crypto);
+    if (!akaServerPublicKey) {
+        this->settingUpConversation = false;
+        cryptoDestroy(crypto);
+        return NULL;
+    }
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
+    if (!netSend(FLAG_EXCHANGE_KEYS, body, CRYPTO_KEY_SIZE, fromId)) {
+        this->settingUpConversation = false;
+        cryptoDestroy(crypto);
+        return NULL;
+    }
+
+    Message* message = NULL;
+
+    if (!(message = receive())
+        || message->flag != FLAG_EXCHANGE_KEYS_DONE
+        || message->size != CRYPTO_KEY_SIZE)
+    {
+        this->settingUpConversation = false;
+        cryptoDestroy(crypto);
+        SDL_free(message);
+        return NULL;
+    }
+
+    byte akaClientPublicKey[CRYPTO_KEY_SIZE];
+    SDL_memcpy(akaClientPublicKey, message->body, CRYPTO_KEY_SIZE);
+    SDL_free(message);
+    if (!cryptoExchangeKeysAsServer(crypto, akaClientPublicKey)) {
+        this->settingUpConversation = false;
+        cryptoDestroy(crypto);
+        return NULL;
+    }
+
+    byte* akaServerStreamHeader = cryptoCreateEncoderAsServer(crypto);
+    if (!akaServerStreamHeader) {
+        this->settingUpConversation = false;
+        cryptoDestroy(crypto);
+        return NULL;
+    }
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    SDL_memcpy(body, akaServerStreamHeader, CRYPTO_HEADER_SIZE);
+    SDL_free(akaServerStreamHeader);
+
+    if (!netSend(FLAG_EXCHANGE_HEADERS, body, CRYPTO_HEADER_SIZE, fromId)) {
+        this->settingUpConversation = false;
+        cryptoDestroy(crypto);
+        return NULL;
+    }
+
+    if (!(message = receive())
+        || message->flag != FLAG_EXCHANGE_KEYS_DONE
+        || message->size != CRYPTO_KEY_SIZE)
+    {
+        this->settingUpConversation = false;
+        SDL_free(message);
+        cryptoDestroy(crypto);
+        return NULL;
+    }
+
+    byte akaClientStreamHeader[CRYPTO_HEADER_SIZE];
+    SDL_memcpy(akaClientStreamHeader, message->body, CRYPTO_HEADER_SIZE);
+    SDL_free(message);
+    if (!cryptoCreateDecoderStreamAsServer(crypto, akaClientStreamHeader)) {
+        this->settingUpConversation = false;
+        cryptoDestroy(crypto);
+        return NULL;
+    }
+
+    this->settingUpConversation = false;
     return crypto;
 }
 

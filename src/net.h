@@ -10,6 +10,7 @@ typedef void (*NetNotifierCallback)(bool); // true on success
 typedef void (*NetServiceCallback)(int); // receives message's flag
 typedef void (*NetCallback)(void);
 typedef unsigned long (*NetCurrentTimeMillisGetter)(void);
+typedef void (*NetOnConversationSetUpInviteReceived)(unsigned/*fromId*/); // must call replyToPendingConversationSetUpInvite() after this
 
 struct NetUserInfo_t;
 typedef struct NetUserInfo_t NetUserInfo;
@@ -29,7 +30,8 @@ bool netInit( // blocks the caller thread until secure connection is established
     NetNotifierCallback onRegisterResult,
     NetCallback onDisconnected, // cleanup is performed after this callback returns, so module needs to be reinitialized after this callback ends to continue working with this module
     NetCurrentTimeMillisGetter currentTimeMillisGetter,
-    NetOnUsersFetched onUsersFetched
+    NetOnUsersFetched onUsersFetched,
+    NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived
 ); // returns true on success
 
 void netLogIn(const char* username, const char* password); // in case of failure the server disconnects client
@@ -43,4 +45,5 @@ unsigned netUserInfoId(const NetUserInfo* info);
 bool netUserInfoConnected(const NetUserInfo* info);
 const byte* netUserInfoName(const NetUserInfo* info);
 Crypto* nullable netCreateConversation(unsigned id); // returns the Crypto object associated with newly created conversation on success, expects the id of the user, the current user wanna create conversation with; blocks the caller thread until either a denial received or creation of the conversation succeeds (if an acceptation received) or fails
+bool netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId); // must be called after getting invoked by the onConversationSetUpInviteReceived callback to reply to inviter, returns true on success; blocks the caller thread just like createConversation does
 void netClean(void);
