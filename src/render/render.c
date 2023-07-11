@@ -102,6 +102,7 @@ THIS(
     RenderOnSendClicked onSendClicked;
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked;
     char* currentUserName; // the name of the user who is currently logged in this client
+    bool allowInput;
 )
 #pragma clang diagnostic pop
 
@@ -201,6 +202,7 @@ void renderInit(
     this->onSendClicked = onSendClicked;
     this->onUpdateUsersListClicked = onUpdateUsersListClicked;
     this->currentUserName = SDL_calloc(this->usernameSize, sizeof(char));
+    this->allowInput = true;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -366,6 +368,11 @@ bool renderShowInviteDialog(const char* fromUserName) {
     int buttonId;
     SDL_ShowMessageBox(&data, &buttonId); // blocks the thread until user pressed any button or closed the dialog window
     return !buttonId;
+}
+
+void renderSetControlsBlocking(bool blocking) {
+    assert(this);
+    SYNCHRONIZED(this->allowInput = !blocking;)
 }
 
 static void postSystemMessage(const char* text, bool error) { // expects a null-terminated string with length in range (0, SYSTEM_MESSAGE_SIZE_MAX]

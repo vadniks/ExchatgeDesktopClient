@@ -7,6 +7,7 @@
 
 #define min(x, y) (x < y ? x : y)
 #define max(x, y) (x > y ? x : y)
+#define boolToStr(x) (x ? "true" : "false")
 
 #define staticAssert(x) _Static_assert(x, "")
 

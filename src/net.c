@@ -5,23 +5,21 @@
 
 #include <sdl_net/SDL_net.h>
 #include <assert.h>
-#include "crypto.h"
 #include "net.h"
 
 staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8 && sizeof(void*) == 8);
 
-#define STATE(x, y)  STATIC_CONST_UNSIGNED STATE_ ## x = y;
 #define FLAG(x, y) STATIC_CONST_INT FLAG_ ## x = y;
 
-//STATE(DISCONNECTED, 0)
-STATE(SERVER_PUBLIC_KEY_RECEIVED, 1)
-STATE(CLIENT_PUBLIC_KEY_SENT, 2)
-STATE(SERVER_CODER_HEADER_RECEIVED, 3)
-STATE(CLIENT_CODER_HEADER_SENT, 4)
-STATE(SECURE_CONNECTION_ESTABLISHED, STATE_CLIENT_CODER_HEADER_SENT)
-STATE(AUTHENTICATED, 5)
-//STATE(FINISHED, 6)
-STATE(FINISHED_WITH_ERROR, 7)
+typedef enum : unsigned {
+    STATE_SERVER_PUBLIC_KEY_RECEIVED = 1,
+    STATE_CLIENT_PUBLIC_KEY_SENT = 2,
+    STATE_SERVER_CODER_HEADER_RECEIVED = 3,
+    STATE_CLIENT_CODER_HEADER_SENT = 4,
+    STATE_SECURE_CONNECTION_ESTABLISHED = STATE_CLIENT_CODER_HEADER_SENT,
+    STATE_AUTHENTICATED = 5,
+    STATE_FINISHED_WITH_ERROR = 7
+} States;
 
 static const char* HOST = "127.0.0.1";
 STATIC_CONST_UNSIGNED PORT = 8080;
@@ -36,20 +34,29 @@ STATIC_CONST_UNSIGNED TOKEN_SIZE = TOKEN_UNSIGNED_VALUE_SIZE + 40 + TOKEN_TRAILI
 STATIC_CONST_UNSIGNED MESSAGE_HEAD_SIZE = INT_SIZE * 6 + LONG_SIZE + TOKEN_SIZE; // 96
 const unsigned NET_MESSAGE_BODY_SIZE = MESSAGE_SIZE - MESSAGE_HEAD_SIZE; // 928
 
-const int NET_FLAG_PROCEED = 0x00000000;
-//FLAG(FINISH, 0x00000001)
-//FLAG(FINISH_WITH_ERROR, 0x00000002)
-//FLAG(FINISH_TO_RECONNECT, 0x00000003)
-FLAG(LOG_IN, 0x00000004)
-FLAG(LOGGED_IN, 0x00000005)
-FLAG(REGISTER, 0x00000006)
-FLAG(REGISTERED, 0x00000007)
-//FLAG(SUCCESS, 0x00000008)
-FLAG(ERROR, 0x00000009)
-FLAG(UNAUTHENTICATED, 0x0000000a)
-FLAG(ACCESS_DENIED, 0x0000000b)
-FLAG(FETCH_USERS, 0x0000000c)
-FLAG(SHUTDOWN, 0x7fffffff)
+typedef enum : int {
+    FLAG_PROCEED = 0x00000000,
+    FLAG_LOG_IN = 0x00000004,
+    FLAG_LOGGED_IN = 0x00000005,
+    FLAG_REGISTER = 0x00000006,
+    FLAG_REGISTERED = 0x00000007,
+    FLAG_ERROR = 0x00000009,
+    FLAG_UNAUTHENTICATED = 0x0000000a,
+    FLAG_ACCESS_DENIED = 0x0000000b,
+
+    FLAG_FETCH_USERS = 0x0000000c,
+
+    // firstly current user (A, is treated as a client) invites another user (B, is treated as a server) by sending him an invite; if B declines the invite he replies with a message containing this flag and body size = 0
+    FLAG_EXCHANGE_KEYS = 0x000000a0, // if B accepts the invite, he replies with his public key, which A treats as a server key (allowing not to rewrite that part of the crypto api)
+    FLAG_EXCHANGE_KEYS_DONE = 0x000000b0, // A receives the B's key, generates his key, computes shared keys and sends his public key to B; B receives it and computes shared keys too
+    FLAG_EXCHANGE_HEADERS = 0x000000c0, // Next part, B generates encoder stream and sends his header to A
+    FLAG_EXCHANGE_HEADERS_DONE = 0x000000d0, // A receives the B's encoder header, creates decoder and encoder, then A sends his encoder header to B
+    FLAG_FLAG_MESSAGING = 0x000000e0, // B receives A's header and creates decoder stream. After that, both A and B have keys and working encoders/decoders to begin an encrypted conversation
+
+    FLAG_SHUTDOWN = 0x7fffffff
+} Flags;
+
+const int NET_FLAG_PROCEED = FLAG_PROCEED;
 
 //STATIC_CONST_UNSIGNED TO_ANONYMOUS = 0x7fffffff;
 STATIC_CONST_UNSIGNED TO_SERVER = 0x7ffffffe;
@@ -334,7 +341,7 @@ static void processMessage(const Message* message) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
             break;
         case STATE_AUTHENTICATED:
-            if (!fromServer) (*(this->onMessageReceived))(message->flag, message->timestamp, message->from, message->body, message->size);
+            if (!fromServer) (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
             break;
     }
 }
@@ -344,26 +351,33 @@ static void onDisconnected(void) {
     netClean();
 }
 
+static bool checkSocket(void)
+{ return SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0; }
+
+static Message* nullable receive(void) {
+    int result = SDLNet_TCP_Recv(this->socket, this->messageBuffer, (int) this->encryptedMessageSize);
+    if (result != (int) this->encryptedMessageSize) return NULL;
+
+    byte* decrypted = cryptoDecrypt(this->connectionCrypto, this->messageBuffer, this->encryptedMessageSize, false);
+    assert(decrypted);
+
+    Message* message = unpackMessage(decrypted);
+    SDL_free(decrypted);
+    return message;
+}
+
 void netListen(void) {
     assert(this);
+    if (checkSocket()) return;
+
     Message* message = NULL;
 
-    if (SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0) {
-
-        if (SDLNet_TCP_Recv(this->socket, this->messageBuffer, (int) this->encryptedMessageSize) == (int) this->encryptedMessageSize) {
-            byte* decrypted = cryptoDecrypt(this->connectionCrypto, this->messageBuffer, this->encryptedMessageSize, false);
-            assert(decrypted);
-
-            message = unpackMessage(decrypted);
-            SDL_free(decrypted);
-        } else { // TODO: send finish message to server on normal cleanup (when client normally shutdowns)
-            onDisconnected();
-            return;
-        }
+    if (!(message = receive()))
+        onDisconnected();
+    else {
+        processMessage(message);
+        SDL_free(message);
     }
-
-    if (message) processMessage(message);
-    SDL_free(message);
 }
 
 unsigned netCurrentUserId(void) {
@@ -371,7 +385,7 @@ unsigned netCurrentUserId(void) {
     return this->userId;
 }
 
-void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
+bool netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     assert(this && size > 0 && size <= NET_MESSAGE_BODY_SIZE);
 
     Message message = {
@@ -393,11 +407,13 @@ void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     byte* packedMessage = packMessage(&message);
     byte* encryptedMessage = cryptoEncrypt(this->connectionCrypto, packedMessage, MESSAGE_SIZE, false);
     SDL_free(packedMessage);
-    if (!encryptedMessage) return;
+    if (!encryptedMessage) return false;
 
     this->lastSentFlag = flag;
-    SDLNet_TCP_Send(this->socket, encryptedMessage, (int) this->encryptedMessageSize);
+    const int bytesSent = SDLNet_TCP_Send(this->socket, encryptedMessage, (int) this->encryptedMessageSize);
     SDL_free(encryptedMessage);
+
+    return bytesSent == (int) this->encryptedMessageSize;
 }
 
 void netShutdownServer(void) {
@@ -463,6 +479,70 @@ static void onUsersFetched(const Message* message) {
 
     for (unsigned i = 0; i < this->userInfosSize; SDL_free((this->userInfos)[i++]));
     resetUserInfos();
+}
+
+Crypto* nullable netCreateConversation(unsigned id) {
+    byte body[NET_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+
+    if (!netSend(NET_FLAG_PROCEED, body, 0, id)) return NULL;
+
+    Message* message;
+
+    if (!(message = receive())
+        || message->flag != FLAG_EXCHANGE_KEYS
+        || message->size != CRYPTO_KEY_SIZE)
+    {
+        SDL_free(message);
+        return NULL;
+    }
+
+    byte akaServerPublicKey[CRYPTO_KEY_SIZE];
+    SDL_memcpy(akaServerPublicKey, message->body, CRYPTO_KEY_SIZE);
+    SDL_free(message);
+
+    Crypto* crypto = cryptoInit();
+
+    if (!cryptoExchangeKeys(crypto, akaServerPublicKey)) {
+        cryptoDestroy(crypto);
+        return NULL;
+    }
+
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    SDL_memcpy(body, cryptoClientPublicKey(crypto), CRYPTO_KEY_SIZE);
+    if (!netSend(FLAG_EXCHANGE_KEYS_DONE, body, CRYPTO_KEY_SIZE, id)) {
+        cryptoDestroy(crypto);
+        return NULL;
+    }
+
+    if (!(message = receive())
+        || message->flag != FLAG_EXCHANGE_HEADERS
+        || message->size != CRYPTO_HEADER_SIZE)
+    {
+        SDL_free(message);
+        cryptoDestroy(crypto);
+        return NULL;
+    }
+
+    byte akaServerStreamHeader[CRYPTO_HEADER_SIZE];
+    SDL_memcpy(akaServerStreamHeader, message->body, CRYPTO_HEADER_SIZE);
+    SDL_free(message);
+
+    byte* akaClientStreamHeader = cryptoInitializeCoderStreams(crypto, akaServerStreamHeader);
+    if (!akaClientStreamHeader) {
+        cryptoDestroy(crypto);
+        return NULL;
+    }
+
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    SDL_memcpy(body, akaClientStreamHeader, CRYPTO_HEADER_SIZE);
+    SDL_free(akaClientStreamHeader);
+    if (!netSend(FLAG_EXCHANGE_HEADERS_DONE, body, CRYPTO_HEADER_SIZE, id)) {
+        cryptoDestroy(crypto);
+        return NULL;
+    }
+
+    return crypto;
 }
 
 void netClean(void) {

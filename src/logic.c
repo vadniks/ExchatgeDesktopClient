@@ -10,14 +10,12 @@
 #include "lifecycle.h"
 #include "logic.h"
 
-STATIC_CONST_UNSIGNED STATE_UNAUTHENTICATED = 0;
-STATIC_CONST_UNSIGNED STATE_AWAITING_AUTHENTICATION = 1;
-STATIC_CONST_UNSIGNED STATE_AUTHENTICATED = 2;
-STATIC_CONST_UNSIGNED STATE_EXCHANGING_MESSAGES = 3;
-
-STATIC_CONST_INT FLAG_INVITE = (int) 0xa0000000;
-STATIC_CONST_INT FLAG_EXCHANGE = (int) 0xb0000000;
-STATIC_CONST_INT FLAG_PROCEED = (int) 0xc0000000;
+typedef enum : unsigned {
+    STATE_UNAUTHENTICATED = 0,
+    STATE_AWAITING_AUTHENTICATION = 1,
+    STATE_AUTHENTICATED = 2,
+    STATE_EXCHANGING_MESSAGES = 3
+} States;
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
@@ -94,7 +92,7 @@ static const User* nullable findUser(unsigned id) {
     return NULL;
 }
 
-static void onMessageReceived(int flag, unsigned long timestamp, unsigned fromId, const byte* message, unsigned size) {
+static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* message, unsigned size) {
     assert(this);
 
     const User* user = findUser(fromId);
@@ -236,7 +234,9 @@ static void startConversation(unsigned id) {
         return;
     }
 
-    renderShowConversation(user->name);
+    renderShowInfiniteProgressBar();
+
+//    renderShowConversation(user->name);
 }
 
 static void continueConversation(unsigned id) {
