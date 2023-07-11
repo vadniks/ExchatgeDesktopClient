@@ -162,8 +162,23 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
     renderShowUsersList(this->currentUserName);
 }
 
-static void onConversationSetUpInviteReceived(unsigned fromId) {
+static void replyToConversationSetUpInvite(unsigned* fromId) {
+    assert(fromId);
+    unsigned xFromId = *fromId;
+    SDL_free(fromId);
 
+    User* user = findUser(xFromId);
+    assert(user);
+
+    netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
+    renderSetControlsBlocking(false);
+}
+
+static void onConversationSetUpInviteReceived(unsigned fromId) {
+    unsigned* xFromId = SDL_malloc(sizeof(int));
+    *xFromId = fromId;
+    renderSetControlsBlocking(true);
+    lifecycleAsync((LifecycleAsyncActionFunction) &replyToConversationSetUpInvite, xFromId, 0);
 }
 
 static void processCredentials(void** data) {
