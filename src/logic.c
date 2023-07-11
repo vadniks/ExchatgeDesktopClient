@@ -167,7 +167,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     unsigned xFromId = *fromId;
     SDL_free(fromId);
 
-    User* user = findUser(xFromId);
+    const User* user = findUser(xFromId);
     assert(user);
 
     netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
