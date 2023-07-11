@@ -334,7 +334,7 @@ static void processMessage(const Message* message) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
             break;
         case STATE_AUTHENTICATED:
-            if (!fromServer) (*(this->onMessageReceived))(message->flag, message->timestamp, message->from, message->body, message->size);
+            if (!fromServer) (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
             break;
     }
 }
@@ -351,7 +351,7 @@ void netListen(void) {
     if (SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0) {
 
         if (SDLNet_TCP_Recv(this->socket, this->messageBuffer, (int) this->encryptedMessageSize) == (int) this->encryptedMessageSize) {
-            byte* decrypted = cryptoDecrypt(this->connectionCrypto, this->messageBuffer, this->encryptedMessageSize, false);
+            byte* decrypted = cryptoDecrypt(this->connectionCrypto, this->messageBuffer, this->encryptedMessageSize);
             assert(decrypted);
 
             message = unpackMessage(decrypted);
@@ -391,7 +391,7 @@ void netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     SDL_memcpy(&(message.token), this->token, TOKEN_SIZE);
 
     byte* packedMessage = packMessage(&message);
-    byte* encryptedMessage = cryptoEncrypt(this->connectionCrypto, packedMessage, MESSAGE_SIZE, false);
+    byte* encryptedMessage = cryptoEncrypt(this->connectionCrypto, packedMessage, MESSAGE_SIZE);
     SDL_free(packedMessage);
     if (!encryptedMessage) return;
 

@@ -83,10 +83,7 @@ static void sleep(unsigned long delayMillis) {
     nanosleep(&timespec, NULL);
 }
 
-static void asyncActionDeallocator(AsyncAction* nullable action) {
-    if (!action) return;
-    SDL_free(action);
-}
+static void asyncActionDeallocator(AsyncAction* action) { SDL_free(action); }
 
 static void asyncActionsThreadLooper(void) {
     while (this->running) {
