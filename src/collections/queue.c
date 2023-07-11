@@ -19,13 +19,13 @@ Queue* queueInit(QueueDeallocator nullable deallocator) {
     return queue;
 }
 
-void queuePush(Queue* queue, void* nullable value) {
+void queuePush(Queue* queue, void* value) {
     assert(queue && queue->size < 0xfffffffe);
     queue->values = SDL_realloc(queue->values, ++(queue->size) * VOID_PTR_SIZE);
     queue->values[queue->size - 1] = value;
 }
 
-void* nullable queuePop(Queue* queue) {
+void* queuePop(Queue* queue) {
     assert(queue && queue->values && queue->size > 0);
     void* value = queue->values[0];
 

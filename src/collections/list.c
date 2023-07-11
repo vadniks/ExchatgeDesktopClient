@@ -20,13 +20,13 @@ List* listInit(ListDeallocator nullable deallocator) {
     return list;
 }
 
-void listAdd(List* list, void* nullable value) {
+void listAdd(List* list, void* value) {
     assert(list && list->size < MAX_SIZE);
     list->values = SDL_realloc(list->values, ++(list->size) * VOID_PTR_SIZE);
     list->values[list->size - 1] = value;
 }
 
-void* nullable listGet(const List* list, unsigned index) {
+void* listGet(const List* list, unsigned index) {
     assert(list && list->values && list->size > 0 && list->size < MAX_SIZE && index < MAX_SIZE);
     return list->values[index];
 }
