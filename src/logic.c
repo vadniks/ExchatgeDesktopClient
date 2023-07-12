@@ -112,6 +112,7 @@ static void onLogInResult(bool successful) {
         this->state = STATE_UNAUTHENTICATED;
         renderShowLogIn();
         renderShowSystemError();
+        renderHideInfiniteProgressBar();
     }
 }
 
@@ -124,6 +125,7 @@ static void onErrorReceived(__attribute_maybe_unused__ int flag) {
 static void onRegisterResult(bool successful) {
     assert(this);
     successful ? renderShowRegistrationSucceededSystemMessage() : renderShowSystemError();
+    renderHideInfiniteProgressBar();
 }
 
 static void onDisconnected(void) { // TODO: forbid using username 'admin' more than one time on the server side
@@ -159,6 +161,7 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
         }
     }
 
+    renderHideInfiniteProgressBar();
     renderShowUsersList(this->currentUserName);
 }
 
@@ -205,6 +208,7 @@ static void processCredentials(void** data) {
     if (!this->netInitialized) {
         this->state = STATE_UNAUTHENTICATED;
         renderShowUnableToConnectToTheServerError();
+        renderHideInfiniteProgressBar();
     }
     if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
 
@@ -215,8 +219,6 @@ static void processCredentials(void** data) {
     SDL_free(data[1]);
     SDL_free(data[2]);
     SDL_free(data);
-
-    renderHideInfiniteProgressBar();
 }
 
 void logicOnCredentialsReceived(const char* username, const char* password, bool logIn) {

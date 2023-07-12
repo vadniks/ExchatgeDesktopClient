@@ -388,7 +388,7 @@ static Message* nullable receive(void) {
 
 void netListen(void) {
     assert(this);
-    if (checkSocket()) return;
+    if (!checkSocket()) return;
 
     Message* message = NULL;
 
