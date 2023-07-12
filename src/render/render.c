@@ -273,20 +273,30 @@ void renderSetMessagesList(const List* messagesList) {
 
 void renderInputBegan(void) {
     assert(this);
-    if (this->allowInput)
-        nk_input_begin(this->context);
+    nk_input_begin(this->context);
 }
 
 void renderProcessEvent(SDL_Event* event) {
     assert(this);
-    if (this->allowInput)
-        nk_sdl_handle_event(event);
+
+    bool inputEvent = event->type == SDL_KEYDOWN
+        || event->type == SDL_KEYUP
+        || event->type == SDL_TEXTEDITING
+        || event->type == SDL_TEXTINPUT
+        || event->type == SDL_TEXTEDITING_EXT
+        || event->type == SDL_MOUSEBUTTONDOWN
+        || event->type == SDL_MOUSEBUTTONUP
+        || event->type == SDL_MOUSEMOTION
+        || event->type == SDL_MOUSEWHEEL;
+
+    if (!this->allowInput && inputEvent) return;
+
+    nk_sdl_handle_event(event);
 }
 
 void renderInputEnded(void) {
     assert(this);
-    if (this->allowInput)
-        nk_input_end(this->context);
+    nk_input_end(this->context);
 }
 
 void renderSetWindowTitle(const char* title) {
