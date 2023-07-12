@@ -508,7 +508,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
     byte body[NET_MESSAGE_BODY_SIZE];
 
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
-    if (!netSend(NET_FLAG_PROCEED, body, 0, id)) return NULL;
+    if (!netSend(FLAG_EXCHANGE_KEYS, body, 1, id)) return NULL;
 
     Message* message;
 
@@ -583,7 +583,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 
     if (!accept) {
         this->settingUpConversation = true;
-        netSend(FLAG_EXCHANGE_KEYS, body, 0, fromId);
+        netSend(FLAG_EXCHANGE_KEYS, body, 1, fromId);
         return NULL;
     }
 
