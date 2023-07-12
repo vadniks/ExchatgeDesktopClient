@@ -571,6 +571,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
         return NULL;
     }
 
+    this->settingUpConversation = false;
     return crypto;
 }
 
@@ -581,14 +582,16 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
+    SDL_Log("a");
     if (!accept) {
-        this->settingUpConversation = true;
+        this->settingUpConversation = false;
         netSend(FLAG_EXCHANGE_KEYS, body, 1, fromId);
         return NULL;
     }
 
     Crypto* crypto = cryptoInit();
 
+    SDL_Log("b");
     const byte* akaServerPublicKey = cryptoGenerateKeyPairAsServer(crypto);
     if (!akaServerPublicKey) {
         this->settingUpConversation = false;
@@ -596,6 +599,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         return NULL;
     }
 
+    SDL_Log("c");
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, CRYPTO_KEY_SIZE, fromId)) {
@@ -606,6 +610,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 
     Message* message = NULL;
 
+    SDL_Log("d");
     if (!(message = receive())
         || message->flag != FLAG_EXCHANGE_KEYS_DONE
         || message->size != CRYPTO_KEY_SIZE)
@@ -616,6 +621,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         return NULL;
     }
 
+    SDL_Log("e");
     byte akaClientPublicKey[CRYPTO_KEY_SIZE];
     SDL_memcpy(akaClientPublicKey, message->body, CRYPTO_KEY_SIZE);
     SDL_free(message);
@@ -625,6 +631,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         return NULL;
     }
 
+    SDL_Log("f");
     byte* akaServerStreamHeader = cryptoCreateEncoderAsServer(crypto);
     if (!akaServerStreamHeader) {
         this->settingUpConversation = false;
@@ -635,12 +642,14 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     SDL_memcpy(body, akaServerStreamHeader, CRYPTO_HEADER_SIZE);
     SDL_free(akaServerStreamHeader);
 
+    SDL_Log("g");
     if (!netSend(FLAG_EXCHANGE_HEADERS, body, CRYPTO_HEADER_SIZE, fromId)) {
         this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
 
+    SDL_Log("h");
     if (!(message = receive())
         || message->flag != FLAG_EXCHANGE_KEYS_DONE
         || message->size != CRYPTO_KEY_SIZE)
@@ -651,6 +660,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         return NULL;
     }
 
+    SDL_Log("i");
     byte akaClientStreamHeader[CRYPTO_HEADER_SIZE];
     SDL_memcpy(akaClientStreamHeader, message->body, CRYPTO_HEADER_SIZE);
     SDL_free(message);
@@ -660,6 +670,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         return NULL;
     }
 
+    SDL_Log("j");
     this->settingUpConversation = false;
     return crypto;
 }
