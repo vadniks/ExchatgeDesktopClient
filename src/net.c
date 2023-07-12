@@ -508,7 +508,10 @@ Crypto* nullable netCreateConversation(unsigned id) {
     byte body[NET_MESSAGE_BODY_SIZE];
 
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
-    if (!netSend(FLAG_EXCHANGE_KEYS, body, 1, id)) return NULL;
+    if (!netSend(FLAG_EXCHANGE_KEYS, body, 1, id)) {
+        this->settingUpConversation = false;
+        return NULL;
+    }
 
     Message* message;
 
