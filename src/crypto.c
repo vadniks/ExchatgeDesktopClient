@@ -149,7 +149,7 @@ bool cryptoCreateDecoderStreamAsServer(Crypto* crypto, const byte* clientStreamH
     int result = crypto_secretstream_xchacha20poly1305_init_pull(
         serverDecryptionStateAsServer(crypto), clientStreamHeader, crypto->clientKey
     );
-    return result != 0;
+    return !result;
 }
 
 unsigned cryptoEncryptedSize(unsigned unencryptedSize)
