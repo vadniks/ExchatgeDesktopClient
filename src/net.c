@@ -654,8 +654,8 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 
     SDL_Log("h");
     if (!(message = receive())
-        || message->flag != FLAG_EXCHANGE_KEYS_DONE
-        || message->size != CRYPTO_KEY_SIZE)
+        || message->flag != FLAG_EXCHANGE_HEADERS_DONE
+        || message->size != CRYPTO_HEADER_SIZE)
     {
         this->settingUpConversation = false;
         SDL_free(message);
