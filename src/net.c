@@ -34,6 +34,8 @@ STATIC_CONST_UNSIGNED TOKEN_SIZE = TOKEN_UNSIGNED_VALUE_SIZE + 40 + TOKEN_TRAILI
 STATIC_CONST_UNSIGNED MESSAGE_HEAD_SIZE = INT_SIZE * 6 + LONG_SIZE + TOKEN_SIZE; // 96
 const unsigned NET_MESSAGE_BODY_SIZE = MESSAGE_SIZE - MESSAGE_HEAD_SIZE; // 928
 
+STATIC_CONST_UNSIGNED TIMEOUT = 5000;
+
 typedef enum : int {
     FLAG_PROCEED = 0x00000000,
     FLAG_LOG_IN = 0x00000004,
@@ -92,8 +94,9 @@ THIS(
     NetUserInfo** userInfos;
     unsigned userInfosSize;
     byte* serverKeyStub;
-    volatile bool settingUpConversation;
+    bool settingUpConversation;
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived;
+    unsigned long conversationSetUpStartMillis;
 )
 #pragma clang diagnostic pop
 
@@ -208,6 +211,7 @@ bool netInit(
     this->serverKeyStub = SDL_calloc(CRYPTO_KEY_SIZE, sizeof(byte));
     this->settingUpConversation = false;
     this->onConversationSetUpInviteReceived = onConversationSetUpInviteReceived;
+    this->conversationSetUpStartMillis = 0;
 
     int sni = SDLNet_Init();
     assert(!sni);
@@ -343,6 +347,7 @@ static void processConversationSetUpMessage(const Message* message) {
     assert(!(this->settingUpConversation));
 
     this->settingUpConversation = true;
+    this->conversationSetUpStartMillis = (*(this->currentTimeMillisGetter))();
     (*(this->onConversationSetUpInviteReceived))(message->from);
 }
 
@@ -501,6 +506,15 @@ static void onUsersFetched(const Message* message) {
     resetUserInfos();
 }
 
+static bool waitForReceiveWithTimeout(unsigned long timeoutMillis) {
+    unsigned long startMillis = (*(this->currentTimeMillisGetter))();
+    while ((*(this->currentTimeMillisGetter))() - startMillis < timeoutMillis) {
+        if (checkSocket())
+            return true;
+    }
+    return false;
+}
+
 Crypto* nullable netCreateConversation(unsigned id) {
     assert(this);
     this->settingUpConversation = true;
@@ -514,6 +528,11 @@ Crypto* nullable netCreateConversation(unsigned id) {
     }
 
     Message* message;
+
+    if (!waitForReceiveWithTimeout(TIMEOUT)) {
+        this->settingUpConversation = false;
+        return NULL;
+    }
 
     if (!(message = receive())
         || message->flag != FLAG_EXCHANGE_KEYS
@@ -584,6 +603,11 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+
+    if ((*(this->currentTimeMillisGetter))() - this->conversationSetUpStartMillis >= TIMEOUT) {
+        this->settingUpConversation = false;
+        return NULL;
+    }
 
     if (!accept) {
         this->settingUpConversation = false;
