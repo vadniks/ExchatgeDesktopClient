@@ -93,7 +93,7 @@ THIS(
     NetUserInfo** userInfos;
     unsigned userInfosSize; // TODO: (maybe) wrap in SYNCHRONIZED block (write to this variable with mutex locking)
     byte* serverKeyStub;
-    bool settingUpConversation;
+    bool settingUpConversation; // TODO: wrap in SYNCHRONIZED block (write to this variable with mutex locking)
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived;
     unsigned long conversationSetUpStartMillis; // TODO: wrap in SYNCHRONIZED block (write to this variable with mutex locking)
 )
