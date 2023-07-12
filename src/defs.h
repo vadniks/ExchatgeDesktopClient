@@ -8,7 +8,7 @@
 #define min(x, y) (x < y ? x : y)
 #define max(x, y) (x > y ? x : y)
 #define boolToStr(x) (x ? "true" : "false")
-#define printArray(x, y) puts(#x " "); for (unsigned i = 0; i < (y); printf("%d ", (x)[i++])); puts("");
+#define printArray(x, y) puts(#x); for (unsigned i = 0; i < (y); printf("%d ", (x)[i++])); puts("");
 
 #define staticAssert(x) _Static_assert(x, "")
 
