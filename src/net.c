@@ -38,7 +38,7 @@ STATIC_CONST_UNSIGNED TOKEN_SIZE = TOKEN_UNSIGNED_VALUE_SIZE + 40 + TOKEN_TRAILI
 STATIC_CONST_UNSIGNED MESSAGE_HEAD_SIZE = INT_SIZE * 6 + LONG_SIZE + TOKEN_SIZE; // 96
 const unsigned NET_MESSAGE_BODY_SIZE = MESSAGE_SIZE - MESSAGE_HEAD_SIZE; // 928
 
-STATIC_CONST_UNSIGNED TIMEOUT = 5000;
+STATIC_CONST_UNSIGNED long TIMEOUT = 5000;
 
 typedef enum : int {
     FLAG_PROCEED = 0x00000000,
@@ -525,9 +525,9 @@ static void onUsersFetched(const Message* message) {
     resetUserInfos();
 }
 
-static bool waitForReceiveWithTimeout(unsigned long timeoutMillis) {
+static bool waitForReceiveWithTimeout(void) {
     unsigned long startMillis = (*(this->currentTimeMillisGetter))();
-    while ((*(this->currentTimeMillisGetter))() - startMillis < timeoutMillis) {
+    while ((*(this->currentTimeMillisGetter))() - startMillis < TIMEOUT) {
         if (checkSocket())
             return true;
     }
@@ -548,7 +548,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
 
     Message* message;
 
-    if (!waitForReceiveWithTimeout(TIMEOUT)) {
+    if (!waitForReceiveWithTimeout()) {
         SYNCHRONIZED(this->settingUpConversation = false;)
         return NULL;
     }
