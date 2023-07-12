@@ -73,7 +73,7 @@ STATIC_CONST_UNSIGNED FROM_SERVER = 0x7fffffff;
 THIS(
     TCPsocket socket;
     SDLNet_SocketSet socketSet;
-    unsigned state;
+    unsigned state; // TODO: wrap in SYNCHRONIZED block (write to this variable with mutex locking)
     unsigned encryptedMessageSize; // constant
     NetMessageReceivedCallback onMessageReceived;
     Crypto* connectionCrypto; // client-server level encryption - different for each connection
@@ -82,20 +82,20 @@ THIS(
     byte tokenAnonymous[TOKEN_SIZE]; // constant
     byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // constant, unencrypted but clients don't know how token is generated
     byte token[TOKEN_SIZE];
-    unsigned userId;
+    unsigned userId; // TODO: (maybe) wrap in SYNCHRONIZED block (write to this variable with mutex locking)
     NetNotifierCallback onLogInResult;
     NetServiceCallback onErrorReceived;
     NetNotifierCallback onRegisterResult;
     NetCallback onDisconnected;
     NetCurrentTimeMillisGetter currentTimeMillisGetter;
-    int lastSentFlag;
+    int lastSentFlag; // TODO: (maybe) wrap in SYNCHRONIZED block (write to this variable with mutex locking)
     NetOnUsersFetched onUsersFetched;
     NetUserInfo** userInfos;
-    unsigned userInfosSize;
+    unsigned userInfosSize; // TODO: (maybe) wrap in SYNCHRONIZED block (write to this variable with mutex locking)
     byte* serverKeyStub;
     bool settingUpConversation;
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived;
-    unsigned long conversationSetUpStartMillis;
+    unsigned long conversationSetUpStartMillis; // TODO: wrap in SYNCHRONIZED block (write to this variable with mutex locking)
 )
 #pragma clang diagnostic pop
 
