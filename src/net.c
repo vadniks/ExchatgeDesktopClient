@@ -11,6 +11,10 @@ staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8 && sizeo
 
 #define FLAG(x, y) STATIC_CONST_INT FLAG_ ## x = y;
 
+#define SYNCHRONIZED_BEGIN { int slm = SDL_LockMutex(this->mutex); assert(!slm); }
+#define SYNCHRONIZED_END { int sum = SDL_UnlockMutex(this->mutex); assert(!sum); }
+#define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
+
 typedef enum : unsigned {
     STATE_SERVER_PUBLIC_KEY_RECEIVED = 1,
     STATE_CLIENT_PUBLIC_KEY_SENT = 2,
@@ -73,29 +77,29 @@ STATIC_CONST_UNSIGNED FROM_SERVER = 0x7fffffff;
 THIS(
     TCPsocket socket;
     SDLNet_SocketSet socketSet;
-    unsigned state; // TODO: wrap in SYNCHRONIZED block (write to this variable with mutex locking)
+    unsigned state;
     unsigned encryptedMessageSize; // constant
     NetMessageReceivedCallback onMessageReceived;
     Crypto* connectionCrypto; // client-server level encryption - different for each connection
-//    Crypto* conversationCrypto; // TODO: conversation level encryption - extra encryption layer - different for each conversation but permanent for all participants of a conversation
     byte* messageBuffer;
     byte tokenAnonymous[TOKEN_SIZE]; // constant
     byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // constant, unencrypted but clients don't know how token is generated
     byte token[TOKEN_SIZE];
-    unsigned userId; // TODO: (maybe) wrap in SYNCHRONIZED block (write to this variable with mutex locking)
+    unsigned userId;
     NetNotifierCallback onLogInResult;
     NetServiceCallback onErrorReceived;
     NetNotifierCallback onRegisterResult;
     NetCallback onDisconnected;
     NetCurrentTimeMillisGetter currentTimeMillisGetter;
-    int lastSentFlag; // TODO: (maybe) wrap in SYNCHRONIZED block (write to this variable with mutex locking)
+    int lastSentFlag;
     NetOnUsersFetched onUsersFetched;
     NetUserInfo** userInfos;
-    unsigned userInfosSize; // TODO: (maybe) wrap in SYNCHRONIZED block (write to this variable with mutex locking)
+    unsigned userInfosSize;
     byte* serverKeyStub;
-    bool settingUpConversation; // TODO: wrap in SYNCHRONIZED block (write to this variable with mutex locking)
+    bool settingUpConversation;
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived;
-    unsigned long conversationSetUpStartMillis; // TODO: wrap in SYNCHRONIZED block (write to this variable with mutex locking)
+    unsigned long conversationSetUpStartMillis;
+    SDL_mutex* mutex;
 )
 #pragma clang diagnostic pop
 
@@ -211,6 +215,7 @@ bool netInit(
     this->settingUpConversation = false;
     this->onConversationSetUpInviteReceived = onConversationSetUpInviteReceived;
     this->conversationSetUpStartMillis = 0;
+    this->mutex = SDL_CreateMutex();
 
     int sni = SDLNet_Init();
     assert(!sni);
@@ -299,7 +304,7 @@ static byte* packMessage(const Message* msg) {
 static void processErrors(const Message* message) {
     switch (this->lastSentFlag) {
         case FLAG_LOG_IN:
-            this->state = STATE_FINISHED_WITH_ERROR;
+            SYNCHRONIZED(this->state = STATE_FINISHED_WITH_ERROR;)
             (*(this->onLogInResult))(false);
             break;
         case FLAG_REGISTER:
@@ -319,9 +324,11 @@ static void processMessagesFromServer(const Message* message) {
 
     switch (message->flag) {
         case FLAG_LOGGED_IN:
+            SYNCHRONIZED_BEGIN
             this->state = STATE_AUTHENTICATED;
             this->userId = message->to;
             SDL_memcpy(this->token, message->body, TOKEN_SIZE);
+            SYNCHRONIZED_END
 
             (*(this->onLogInResult))(true);
             break;
@@ -345,8 +352,11 @@ static void processConversationSetUpMessage(const Message* message) {
     if (message->flag != FLAG_EXCHANGE_KEYS) assert(false);
     assert(!(this->settingUpConversation));
 
+    SYNCHRONIZED_BEGIN
     this->settingUpConversation = true;
     this->conversationSetUpStartMillis = (*(this->currentTimeMillisGetter))();
+    SYNCHRONIZED_END
+
     (*(this->onConversationSetUpInviteReceived))(message->from);
 }
 
@@ -379,7 +389,7 @@ static bool checkSocket(void)
 { return SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0; }
 
 static Message* nullable receive(void) {
-    int result = SDLNet_TCP_Recv(this->socket, this->messageBuffer, (int) this->encryptedMessageSize);
+    SYNCHRONIZED(int result = SDLNet_TCP_Recv(this->socket, this->messageBuffer, (int) this->encryptedMessageSize);)
     if (result != (int) this->encryptedMessageSize) return NULL;
 
     byte* decrypted = cryptoDecrypt(this->connectionCrypto, this->messageBuffer, this->encryptedMessageSize, false);
@@ -433,8 +443,10 @@ bool netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     SDL_free(packedMessage);
     if (!encryptedMessage) return false;
 
+    SYNCHRONIZED_BEGIN
     this->lastSentFlag = flag;
     const int bytesSent = SDLNet_TCP_Send(this->socket, encryptedMessage, (int) this->encryptedMessageSize);
+    SYNCHRONIZED_END
     SDL_free(encryptedMessage);
 
     return bytesSent == (int) this->encryptedMessageSize;
@@ -481,14 +493,17 @@ const byte* netUserInfoName(const NetUserInfo* info) {
 }
 
 static void resetUserInfos(void) {
+    SYNCHRONIZED_BEGIN
     SDL_free(this->userInfos);
     this->userInfos = NULL;
     this->userInfosSize = 0;
+    SYNCHRONIZED_END
 }
 
 static void onUsersFetched(const Message* message) {
     assert(this);
     if (!(message->index)) resetUserInfos();
+    SYNCHRONIZED_BEGIN
 
     this->userInfosSize += message->size;
     assert(this->userInfosSize);
@@ -497,11 +512,16 @@ static void onUsersFetched(const Message* message) {
     for (unsigned i = 0, j = this->userInfosSize - message->size; i < message->size; i++, j++)
         (this->userInfos)[j] = unpackUserInfo(message->body + i * USER_INFO_SIZE);
 
-    if (message->index < message->count - 1) return;
+    if (message->index < message->count - 1) {
+        SYNCHRONIZED_END
+        return;
+    }
 
     (*(this->onUsersFetched))(this->userInfos, this->userInfosSize);
 
     for (unsigned i = 0; i < this->userInfosSize; SDL_free((this->userInfos)[i++]));
+
+    SYNCHRONIZED_END
     resetUserInfos();
 }
 
@@ -516,20 +536,20 @@ static bool waitForReceiveWithTimeout(unsigned long timeoutMillis) {
 
 Crypto* nullable netCreateConversation(unsigned id) {
     assert(this);
-    this->settingUpConversation = true;
+    SYNCHRONIZED(this->settingUpConversation = true;)
 
     byte body[NET_MESSAGE_BODY_SIZE];
 
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, 1, id)) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         return NULL;
     }
 
     Message* message;
 
     if (!waitForReceiveWithTimeout(TIMEOUT)) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         return NULL;
     }
 
@@ -537,7 +557,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
         || message->flag != FLAG_EXCHANGE_KEYS
         || message->size != CRYPTO_KEY_SIZE)
     {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         SDL_free(message);
         return NULL;
     }
@@ -549,7 +569,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
     Crypto* crypto = cryptoInit();
 
     if (!cryptoExchangeKeys(crypto, akaServerPublicKey)) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -557,7 +577,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, cryptoClientPublicKey(crypto), CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS_DONE, body, CRYPTO_KEY_SIZE, id)) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -566,7 +586,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
         || message->flag != FLAG_EXCHANGE_HEADERS
         || message->size != CRYPTO_HEADER_SIZE)
     {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         SDL_free(message);
         cryptoDestroy(crypto);
         return NULL;
@@ -578,7 +598,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
 
     byte* akaClientStreamHeader = cryptoInitializeCoderStreams(crypto, akaServerStreamHeader);
     if (!akaClientStreamHeader) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -587,12 +607,12 @@ Crypto* nullable netCreateConversation(unsigned id) {
     SDL_memcpy(body, akaClientStreamHeader, CRYPTO_HEADER_SIZE);
     SDL_free(akaClientStreamHeader);
     if (!netSend(FLAG_EXCHANGE_HEADERS_DONE, body, CRYPTO_HEADER_SIZE, id)) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
 
-    this->settingUpConversation = false;
+    SYNCHRONIZED(this->settingUpConversation = false;)
     return crypto;
 }
 
@@ -604,12 +624,12 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
     if ((*(this->currentTimeMillisGetter))() - this->conversationSetUpStartMillis >= TIMEOUT) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         return NULL;
     }
 
     if (!accept) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         netSend(FLAG_EXCHANGE_KEYS, body, 1, fromId);
         return NULL;
     }
@@ -618,7 +638,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 
     const byte* akaServerPublicKey = cryptoGenerateKeyPairAsServer(crypto);
     if (!akaServerPublicKey) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -626,7 +646,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, CRYPTO_KEY_SIZE, fromId)) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -637,7 +657,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         || message->flag != FLAG_EXCHANGE_KEYS_DONE
         || message->size != CRYPTO_KEY_SIZE)
     {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         SDL_free(message);
         return NULL;
@@ -647,14 +667,14 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     SDL_memcpy(akaClientPublicKey, message->body, CRYPTO_KEY_SIZE);
     SDL_free(message);
     if (!cryptoExchangeKeysAsServer(crypto, akaClientPublicKey)) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
 
     byte* akaServerStreamHeader = cryptoCreateEncoderAsServer(crypto);
     if (!akaServerStreamHeader) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -663,7 +683,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     SDL_free(akaServerStreamHeader);
 
     if (!netSend(FLAG_EXCHANGE_HEADERS, body, CRYPTO_HEADER_SIZE, fromId)) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -672,7 +692,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         || message->flag != FLAG_EXCHANGE_HEADERS_DONE
         || message->size != CRYPTO_HEADER_SIZE)
     {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         SDL_free(message);
         cryptoDestroy(crypto);
         return NULL;
@@ -682,17 +702,18 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     SDL_memcpy(akaClientStreamHeader, message->body, CRYPTO_HEADER_SIZE);
     SDL_free(message);
     if (!cryptoCreateDecoderStreamAsServer(crypto, akaClientStreamHeader)) {
-        this->settingUpConversation = false;
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
 
-    this->settingUpConversation = false;
+    SYNCHRONIZED(this->settingUpConversation = false;)
     return crypto;
 }
 
 void netClean(void) {
     assert(this);
+    SYNCHRONIZED_BEGIN
 
     SDL_free(this->serverKeyStub);
     SDL_free(this->userInfos);
@@ -704,6 +725,8 @@ void netClean(void) {
     SDLNet_TCP_Close(this->socket);
     SDLNet_Quit();
 
+    SYNCHRONIZED_END
+    SDL_DestroyMutex(this->mutex);
     SDL_free(this);
     this = NULL;
 }
