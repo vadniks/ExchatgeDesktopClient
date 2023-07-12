@@ -60,7 +60,6 @@ typedef enum : int {
 
 const int NET_FLAG_PROCEED = FLAG_PROCEED;
 
-//STATIC_CONST_UNSIGNED TO_ANONYMOUS = 0x7fffffff;
 STATIC_CONST_UNSIGNED TO_SERVER = 0x7ffffffe;
 
 const unsigned NET_USERNAME_SIZE = 16;
