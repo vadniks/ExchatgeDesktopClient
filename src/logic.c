@@ -256,6 +256,7 @@ static void createConversation(unsigned* id) {
     Crypto* crypto = netCreateConversation(*id);
     SDL_free(id);
     renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
 
     SDL_Log("establishing secured connection with invited user %s", crypto ? "succeeded" : "failed");
     SDL_free(crypto); // TODO: test only
@@ -271,6 +272,7 @@ static void startConversation(unsigned id) {
     }
 
     renderShowInfiniteProgressBar();
+    renderSetControlsBlocking(true);
 
     unsigned* xId = SDL_malloc(sizeof(int));
     *xId = id;
