@@ -38,7 +38,7 @@ static Crypto* initFromExisted(byte* passwordBuffer, unsigned size) {
     assert(streamsStates && sqlite3_column_bytes(statement, 0) == (int) CRYPTO_STREAMS_STATES_SIZE);
     assert(!sqlite3_finalize(statement));
 
-    return init(passwordBuffer, size, NULL);
+    return init(passwordBuffer, size, streamsStates);
 }
 
 bool databaseInit(byte* passwordBuffer, unsigned size) {
