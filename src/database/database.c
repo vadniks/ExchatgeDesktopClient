@@ -23,9 +23,9 @@ static Crypto* init(byte* passwordBuffer, unsigned size, const byte* nullable st
     cryptoFillWithRandomBytes(key, CRYPTO_KEY_SIZE);
     SDL_free(key);
 
-    const unsigned sqlSize = 64;
+    const unsigned sqlSize = 65;
     char sql[sqlSize];
-    assert(SDL_snprintf(sql, sqlSize, "create table if not exists %s (%s blob not null)", SERVICE_TABLE, STREAMS_STATES_COLUMN) == sqlSize);
+    assert(SDL_snprintf(sql, sqlSize, "create table if not exists %s (%s blob not null)", SERVICE_TABLE, STREAMS_STATES_COLUMN) == sqlSize - 1);
 
     sqlite3_stmt* statement;
     assert(!sqlite3_prepare(this->db, sql, (int) sqlSize, &statement, NULL));
@@ -37,8 +37,8 @@ static Crypto* init(byte* passwordBuffer, unsigned size, const byte* nullable st
 
 static Crypto* initFromExisted(byte* passwordBuffer, unsigned size) {
     const unsigned sqlSize = 34;
-    char sql[sqlSize];
-    assert(SDL_snprintf(sql, sqlSize, "select %s from %s", STREAMS_STATES_COLUMN, SERVICE_TABLE) == sqlSize);
+    char sql[sqlSize + 1];
+    assert(SDL_snprintf(sql, sqlSize, "select %s from %s", STREAMS_STATES_COLUMN, SERVICE_TABLE) == sqlSize - 1);
 
     sqlite3_stmt* statement;
     assert(!sqlite3_prepare(this->db, sql, (int) sqlSize, &statement, NULL));
