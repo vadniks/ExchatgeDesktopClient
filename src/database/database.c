@@ -79,6 +79,12 @@ static Crypto* initFromExisted(byte* passwordBuffer, unsigned size) {
     return init(passwordBuffer, size, streamsStates);
 }
 
+static Crypto* initNew(byte* passwordBuffer, unsigned size) {
+    Crypto* crypto = init(passwordBuffer, size, NULL);
+    insertStreamsStates(cryptoExportStreamsStates(crypto));
+    return crypto;
+}
+
 bool databaseInit(byte* passwordBuffer, unsigned size) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -87,8 +93,7 @@ bool databaseInit(byte* passwordBuffer, unsigned size) {
     if (sqlite3_open(FILE_NAME, &(this->db)) != 0) return false;
 
     if (existedEarlier) this->crypto = initFromExisted(passwordBuffer, size);
-    else this->crypto = init(passwordBuffer, size, NULL);
-    insertStreamsStates(cryptoExportStreamsStates(this->crypto));
+    else this->crypto = initNew(passwordBuffer, size);
 
     cryptoFillWithRandomBytes(passwordBuffer, size);
     SDL_free(passwordBuffer);
