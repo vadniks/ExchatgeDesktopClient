@@ -17,7 +17,7 @@ THIS(
     Crypto* crypto;
 )
 
-struct Message_t {
+struct DatabaseMessage_t {
     unsigned* nullable userId;
     unsigned long timestamp;
     char* text;
