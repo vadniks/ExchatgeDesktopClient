@@ -7,7 +7,7 @@
 #include "database/database.h"
 
 int main(int argc, const char** argv) {
-    byte akaPassword[16]; // TODO: test only
+    byte* akaPassword = SDL_malloc(16); // TODO: test only
     SDL_memset(akaPassword, 0, 16);
     assert(databaseInit(akaPassword, 16));
     databaseClean();
