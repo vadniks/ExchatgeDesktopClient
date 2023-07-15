@@ -47,8 +47,7 @@ static void createTableIfNotExists(void) {
 
 static void streamsStatesExistsResultHandler(bool* result, sqlite3_stmt* statement) {
     assert(sqlite3_step(statement) == SQLITE_ROW);
-    int a = sqlite3_column_int(statement, 1);
-    *result = a > 0;
+    *result = sqlite3_column_int(statement, 0) > 0;
 }
 
 static bool streamsStatesExists(void) {
@@ -117,8 +116,7 @@ bool databaseInit(byte* passwordBuffer, unsigned size) {
 
     if (existedEarlier) this->crypto = initFromExisted(passwordBuffer, size);
     else this->crypto = initNew(passwordBuffer, size);
-
-    assert(streamsStatesExists()); // TODO: fails
+    assert(streamsStatesExists());
 
     cryptoFillWithRandomBytes(passwordBuffer, size);
     SDL_free(passwordBuffer);
