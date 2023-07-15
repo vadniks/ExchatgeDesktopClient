@@ -42,7 +42,7 @@ static Crypto* initFromExisted(byte* passwordBuffer, unsigned size) {
 
     sqlite3_stmt* statement;
     assert(!sqlite3_prepare(this->db, sql, (int) sqlSize, &statement, NULL));
-    assert(sqlite3_step(statement) == SQLITE_ROW);
+    assert(sqlite3_step(statement) == SQLITE_DONE);
 
     const byte* streamsStates = sqlite3_column_blob(statement, 0);
     assert(streamsStates && sqlite3_column_bytes(statement, 0) == (int) CRYPTO_STREAMS_STATES_SIZE);
