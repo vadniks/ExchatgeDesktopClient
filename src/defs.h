@@ -13,7 +13,11 @@
 #define staticAssert(x) _Static_assert(x, "")
 
 #if !defined(__GNUC__) // && !defined(__clang__) as clang defines __GNUC__ too
-#   error "Don't go any further"
+#   error "Project uses gcc extensions"
+#endif
+
+#ifndef __GLIBC__
+#   error "Project uses glibc"
 #endif
 
 #ifndef __LINUX__
