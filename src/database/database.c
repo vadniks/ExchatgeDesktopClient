@@ -16,15 +16,38 @@ THIS(
     Crypto* crypto;
 )
 
+typedef void (* nullable Binder)(const void* nullable, sqlite3_stmt*);
+
+static void execSingleResultless(
+    const char* sql,
+    unsigned sqlSize,
+    Binder binder,
+    const void* nullable parameter
+) {
+    sqlite3_stmt* statement;
+    assert(!sqlite3_prepare(this->db, sql, (int) sqlSize, &statement, NULL));
+    if (binder) (*binder)(parameter, statement);
+    assert(sqlite3_step(statement) == SQLITE_DONE);
+    assert(!sqlite3_finalize(statement));
+}
+
 static void createTableIfNotExists(void) {
     const unsigned sqlSize = 65;
     char sql[sqlSize];
     assert(SDL_snprintf(sql, sqlSize, "create table if not exists %s (%s blob not null)", SERVICE_TABLE, STREAMS_STATES_COLUMN) == sqlSize - 1);
 
-    sqlite3_stmt* statement;
-    assert(!sqlite3_prepare(this->db, sql, (int) sqlSize, &statement, NULL));
-    assert(sqlite3_step(statement) == SQLITE_DONE);
-    assert(!sqlite3_finalize(statement));
+    execSingleResultless(sql, sqlSize, NULL, NULL);
+}
+
+static void insertStreamStatesBinder(const byte* streamsStates, sqlite3_stmt* statement)
+{ assert(!sqlite3_bind_blob(statement, 0, streamsStates, (int) CRYPTO_STREAMS_STATES_SIZE, SQLITE_STATIC)); }
+
+static void insertStreamsStates(const byte* streamsStates) {
+    const unsigned sqlSize = 65;
+    char sql[sqlSize];
+    assert(SDL_snprintf(sql, sqlSize, "insert into %s (%s) values (?)", SERVICE_TABLE, STREAMS_STATES_COLUMN) == sqlSize - 1);
+
+    execSingleResultless(sql, sqlSize, (Binder) &insertStreamStatesBinder, streamsStates);
 }
 
 static Crypto* init(byte* passwordBuffer, unsigned size, const byte* nullable streamsStates) {
@@ -52,7 +75,9 @@ static Crypto* initFromExisted(byte* passwordBuffer, unsigned size) {
     assert(streamsStates && sqlite3_column_bytes(statement, 0) == (int) CRYPTO_STREAMS_STATES_SIZE);
     assert(!sqlite3_finalize(statement));
 
-    return init(passwordBuffer, size, streamsStates);
+    Crypto* crypto = init(passwordBuffer, size, streamsStates);
+    insertStreamsStates(cryptoExportStreamsStates(crypto));
+    return crypto;
 }
 
 bool databaseInit(byte* passwordBuffer, unsigned size) {
