@@ -22,6 +22,16 @@ static Crypto* init(byte* passwordBuffer, unsigned size, const byte* nullable st
     cryptoSetUpAutonomous(crypto, key, streamsStates);
     cryptoFillWithRandomBytes(key, CRYPTO_KEY_SIZE);
     SDL_free(key);
+
+    const unsigned sqlSize = 64;
+    char sql[sqlSize];
+    assert(SDL_snprintf(sql, sqlSize, "create table if not exists %s (%s blob not null)", SERVICE_TABLE, STREAMS_STATES_COLUMN) == sqlSize);
+
+    sqlite3_stmt* statement;
+    assert(!sqlite3_prepare(this->db, sql, (int) sqlSize, &statement, NULL));
+    assert(sqlite3_step(statement) == SQLITE_DONE);
+    assert(!sqlite3_finalize(statement));
+
     return crypto;
 }
 
