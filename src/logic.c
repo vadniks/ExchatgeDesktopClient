@@ -380,8 +380,7 @@ char* logicMillisToDateTime(unsigned long millis) {
 
 unsigned long logicCurrentTimeMillis(void) {
     struct timespec timespec;
-    int cgt = clock_gettime(CLOCK_REALTIME, &timespec);
-    assert(!cgt);
+    assert(!clock_gettime(CLOCK_REALTIME, &timespec));
     return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
 }
 
