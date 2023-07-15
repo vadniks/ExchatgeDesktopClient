@@ -11,8 +11,8 @@ staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8 && sizeo
 
 #define FLAG(x, y) STATIC_CONST_INT FLAG_ ## x = y;
 
-#define SYNCHRONIZED_BEGIN { int slm = SDL_LockMutex(this->mutex); assert(!slm); }
-#define SYNCHRONIZED_END { int sum = SDL_UnlockMutex(this->mutex); assert(!sum); }
+#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->mutex));
+#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->mutex));
 #define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
 
 typedef enum : unsigned {
@@ -141,10 +141,9 @@ static void initiateSecuredConnection(void) {
     byte serverSignedPublicKey[signedPublicKeySize];
     const byte* serverKeyStart = serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE;
 
-    int received = SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize); // TODO: add timeout, wait for a constant millis count and then if no response received drop connection; add timeout to server too
-    assert(received == (int) signedPublicKeySize);
-    bool signedChecked = cryptoCheckServerSignedBytes(serverSignedPublicKey, serverKeyStart, CRYPTO_KEY_SIZE);
-    assert(signedChecked);
+     // TODO: add timeout, wait for a constant millis count and then if no response received drop connection; add timeout to server too
+    assert(SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize) == (int) signedPublicKeySize);
+    assert(cryptoCheckServerSignedBytes(serverSignedPublicKey, serverKeyStart, CRYPTO_KEY_SIZE));
 
     if (!SDL_memcmp(serverKeyStart, this->serverKeyStub, CRYPTO_KEY_SIZE)) return; // denial of service
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
@@ -152,26 +151,20 @@ static void initiateSecuredConnection(void) {
     if (!cryptoExchangeKeys(this->connectionCrypto, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE)) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
-    int sent = SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE);
-    assert(sent == (int) CRYPTO_KEY_SIZE);
+    assert(SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE) == (int) CRYPTO_KEY_SIZE);
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
 
     const unsigned serverSignedCoderHeaderSize = CRYPTO_SIGNATURE_SIZE + CRYPTO_HEADER_SIZE;
     byte serverSignedCoderHeader[serverSignedCoderHeaderSize];
     const byte* serverCoderHeaderStart = serverSignedCoderHeader + CRYPTO_SIGNATURE_SIZE;
 
-    received = SDLNet_TCP_Recv(this->socket, serverSignedCoderHeader, (int) serverSignedCoderHeaderSize);
-    assert(received == (int) serverSignedCoderHeaderSize);
-    signedChecked = cryptoCheckServerSignedBytes(
-        serverSignedCoderHeader, serverCoderHeaderStart, CRYPTO_HEADER_SIZE
-    );
-    assert(signedChecked);
+    assert(SDLNet_TCP_Recv(this->socket, serverSignedCoderHeader, (int) serverSignedCoderHeaderSize) == (int) serverSignedCoderHeaderSize);
+    assert(cryptoCheckServerSignedBytes(serverSignedCoderHeader, serverCoderHeaderStart, CRYPTO_HEADER_SIZE));
     this->state = STATE_SERVER_CODER_HEADER_RECEIVED;
 
     byte* clientCoderHeader = cryptoInitializeCoderStreams(this->connectionCrypto, serverCoderHeaderStart);
     if (clientCoderHeader) {
-        sent = SDLNet_TCP_Send(this->socket, clientCoderHeader, (int) CRYPTO_HEADER_SIZE);
-        assert(sent == (int) CRYPTO_HEADER_SIZE);
+        assert(SDLNet_TCP_Send(this->socket, clientCoderHeader, (int) CRYPTO_HEADER_SIZE) == (int) CRYPTO_HEADER_SIZE);
         this->state = STATE_CLIENT_CODER_HEADER_SENT;
     }
 
@@ -217,12 +210,10 @@ bool netInit(
     this->conversationSetUpStartMillis = 0;
     this->mutex = SDL_CreateMutex();
 
-    int sni = SDLNet_Init();
-    assert(!sni);
+    assert(!SDLNet_Init());
 
     IPaddress address;
-    int snrh = SDLNet_ResolveHost(&address, HOST, PORT);
-    assert(!snrh);
+    assert(!SDLNet_ResolveHost(&address, HOST, PORT));
 
     this->socket = SDLNet_TCP_OpenClient(&address);
     if (!this->socket) {
@@ -232,8 +223,7 @@ bool netInit(
 
     this->socketSet = SDLNet_AllocSocketSet(1);
     assert(this->socketSet);
-    int sntas = SDLNet_TCP_AddSocket(this->socketSet, this->socket);
-    assert(sntas == 1);
+    assert(SDLNet_TCP_AddSocket(this->socketSet, this->socket) == 1);
 
     initiateSecuredConnection();
     this->messageBuffer = SDL_malloc(this->encryptedMessageSize);

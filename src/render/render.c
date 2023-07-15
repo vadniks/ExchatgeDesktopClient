@@ -7,8 +7,8 @@
 #include "../conversationMessage.h"
 #include "render.h"
 
-#define SYNCHRONIZED_BEGIN int slm = SDL_LockMutex(this->uiQueriesMutex); assert(!slm); {
-#define SYNCHRONIZED_END int sdum = SDL_UnlockMutex(this->uiQueriesMutex); assert(!sdum); }
+#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->uiQueriesMutex)); {
+#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->uiQueriesMutex)); }
 #define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
 
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
@@ -671,8 +671,7 @@ static void drawUsersList(void) {
         User* user = (User*) listGet(this->usersList, i);
 
         char idString[MAX_U32_DEC_DIGITS_COUNT];
-        int ssp = SDL_snprintf(idString, MAX_U32_DEC_DIGITS_COUNT, "%u", user->id);
-        assert(ssp <= (int) MAX_U32_DEC_DIGITS_COUNT);
+        assert(SDL_snprintf(idString, MAX_U32_DEC_DIGITS_COUNT, "%u", user->id) <= (int) MAX_U32_DEC_DIGITS_COUNT);
 
         drawUserRow(user->id, idString, user->name, user->conversationExists, user->online);
     }

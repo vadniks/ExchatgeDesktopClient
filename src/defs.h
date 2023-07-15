@@ -8,7 +8,7 @@
 #define min(x, y) (x < y ? x : y)
 #define max(x, y) (x > y ? x : y)
 #define boolToStr(x) (x ? "true" : "false")
-#define printArray(x, y) puts(#x); for (unsigned i = 0; i < (y); printf("%d ", (x)[i++])); puts("");
+#define printBinaryArray(x, y) puts(#x); for (unsigned i = 0; i < (y); printf("%d ", ((const unsigned char*) x)[i++])); puts("");
 
 #define staticAssert(x) _Static_assert(x, "")
 
@@ -21,7 +21,7 @@
 #endif
 
 #ifndef __x86_64__
-#   warning "Project targets x86_64 systems"
+#   error "Project targets x86_64 systems"
 #endif
 
 #ifdef __clang__

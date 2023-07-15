@@ -42,9 +42,7 @@ Crypto* cryptoInit(void) {
 }
 
 bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
-    assert(crypto);
-    int ckxk = crypto_kx_keypair(crypto->clientPublicKey, crypto->clientSecretKey);
-    assert(!ckxk);
+    assert(crypto && !crypto_kx_keypair(crypto->clientPublicKey, crypto->clientSecretKey));
     SDL_memcpy(crypto->serverPublicKey, serverPublicKey, CRYPTO_KEY_SIZE);
 
     int result = crypto_kx_client_session_keys(
@@ -97,10 +95,9 @@ bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedByt
     ) != 0)
         return false;
 
-    int sm = SDL_memcmp(unsignedBytes, generatedUnsigned, unsignedSize);
     assert(
         unsignedSize == (unsigned) generatedUnsignedSize &&
-        !sm
+        !SDL_memcmp(unsignedBytes, generatedUnsigned, unsignedSize)
     );
     return true;
 }
@@ -113,8 +110,7 @@ static inline StreamState* serverDecryptionStateAsServer(Crypto* crypto) { retur
 static inline StreamState* serverEncryptionStateAsServer(Crypto* crypto) { return &(crypto->clientEncryptionState); }
 
 const byte* cryptoGenerateKeyPairAsServer(Crypto* crypto) {
-    int ckxk = crypto_kx_keypair(serverPublicKeyAsServer(crypto), serverSecretKeyAsServer(crypto));
-    assert(!ckxk);
+    assert(!crypto_kx_keypair(serverPublicKeyAsServer(crypto), serverSecretKeyAsServer(crypto)));
     return crypto->clientPublicKey;
 }
 

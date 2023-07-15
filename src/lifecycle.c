@@ -9,11 +9,7 @@
 #include "lifecycle.h"
 
 #define ASYNC_ACTIONS_QUEUE_SYNCHRONIZED(x) \
-    int slmsum = SDL_LockMutex(this->asyncActionsQueueMutex); \
-    assert(!slmsum); \
-    x \
-    slmsum = SDL_UnlockMutex(this->asyncActionsQueueMutex); \
-    assert(!slmsum);
+    assert(!SDL_LockMutex(this->asyncActionsQueueMutex)); x assert(!SDL_UnlockMutex(this->asyncActionsQueueMutex));
 
 static const unsigned UI_UPDATE_PERIOD = 1000 / 60;
 static const unsigned NET_UPDATE_PERIOD = 60 / 15;
@@ -109,9 +105,8 @@ bool lifecycleInit(unsigned argc, const char** argv) {
     this->asyncActionsQueueMutex = SDL_CreateMutex();
     this->asyncActionsThread = SDL_CreateThread((SDL_ThreadFunction) &asyncActionsThreadLooper, "asyncActionsThread", NULL);
 
-    SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
-    int si = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER);
-    assert(!si);
+    SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "1"); // TODO: optimize ui for highDpi displays
+    assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
 
     renderInit(
         NET_USERNAME_SIZE,
