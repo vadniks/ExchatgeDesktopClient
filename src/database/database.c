@@ -1,7 +1,7 @@
 
 //#include "sqlite3proxy.h" // precompiled version of this header is included automatically by cmake
 #include <sdl/SDL_stdinc.h>
-#include <sdl/SDL_log.h>
+#include <sdl/SDL_log.h> // TODO: test only
 #include <assert.h>
 #include <unistd.h>
 #include "crypto.h"
@@ -41,10 +41,10 @@ static void createTableIfNotExists(void) {
 }
 
 static void insertStreamStatesBinder(const byte* streamsStates, sqlite3_stmt* statement)
-{ assert(!sqlite3_bind_blob(statement, 0, streamsStates, (int) CRYPTO_STREAMS_STATES_SIZE, SQLITE_STATIC)); }
+{ assert(!sqlite3_bind_blob(statement, 1, streamsStates, (int) CRYPTO_STREAMS_STATES_SIZE, SQLITE_STATIC)); }
 
 static void insertStreamsStates(const byte* streamsStates) {
-    const unsigned sqlSize = 65;
+    const unsigned sqlSize = 47;
     char sql[sqlSize];
     assert(SDL_snprintf(sql, sqlSize, "insert into %s (%s) values (?)", SERVICE_TABLE, STREAMS_STATES_COLUMN) == sqlSize - 1);
 
@@ -70,15 +70,13 @@ static Crypto* initFromExisted(byte* passwordBuffer, unsigned size) {
 
     sqlite3_stmt* statement;
     assert(!sqlite3_prepare(this->db, sql, (int) sqlSize, &statement, NULL));
-    assert(sqlite3_step(statement) == SQLITE_DONE);
+    assert(sqlite3_step(statement) == SQLITE_ROW);
 
     const byte* streamsStates = sqlite3_column_blob(statement, 0);
     assert(streamsStates && sqlite3_column_bytes(statement, 0) == (int) CRYPTO_STREAMS_STATES_SIZE);
     assert(!sqlite3_finalize(statement));
 
-    Crypto* crypto = init(passwordBuffer, size, streamsStates);
-    insertStreamsStates(cryptoExportStreamsStates(crypto));
-    return crypto;
+    return init(passwordBuffer, size, streamsStates);
 }
 
 bool databaseInit(byte* passwordBuffer, unsigned size) {
@@ -90,6 +88,7 @@ bool databaseInit(byte* passwordBuffer, unsigned size) {
 
     if (existedEarlier) this->crypto = initFromExisted(passwordBuffer, size);
     else this->crypto = init(passwordBuffer, size, NULL);
+    insertStreamsStates(cryptoExportStreamsStates(this->crypto));
 
     cryptoFillWithRandomBytes(passwordBuffer, size);
     SDL_free(passwordBuffer);
