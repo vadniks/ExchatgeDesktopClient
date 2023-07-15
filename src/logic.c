@@ -358,14 +358,14 @@ char* logicMillisToDateTime(unsigned long millis) {
     struct tm* tm = localtime((long*) &millis);
     assert(tm);
 
-    // 'ss:mm:hh mmm-dd-yyyy'  20 + \0 = 21
+    // 'hh:mm:ss mmm-dd-yyyy'  20 + \0 = 21
     char* text = SDL_calloc(21, sizeof(char));
 
-    utos(text, 2, tm->tm_sec);
+    utos(text, 2, tm->tm_hour);
     text[2] = ':';
     utos(text + 3, 2, tm->tm_min);
     text[5] = ':';
-    utos(text + 6, 2, tm->tm_hour);
+    utos(text + 6, 2, tm->tm_sec);
     text[8] = ' ';
 
     monthToName(text + 9, tm->tm_mon);
