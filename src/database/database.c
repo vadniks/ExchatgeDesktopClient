@@ -17,6 +17,13 @@ THIS(
     Crypto* crypto;
 )
 
+struct Message_t {
+    unsigned* nullable userId;
+    unsigned long timestamp;
+    char* text;
+    unsigned size;
+};
+
 typedef void (*StatementProcessor)(void* nullable, sqlite3_stmt*);
 
 static void execSingle(
