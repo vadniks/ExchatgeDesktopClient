@@ -156,6 +156,8 @@ static void stopApp(void) {
 }
 
 void lifecycleLoop(void) {
+    unsigned long startMillis, differenceMillis, frameMillis = UI_UPDATE_PERIOD;
+
     while (this->running) {
 
         if (processEvents()) {
@@ -164,7 +166,11 @@ void lifecycleLoop(void) {
             break;
         }
 
+        startMillis = logicCurrentTimeMillis();
         renderDraw();
+
+        do differenceMillis = logicCurrentTimeMillis() - startMillis;
+        while (differenceMillis < frameMillis);
     }
 }
 
