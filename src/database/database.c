@@ -17,18 +17,23 @@ THIS(
     Crypto* crypto;
 )
 
-typedef void (* nullable Binder)(const void* nullable, sqlite3_stmt*);
+typedef void (*StatementProcessor)(void* nullable, sqlite3_stmt*);
 
-static void execSingleResultless(
+static void execSingle(
     const char* sql,
     unsigned sqlSize,
-    Binder binder,
-    const void* nullable parameter
+    StatementProcessor nullable binder,
+    void* nullable binderParameter,
+    StatementProcessor nullable resultHandler,
+    void* nullable resultHandlerParameter
 ) {
     sqlite3_stmt* statement;
     assert(!sqlite3_prepare(this->db, sql, (int) sqlSize, &statement, NULL));
-    if (binder) (*binder)(parameter, statement);
-    assert(sqlite3_step(statement) == SQLITE_DONE);
+    if (binder) (*binder)(binderParameter, statement);
+
+    if (!resultHandler) assert(sqlite3_step(statement) == SQLITE_DONE);
+    else (*resultHandler)(resultHandlerParameter, statement);
+
     assert(!sqlite3_finalize(statement));
 }
 
@@ -37,18 +42,36 @@ static void createTableIfNotExists(void) {
     char sql[sqlSize];
     assert(SDL_snprintf(sql, sqlSize, "create table if not exists %s (%s blob not null)", SERVICE_TABLE, STREAMS_STATES_COLUMN) == sqlSize - 1);
 
-    execSingleResultless(sql, sqlSize, NULL, NULL);
+    execSingle(sql, sqlSize, NULL, NULL, NULL, NULL);
+}
+
+static void streamsStatesExistsResultHandler(bool* result, sqlite3_stmt* statement) {
+    assert(sqlite3_step(statement) == SQLITE_ROW);
+    int a = sqlite3_column_int(statement, 1);
+    *result = a > 0;
+}
+
+static bool streamsStatesExists(void) {
+    const unsigned sqlSize = 29;
+    char sql[sqlSize];
+    assert(SDL_snprintf(sql, sqlSize, "select count(*) from %s", SERVICE_TABLE) == sqlSize - 1);
+
+    bool result = false;
+    execSingle(sql, sqlSize, NULL, NULL, (StatementProcessor) &streamsStatesExistsResultHandler, &result);
+    return result;
 }
 
 static void insertStreamStatesBinder(const byte* streamsStates, sqlite3_stmt* statement)
 { assert(!sqlite3_bind_blob(statement, 1, streamsStates, (int) CRYPTO_STREAMS_STATES_SIZE, SQLITE_STATIC)); }
 
 static void insertStreamsStates(const byte* streamsStates) {
+    assert(!streamsStatesExists());
+
     const unsigned sqlSize = 47;
     char sql[sqlSize];
     assert(SDL_snprintf(sql, sqlSize, "insert into %s (%s) values (?)", SERVICE_TABLE, STREAMS_STATES_COLUMN) == sqlSize - 1);
 
-    execSingleResultless(sql, sqlSize, (Binder) &insertStreamStatesBinder, streamsStates);
+    execSingle(sql, sqlSize, (StatementProcessor) &insertStreamStatesBinder, (void*) streamsStates, NULL, NULL);
 }
 
 static Crypto* init(byte* passwordBuffer, unsigned size, const byte* nullable streamsStates) {
@@ -94,6 +117,8 @@ bool databaseInit(byte* passwordBuffer, unsigned size) {
 
     if (existedEarlier) this->crypto = initFromExisted(passwordBuffer, size);
     else this->crypto = initNew(passwordBuffer, size);
+
+    assert(streamsStatesExists()); // TODO: fails
 
     cryptoFillWithRandomBytes(passwordBuffer, size);
     SDL_free(passwordBuffer);
