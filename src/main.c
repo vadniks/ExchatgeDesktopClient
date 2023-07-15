@@ -7,8 +7,11 @@
 #include "database/database.h"
 
 int main(int argc, const char** argv) {
-    assert(databaseInit()); // TODO: test only
+    byte akaPassword[16]; // TODO: test only
+    SDL_memset(akaPassword, 0, 16);
+    assert(databaseInit(akaPassword, 16));
     databaseClean();
+
 //    if (!lifecycleInit(argc, argv)) return EXIT_FAILURE;
 //    lifecycleLoop();
 //    lifecycleClean();
