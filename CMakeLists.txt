@@ -49,6 +49,10 @@ set(LIB_COLLECTIONS_NAME "collections")
 add_subdirectory(src/collections)
 target_link_libraries(${PROJECT_NAME} ${LIB_COLLECTIONS_NAME})
 
+set(LIB_DATABASE_NAME "database")
+add_subdirectory(src/database)
+target_link_libraries(${PROJECT_NAME} ${LIB_DATABASE_NAME})
+
 file(COPY res DESTINATION ${CMAKE_BINARY_DIR})
 
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -82,5 +86,11 @@ endif()
 #             <.so|.a>
 #         include
 #             sodium
+#                 <.h>
+#     sqlite
+#         bin
+#             <.so|.a>
+#         include
+#             sqlite
 #                 <.h>
 #
