@@ -15,6 +15,6 @@ int main(int argc, const char** argv) {
 //    if (!lifecycleInit(argc, argv)) return EXIT_FAILURE;
 //    lifecycleLoop();
 //    lifecycleClean();
-//    assert(!SDL_GetNumAllocations());
+    assert(!SDL_GetNumAllocations());
     return EXIT_SUCCESS;
 }

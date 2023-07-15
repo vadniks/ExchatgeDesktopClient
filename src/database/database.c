@@ -103,7 +103,11 @@ static Crypto* initFromExisted(byte* passwordBuffer, unsigned size) {
 
 static Crypto* initNew(byte* passwordBuffer, unsigned size) {
     Crypto* crypto = init(passwordBuffer, size, NULL);
-    insertStreamsStates(cryptoExportStreamsStates(crypto));
+
+    byte* streamsStates = cryptoExportStreamsStates(crypto);
+    insertStreamsStates(streamsStates);
+    SDL_free(streamsStates);
+
     return crypto;
 }
 
