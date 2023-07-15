@@ -16,13 +16,7 @@ THIS(
     Crypto* crypto;
 )
 
-static Crypto* init(byte* passwordBuffer, unsigned size, const byte* nullable streamsStates) {
-    Crypto* crypto = cryptoInit();
-    byte* key = cryptoMakeKey(passwordBuffer, size);
-    cryptoSetUpAutonomous(crypto, key, streamsStates);
-    cryptoFillWithRandomBytes(key, CRYPTO_KEY_SIZE);
-    SDL_free(key);
-
+static void createTableIfNotExists(void) {
     const unsigned sqlSize = 65;
     char sql[sqlSize];
     assert(SDL_snprintf(sql, sqlSize, "create table if not exists %s (%s blob not null)", SERVICE_TABLE, STREAMS_STATES_COLUMN) == sqlSize - 1);
@@ -31,6 +25,16 @@ static Crypto* init(byte* passwordBuffer, unsigned size, const byte* nullable st
     assert(!sqlite3_prepare(this->db, sql, (int) sqlSize, &statement, NULL));
     assert(sqlite3_step(statement) == SQLITE_DONE);
     assert(!sqlite3_finalize(statement));
+}
+
+static Crypto* init(byte* passwordBuffer, unsigned size, const byte* nullable streamsStates) {
+    createTableIfNotExists();
+
+    Crypto* crypto = cryptoInit();
+    byte* key = cryptoMakeKey(passwordBuffer, size);
+    cryptoSetUpAutonomous(crypto, key, streamsStates);
+    cryptoFillWithRandomBytes(key, CRYPTO_KEY_SIZE);
+    SDL_free(key);
 
     return crypto;
 }
@@ -52,13 +56,16 @@ static Crypto* initFromExisted(byte* passwordBuffer, unsigned size) {
 }
 
 bool databaseInit(byte* passwordBuffer, unsigned size) {
+    assert(!this);
     this = SDL_malloc(sizeof *this);
 
     bool existedEarlier = !access(FILE_NAME, F_OK | R_OK | W_OK);
     if (sqlite3_open(FILE_NAME, &(this->db)) != 0) return false;
 
-    if (existedEarlier) initFromExisted(passwordBuffer, size);
-    else init(passwordBuffer, size, NULL);
+    Crypto* crypto = NULL;
+    if (existedEarlier) crypto = initFromExisted(passwordBuffer, size);
+    else crypto = init(passwordBuffer, size, NULL);
+    cryptoDestroy(crypto); // TODO
 
     cryptoFillWithRandomBytes(passwordBuffer, size);
     SDL_free(passwordBuffer);
@@ -67,6 +74,6 @@ bool databaseInit(byte* passwordBuffer, unsigned size) {
 }
 
 void databaseClean(void) {
-    assert(!sqlite3_close(this->db));
+    assert(this && !sqlite3_close(this->db));
     SDL_free(this);
 }
