@@ -2,10 +2,15 @@
 //#include "sqlite3proxy.h" // precompiled version of this header is included automatically by cmake
 #include <sdl/SDL_stdinc.h>
 #include <sdl/SDL_log.h> // TODO: test only
+#include <sdl/SDL_mutex.h>
 #include <assert.h>
 #include <unistd.h>
 #include "crypto.h"
 #include "database.h"
+
+#define SYNCHRONIZED_BEGIN SDL_LockMutex(this->mutex);
+#define SYNCHRONIZED_END SDL_UnlockMutex(this->mutex);
+#define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
 
 STATIC_CONST_STRING FILE_NAME = "./database.sqlite3";
 
@@ -13,6 +18,7 @@ STATIC_CONST_STRING SERVICE_TABLE = "service"; // 7
 STATIC_CONST_STRING STREAMS_STATES_COLUMN = "streamsStates"; // 13
 
 THIS(
+    SDL_mutex* mutex;
     sqlite3* db;
     Crypto* crypto;
 )
@@ -141,9 +147,12 @@ static Crypto* initNew(byte* passwordBuffer, unsigned size) {
 bool databaseInit(byte* passwordBuffer, unsigned size) {
     assert(!this && size > 0);
     this = SDL_malloc(sizeof *this);
+    this->mutex = SDL_CreateMutex();
+    SYNCHRONIZED_BEGIN
 
     bool existedEarlier = !access(FILE_NAME, F_OK | R_OK | W_OK);
     if (sqlite3_open(FILE_NAME, &(this->db)) != 0) {
+        SYNCHRONIZED_END
         cryptoFillWithRandomBytes(passwordBuffer, size);
         SDL_free(passwordBuffer);
         return false;
@@ -154,13 +163,15 @@ bool databaseInit(byte* passwordBuffer, unsigned size) {
     assert(streamsStatesExists());
 
     SDL_free(passwordBuffer);
-    if (!this->crypto) return false;
+    SYNCHRONIZED_END
 
-    return true;
+    if (!this->crypto) return false;
+    else return true;
 }
 
 void databaseClean(void) {
     assert(this && !sqlite3_close(this->db));
     if (this->crypto) cryptoDestroy(this->crypto);
+    SDL_DestroyMutex(this->mutex);
     SDL_free(this);
 }
