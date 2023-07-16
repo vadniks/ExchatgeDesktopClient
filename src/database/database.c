@@ -161,6 +161,6 @@ bool databaseInit(byte* passwordBuffer, unsigned size) {
 
 void databaseClean(void) {
     assert(this && !sqlite3_close(this->db));
-    cryptoDestroy(this->crypto);
+    if (this->crypto) cryptoDestroy(this->crypto);
     SDL_free(this);
 }
