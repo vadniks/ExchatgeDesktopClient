@@ -30,6 +30,8 @@ static const byte serverSignPublicKey[SERVER_SIGN_PUBLIC_KEY_SIZE] = {
     138, 54, 215, 5, 170, 139, 175, 148, 71, 215, 74, 172, 27, 225, 26, 249
 };
 
+static _Atomic bool sodiumInitialized = false;
+
 struct Crypto_t {
     byte serverPublicKey[CRYPTO_KEY_SIZE]; // clientPublicKey for *AsServer functions
     byte clientPublicKey[CRYPTO_KEY_SIZE]; // serverPublicKey for *AsServer functions
@@ -41,7 +43,9 @@ struct Crypto_t {
 };
 
 Crypto* cryptoInit(void) {
-    if (sodium_init() < 0) return NULL;
+    if (!sodiumInitialized && sodium_init() < 0) return NULL;
+    sodiumInitialized = true;
+
     return (Crypto*) SDL_malloc(sizeof(Crypto));
 }
 
@@ -107,7 +111,7 @@ bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedByt
 }
 
 byte* cryptoMakeKey(byte* passwordBuffer, unsigned size) {
-    assert(passwordBuffer && size > 0);
+    assert(passwordBuffer && size >= crypto_generichash_BYTES_MIN && size <= crypto_generichash_BYTES_MAX);
 
     byte* hash = SDL_malloc(CRYPTO_KEY_SIZE * sizeof(char));
     assert(!crypto_generichash(hash, CRYPTO_KEY_SIZE, passwordBuffer, size, NULL, 0));
@@ -118,6 +122,7 @@ byte* cryptoMakeKey(byte* passwordBuffer, unsigned size) {
 
 void cryptoSetUpAutonomous(Crypto* crypto, const byte* key, const byte* nullable streamsStates) {
     assert(crypto && key);
+    SDL_memcpy(&(crypto->clientKey), key, CRYPTO_KEY_SIZE);
 
     if (!streamsStates) {
         byte header[CRYPTO_HEADER_SIZE];
@@ -139,6 +144,11 @@ byte* cryptoExportStreamsStates(const Crypto* crypto) {
     SDL_memcpy(bytes + size, &(crypto->clientEncryptionState), size);
 
     return bytes;
+}
+
+const byte* cryptoClientKey(const Crypto* crypto) {
+    assert(crypto);
+    return crypto->clientKey;
 }
 
 static inline byte* clientPublicKeyAsServer(Crypto* crypto) { return crypto->serverPublicKey; }
@@ -261,7 +271,7 @@ unsigned cryptoSingleEncryptedSize(unsigned unencryptedSize)
 byte* nullable cryptoEncryptSingle(const byte* key, const byte* bytes, unsigned bytesSize) {
     assert(key && bytes);
 
-    const unsigned encryptedSize = cryptoEncryptedSize(bytesSize);
+    const unsigned encryptedSize = cryptoSingleEncryptedSize(bytesSize);
     byte* encrypted = SDL_calloc(encryptedSize, sizeof(char));
 
     byte* nonceStart = encrypted + encryptedSize - NONCE_SIZE;

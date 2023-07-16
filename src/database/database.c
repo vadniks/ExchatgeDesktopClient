@@ -67,32 +67,45 @@ static bool streamsStatesExists(void) {
     return result;
 }
 
-static void insertStreamStatesBinder(const byte* streamsStates, sqlite3_stmt* statement)
-{ assert(!sqlite3_bind_blob(statement, 1, streamsStates, (int) CRYPTO_STREAMS_STATES_SIZE, SQLITE_STATIC)); }
+static void insertEncryptedStreamStatesBinder(const byte* encryptedStreamsStates, sqlite3_stmt* statement)
+{ assert(!sqlite3_bind_blob(statement, 1, encryptedStreamsStates, (int) cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE), SQLITE_STATIC)); }
 
-static void insertStreamsStates(const byte* streamsStates) {
+static void insertEncryptedStreamsStates(const byte* encryptedStreamsStates) {
     assert(!streamsStatesExists());
 
     const unsigned sqlSize = 47;
     char sql[sqlSize];
     assert(SDL_snprintf(sql, sqlSize, "insert into %s (%s) values (?)", SERVICE_TABLE, STREAMS_STATES_COLUMN) == sqlSize - 1);
 
-    execSingle(sql, sqlSize, (StatementProcessor) &insertStreamStatesBinder, (void*) streamsStates, NULL, NULL);
+    execSingle(sql, sqlSize, (StatementProcessor) &insertEncryptedStreamStatesBinder, (void*) encryptedStreamsStates, NULL, NULL);
 }
 
-static Crypto* init(byte* passwordBuffer, unsigned size, const byte* nullable streamsStates) {
+static Crypto* nullable init(byte* passwordBuffer, unsigned size, const byte* nullable encryptedStreamsStates) {
     createTableIfNotExists();
 
     Crypto* crypto = cryptoInit();
     byte* key = cryptoMakeKey(passwordBuffer, size);
-    cryptoSetUpAutonomous(crypto, key, streamsStates);
+
+    if (encryptedStreamsStates) {
+        byte* streamsStates = cryptoDecryptSingle(key, encryptedStreamsStates, cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE));
+        if (!streamsStates) {
+            SDL_free(key);
+            cryptoDestroy(crypto);
+            return NULL;
+        }
+
+        cryptoSetUpAutonomous(crypto, key, streamsStates);
+        SDL_free(streamsStates);
+    } else
+        cryptoSetUpAutonomous(crypto, key, NULL);
+
     cryptoFillWithRandomBytes(key, CRYPTO_KEY_SIZE);
     SDL_free(key);
 
     return crypto;
 }
 
-static Crypto* initFromExisted(byte* passwordBuffer, unsigned size) {
+static Crypto* nullable initFromExisted(byte* passwordBuffer, unsigned size) {
     const unsigned sqlSize = 34;
     char sql[sqlSize + 1];
     assert(SDL_snprintf(sql, sqlSize, "select %s from %s", STREAMS_STATES_COLUMN, SERVICE_TABLE) == sqlSize - 1);
@@ -101,36 +114,47 @@ static Crypto* initFromExisted(byte* passwordBuffer, unsigned size) {
     assert(!sqlite3_prepare(this->db, sql, (int) sqlSize, &statement, NULL));
     assert(sqlite3_step(statement) == SQLITE_ROW);
 
-    const byte* streamsStates = sqlite3_column_blob(statement, 0);
-    assert(streamsStates && sqlite3_column_bytes(statement, 0) == (int) CRYPTO_STREAMS_STATES_SIZE);
+    const unsigned encryptedStreamsStatesSize = cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE);
+    const byte* encryptedStreamsStates = sqlite3_column_blob(statement, 0);
+    assert(encryptedStreamsStates && sqlite3_column_bytes(statement, 0) == (int) encryptedStreamsStatesSize);
+
+    Crypto* crypto = init(passwordBuffer, size, encryptedStreamsStates);
     assert(!sqlite3_finalize(statement));
 
-    return init(passwordBuffer, size, streamsStates);
+    return crypto;
 }
 
 static Crypto* initNew(byte* passwordBuffer, unsigned size) {
     Crypto* crypto = init(passwordBuffer, size, NULL);
+    assert(crypto);
 
     byte* streamsStates = cryptoExportStreamsStates(crypto);
-    insertStreamsStates(streamsStates);
+    byte* encryptedStreamsStates = cryptoEncryptSingle(cryptoClientKey(crypto), streamsStates, CRYPTO_STREAMS_STATES_SIZE);
     SDL_free(streamsStates);
+
+    insertEncryptedStreamsStates(encryptedStreamsStates);
+    SDL_free(encryptedStreamsStates);
 
     return crypto;
 }
 
 bool databaseInit(byte* passwordBuffer, unsigned size) {
-    assert(!this);
+    assert(!this && size > 0);
     this = SDL_malloc(sizeof *this);
 
     bool existedEarlier = !access(FILE_NAME, F_OK | R_OK | W_OK);
-    if (sqlite3_open(FILE_NAME, &(this->db)) != 0) return false;
+    if (sqlite3_open(FILE_NAME, &(this->db)) != 0) {
+        cryptoFillWithRandomBytes(passwordBuffer, size);
+        SDL_free(passwordBuffer);
+        return false;
+    }
 
     if (existedEarlier) this->crypto = initFromExisted(passwordBuffer, size);
     else this->crypto = initNew(passwordBuffer, size);
     assert(streamsStatesExists());
 
-    cryptoFillWithRandomBytes(passwordBuffer, size);
     SDL_free(passwordBuffer);
+    if (!this->crypto) return false;
 
     return true;
 }
