@@ -378,7 +378,7 @@ bool renderShowInviteDialog(const char* fromUserName) {
         NULL
     };
 
-    int buttonId;
+    int buttonId; // TODO: nk_popup_begin()
     SDL_ShowMessageBox(&data, &buttonId); // blocks the thread until user pressed any button or closed the dialog window
     return !buttonId;
 }
