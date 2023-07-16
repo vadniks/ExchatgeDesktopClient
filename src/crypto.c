@@ -44,7 +44,7 @@ struct Crypto_t {
 
 Crypto* cryptoInit(void) {
     if (!sodiumInitialized && sodium_init() < 0) return NULL;
-    sodiumInitialized = true;
+    else sodiumInitialized = true;
 
     return (Crypto*) SDL_malloc(sizeof(Crypto));
 }
