@@ -244,8 +244,11 @@ static void conversationExistsBinder(const unsigned* userId, sqlite3_stmt* state
 { assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
 
 static void conversationExistsResultHandler(bool* result, sqlite3_stmt* statement) {
-    assert(sqlite3_step(statement) == SQLITE_ROW);
-    *result = sqlite3_column_count(statement) == 1;
+    const int xResult = sqlite3_step(statement);
+
+    if (xResult == SQLITE_ROW) *result = true;
+    else if (xResult == SQLITE_DONE) *result = false;
+    else assert(false);
 }
 
 bool databaseConversationExists(unsigned userId) {
