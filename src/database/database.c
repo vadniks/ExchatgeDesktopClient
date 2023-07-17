@@ -13,15 +13,15 @@
 
 STATIC_CONST_STRING FILE_NAME = "./database.sqlite3";
 
-STATIC_CONST_STRING SERVICE_TABLE = "service"; // 7
-STATIC_CONST_STRING STREAMS_STATES_COLUMN = "streamsStates"; // 13
-STATIC_CONST_STRING CONVERSATIONS_TABLE = "conversations"; // 13
-STATIC_CONST_STRING USER_COLUMN = "user"; // 4
-STATIC_CONST_STRING MESSAGES_TABLE = "messages"; // 8
-STATIC_CONST_STRING TIMESTAMP_COLUMN = "timestamp"; // 9
-STATIC_CONST_STRING FROM_COLUMN = "\"from\""; // 6
-STATIC_CONST_STRING TEXT_COLUMN = "text"; // 4
-STATIC_CONST_STRING SIZE_COLUMN = "size"; // 4
+STATIC_CONST_STRING SERVICE_TABLE = "service";
+STATIC_CONST_STRING STREAMS_STATES_COLUMN = "streamsStates";
+STATIC_CONST_STRING CONVERSATIONS_TABLE = "conversations";
+STATIC_CONST_STRING USER_COLUMN = "user";
+STATIC_CONST_STRING MESSAGES_TABLE = "messages";
+STATIC_CONST_STRING TIMESTAMP_COLUMN = "timestamp";
+STATIC_CONST_STRING FROM_COLUMN = "\"from\"";
+STATIC_CONST_STRING TEXT_COLUMN = "text";
+STATIC_CONST_STRING SIZE_COLUMN = "size";
 
 THIS(
     SDL_mutex* mutex;
@@ -175,9 +175,15 @@ static Crypto* nullable init(byte* passwordBuffer, unsigned size, const byte* nu
 }
 
 static Crypto* nullable initFromExisted(byte* passwordBuffer) {
-    const unsigned sqlSize = 34;
-    char sql[sqlSize + 1];
-    assert(SDL_snprintf(sql, sqlSize, "select %s from %s", STREAMS_STATES_COLUMN, SERVICE_TABLE) == sqlSize - 1);
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "select %s from %s",
+        STREAMS_STATES_COLUMN, SERVICE_TABLE
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
 
     sqlite3_stmt* statement;
     assert(!sqlite3_prepare(this->db, sql, (int) sqlSize, &statement, NULL));
@@ -234,6 +240,36 @@ bool databaseInit(byte* passwordBuffer, unsigned passwordSize, unsigned username
     else return true;
 }
 
+static void conversationExistsBinder(const unsigned* userId, sqlite3_stmt* statement)
+{ assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
+
+static void conversationExistsResultHandler(bool* result, sqlite3_stmt* statement) {
+    assert(sqlite3_step(statement) == SQLITE_ROW);
+    *result = sqlite3_column_count(statement) == 1;
+}
+
+bool databaseConversationExists(unsigned userId) {
+    assert(this);
+
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = SDL_snprintf(
+        sql, bufferSize,
+        "select %s from %s where %s = ?",
+        USER_COLUMN, CONVERSATIONS_TABLE, USER_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    bool result = false;
+    executeSingle(
+        sql, sqlSize,
+        (StatementProcessor) &conversationExistsBinder, &userId,
+        (StatementProcessor) &conversationExistsResultHandler, &result
+    );
+    return result;
+}
+
 static void addConversationBinder(const void* const* parameters, sqlite3_stmt* statement) {
     assert(!sqlite3_bind_int(statement, 1, (int) *((const unsigned*) parameters[0])));
     assert(!sqlite3_bind_blob(statement, 2, (const byte*) parameters[1], cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE), SQLITE_STATIC));
@@ -241,6 +277,8 @@ static void addConversationBinder(const void* const* parameters, sqlite3_stmt* s
 
 bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
     assert(this);
+    if (databaseConversationExists(userId)) return false;
+    SYNCHRONIZED_BEGIN
 
     byte* streamStates = cryptoExportStreamsStates(crypto);
     byte* encryptedStreamsStates = cryptoEncrypt(this->crypto, streamStates, CRYPTO_STREAMS_STATES_SIZE, false);
@@ -265,6 +303,7 @@ bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
     );
 
     SDL_free(encryptedStreamsStates);
+    SYNCHRONIZED_END
     return true;
 }
 
