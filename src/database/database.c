@@ -16,6 +16,8 @@ STATIC_CONST_STRING FILE_NAME = "./database.sqlite3";
 STATIC_CONST_STRING SERVICE_TABLE = "service"; // 7
 STATIC_CONST_STRING STREAMS_STATES_COLUMN = "streamsStates"; // 13
 STATIC_CONST_STRING CONVERSATIONS_TABLE = "conversations"; // 13
+STATIC_CONST_STRING USER_COLUMN = "user"; // 4
+STATIC_CONST_STRING MESSAGES_TABLE = "messages"; // 8
 STATIC_CONST_STRING TIMESTAMP_COLUMN = "timestamp"; // 9
 STATIC_CONST_STRING FROM_COLUMN = "\"from\""; // 6
 STATIC_CONST_STRING TEXT_COLUMN = "text"; // 4
@@ -31,7 +33,7 @@ THIS(
 
 typedef void (*StatementProcessor)(void* nullable, sqlite3_stmt*);
 
-static void executeSingle(
+static void overloadable executeSingle(
     const char* sql,
     unsigned sqlSize,
     StatementProcessor nullable binder,
@@ -49,15 +51,41 @@ static void executeSingle(
     assert(!sqlite3_finalize(statement));
 }
 
-static void createServiceTable(void) {
-    const unsigned sqlSize = 51;
-    char sql[sqlSize];
-    assert(SDL_snprintf(sql, sqlSize, "create table %s (%s blob not null)", SERVICE_TABLE, STREAMS_STATES_COLUMN) == sqlSize - 1);
+static inline void overloadable executeSingle(const char* sql, unsigned sqlSize)
+{ executeSingle(sql, sqlSize, NULL, NULL, NULL, NULL); }
 
-    executeSingle(sql, sqlSize, NULL, NULL, NULL, NULL);
+static void createServiceTable(void) {
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "create table %s (%s blob(%u) not null)",
+        SERVICE_TABLE, STREAMS_STATES_COLUMN, cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE)
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    executeSingle(sql, sqlSize);
 }
 
 static void createConversationsTable(void) {
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "create table %s ("
+            "%s unsigned int not null unique, " // user (id)
+            "%s blob(%u) not null" // streamsStates
+        ")",
+        CONVERSATIONS_TABLE, USER_COLUMN, STREAMS_STATES_COLUMN, cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE)
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    executeSingle(sql, sqlSize);
+}
+
+static void createMessagesTable(void) {
     const unsigned bufferSize = 255;
     char sql[bufferSize];
 
@@ -69,16 +97,17 @@ static void createConversationsTable(void) {
             "%s blob not null, " // text
             "%s unsigned int not null" // size
         ")",
-        CONVERSATIONS_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN, this->usernameSize, TEXT_COLUMN, SIZE_COLUMN
+        MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN, this->usernameSize, TEXT_COLUMN, SIZE_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
-    executeSingle(sql, sqlSize, NULL, NULL, NULL, NULL);
+    executeSingle(sql, sqlSize);
 }
 
 static void createTables(void) {
     createServiceTable();
     createConversationsTable();
+    createMessagesTable();
 }
 
 static void streamsStatesExistsResultHandler(bool* result, sqlite3_stmt* statement) {
@@ -97,16 +126,27 @@ static bool streamsStatesExists(void) {
 }
 
 static void insertEncryptedStreamStatesBinder(const byte* encryptedStreamsStates, sqlite3_stmt* statement)
-{ assert(!sqlite3_bind_blob(statement, 1, encryptedStreamsStates, (int) cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE), SQLITE_STATIC)); }
+{ assert(!sqlite3_bind_blob(statement, 1, encryptedStreamsStates, cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE), SQLITE_STATIC)); }
 
 static void insertEncryptedStreamsStates(const byte* encryptedStreamsStates) {
     assert(!streamsStatesExists());
 
-    const unsigned sqlSize = 47;
-    char sql[sqlSize];
-    assert(SDL_snprintf(sql, sqlSize, "insert into %s (%s) values (?)", SERVICE_TABLE, STREAMS_STATES_COLUMN) == sqlSize - 1);
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
 
-    executeSingle(sql, sqlSize, (StatementProcessor) &insertEncryptedStreamStatesBinder, (void*) encryptedStreamsStates, NULL, NULL);
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "insert into %s (%s) values (?)",
+        SERVICE_TABLE, STREAMS_STATES_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    executeSingle(
+        sql, sqlSize,
+        (StatementProcessor) &insertEncryptedStreamStatesBinder,
+        (void*) encryptedStreamsStates,
+        NULL, NULL
+    );
 }
 
 static Crypto* nullable init(byte* passwordBuffer, unsigned size, const byte* nullable encryptedStreamsStates) {
@@ -168,7 +208,7 @@ static Crypto* initNew(byte* passwordBuffer) {
 }
 
 bool databaseInit(byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize) {
-    assert(!this && passwordSize > 0);
+    assert(!this && passwordSize > 0 && usernameSize > 0);
     this = SDL_malloc(sizeof *this);
     this->mutex = SDL_CreateMutex();
     SYNCHRONIZED_BEGIN
@@ -194,20 +234,53 @@ bool databaseInit(byte* passwordBuffer, unsigned passwordSize, unsigned username
     else return true;
 }
 
-bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
+static void addConversationBinder(const void* const* parameters, sqlite3_stmt* statement) {
+    assert(!sqlite3_bind_int(statement, 1, (int) *((const unsigned*) parameters[0])));
+    assert(!sqlite3_bind_blob(statement, 2, (const byte*) parameters[1], cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE), SQLITE_STATIC));
+}
 
+bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
+    assert(this);
+
+    byte* streamStates = cryptoExportStreamsStates(crypto);
+    byte* encryptedStreamsStates = cryptoEncrypt(this->crypto, streamStates, CRYPTO_STREAMS_STATES_SIZE, false);
+    SDL_free(streamStates);
+    assert(encryptedStreamsStates);
+
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "insert into %s (%s, %s) values (?, ?)",
+        CONVERSATIONS_TABLE, USER_COLUMN, STREAMS_STATES_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    executeSingle(
+        sql, sqlSize,
+        (StatementProcessor) &addConversationBinder,
+        (void*) (const void*[2]) {&userId, encryptedStreamsStates},
+        NULL, NULL
+    );
+
+    SDL_free(encryptedStreamsStates);
+    return true;
 }
 
 bool databaseAddMessage(const unsigned* nullable userId, const ConversationMessage* message) {
-
+    assert(this);
+    return true;
 }
 
 bool databaseUserExists(unsigned id) {
-
+    assert(this);
+    return true;
 }
 
 List* nullable databaseGetMessages(unsigned userId, unsigned* size) {
-
+    assert(this);
+    return NULL;
 }
 
 
