@@ -25,12 +25,11 @@ int main(int argc, const char** argv) {
 
     databaseClean();
 
+    SDL_Quit(); // for _Log()
+
 //    if (!lifecycleInit(argc, argv)) return EXIT_FAILURE;
 //    lifecycleLoop();
 //    lifecycleClean();
-
-    SDL_Quit(); // for _Log()
-
     assert(!SDL_GetNumAllocations());
     return EXIT_SUCCESS;
 }
