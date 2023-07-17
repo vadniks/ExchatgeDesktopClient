@@ -9,7 +9,7 @@
 int main(int argc, const char** argv) {
     byte* akaPassword = SDL_malloc(16); // TODO: test only
     SDL_memset(akaPassword, 0, 16);
-    assert(databaseInit(akaPassword, 16));
+    assert(databaseInit(akaPassword, 16, 16));
     databaseClean();
 
 //    if (!lifecycleInit(argc, argv)) return EXIT_FAILURE;
