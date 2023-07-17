@@ -2,7 +2,7 @@
 #pragma once
 
 #include "defs.h"
-#include <collections/list.h>
+#include "collections/list.h"
 
 typedef struct {
     unsigned long timestamp;
