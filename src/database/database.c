@@ -5,7 +5,6 @@
 #include <sdl/SDL_mutex.h>
 #include <assert.h>
 #include <unistd.h>
-#include "crypto.h"
 #include "database.h"
 
 #define SYNCHRONIZED_BEGIN SDL_LockMutex(this->mutex);
@@ -22,13 +21,6 @@ THIS(
     sqlite3* db;
     Crypto* crypto;
 )
-
-struct DatabaseMessage_t {
-    unsigned* nullable userId;
-    unsigned long timestamp;
-    char* text;
-    unsigned size;
-};
 
 typedef void (*StatementProcessor)(void* nullable, sqlite3_stmt*);
 
