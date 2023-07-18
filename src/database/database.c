@@ -46,8 +46,8 @@ DatabaseMessage* databaseMessageCreate(unsigned long timestamp, const unsigned* 
     message->timestamp = timestamp;
 
     if (from) {
-        message->from = SDL_malloc(sizeof from);
-        SDL_memcpy(message->from, from, sizeof from);
+        message->from = SDL_malloc(sizeof(int));
+        *(message->from) = *from;
     } else
         message->from = NULL;
 
@@ -411,9 +411,10 @@ bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable fro
 
     return result;
 }
-
+#include <stdio.h>
 static void addMessageBinder(const DatabaseMessage* message, sqlite3_stmt* statement) {
     byte* encryptedText = cryptoEncrypt(this->crypto, (byte*) message->text, message->size, false);
+    printBinaryArray(encryptedText, cryptoEncryptedSize(message->size))
     SDL_Log("bb %u", cryptoEncryptedSize(message->size)); // TODO: test only
 
     assert(!sqlite3_bind_int64(statement, 1, (long) message->timestamp));
@@ -453,7 +454,7 @@ static void getMessagesResultHandler(void** parameters, sqlite3_stmt* statement)
     List* messages = parameters[0];
     unsigned* size = parameters[1];
 
-    DatabaseMessage* message; // TODO: test all
+    DatabaseMessage* message;
     int result;
     unsigned* from;
     unsigned fromId, encryptedTextSize, textSize;
@@ -464,14 +465,15 @@ static void getMessagesResultHandler(void** parameters, sqlite3_stmt* statement)
 
         if (sqlite3_column_type(statement, 1) != SQLITE_NULL) {
             fromId = sqlite3_column_int(statement, 1);
-            from = SDL_malloc(sizeof fromId);
-            message->from = &fromId;
+            from = SDL_malloc(sizeof(int));
+            *from = fromId;
         } else
             from = NULL;
 
+        encryptedText = sqlite3_column_blob(statement, 2);
         encryptedTextSize = sqlite3_column_bytes(statement, 2);
         assert(encryptedTextSize > cryptoEncryptedSize(0));
-        encryptedText = sqlite3_column_blob(statement, 2);
+        printBinaryArray(encryptedText, encryptedTextSize) // TODO: first 16 bytes of encryptedText get overwritten by smth else (encryptedText here and in addMessageBinder when addition is performed not equal) - memory corruption occurs smwhr nearby
         SDL_Log("aa %u", encryptedTextSize);  // TODO: test only
 
         text = cryptoDecrypt(this->crypto, encryptedText, encryptedTextSize, false);
