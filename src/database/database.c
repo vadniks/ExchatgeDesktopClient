@@ -314,7 +314,7 @@ bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
 
 static void messageExistsBinder(const void* const* parameters, sqlite3_stmt* statement) {
     const unsigned* from = parameters[1];
-    assert(!sqlite3_bind_int64(statement, 1, *((const unsigned long*) parameters[0])));
+    assert(!sqlite3_bind_int64(statement, 1, (long) *((const unsigned long*) parameters[0])));
     assert(!(from ? sqlite3_bind_int(statement, 2, (int) *from) : sqlite3_bind_null(statement, 2)));
 }
 
@@ -324,20 +324,19 @@ bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable fro
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
-        "select count(*) from %s where %s = ? and %s = ?",
+        "select rowid from %s where %s = ? and %s = ?", // rowid is the default primary key for tables without explicitly defined primary key, aka builtin id
         MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
-    unsigned result = 0;
+    bool result = false;
     executeSingle(
         sql, sqlSize,
         (StatementProcessor) &messageExistsBinder, (const void*[2]) {&timestamp, from},
         (StatementProcessor) &basicResultHandler, &result
     );
 
-    assert(result < 2);
-    return result == 0;
+    return result;
 }
 
 static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statement) {
@@ -367,7 +366,6 @@ bool databaseAddMessage(const unsigned* nullable fromUserId, const ConversationM
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
-    // TODO: fails here
     executeSingle(sql, sqlSize, (StatementProcessor) &addMessageBinder, (const void*[2]) {fromUserId, message}, NULL, NULL);
     return true;
 }

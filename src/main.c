@@ -32,6 +32,7 @@ int main(int argc, const char** argv) {
     SDL_memset(text, 'a', 10);
     ConversationMessage message = {0, fromText, text, 10};
     if (!messageExists) databaseAddMessage(&from, &message);
+    assert(databaseMessageExists(0, &from));
 
     databaseClean();
 
