@@ -85,7 +85,11 @@ void databaseMessageDestroy(DatabaseMessage* message) {
     SDL_free(message);
 }
 
-static void overloadable executeSingle(
+static void
+#ifdef __clang__
+overloadable
+#endif
+/*static void */executeSingle(
     const char* sql,
     unsigned sqlSize,
     StatementProcessor nullable binder,
