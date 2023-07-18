@@ -112,18 +112,24 @@ static void createTables(void) {
     createMessagesTable();
 }
 
-static void streamsStatesExistsResultHandler(bool* result, sqlite3_stmt* statement) {
+static void existsResultHandler(bool* result, sqlite3_stmt* statement) {
     assert(sqlite3_step(statement) == SQLITE_ROW);
     *result = sqlite3_column_int(statement, 0) > 0;
 }
 
 static bool streamsStatesExists(void) {
-    const unsigned sqlSize = 29;
-    char sql[sqlSize];
-    assert(SDL_snprintf(sql, sqlSize, "select count(*) from %s", SERVICE_TABLE) == sqlSize - 1);
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = SDL_snprintf(
+        sql, bufferSize,
+        "select exists(select 1 from %s limit 1)",
+        SERVICE_TABLE
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
 
     bool result = false;
-    executeSingle(sql, sqlSize, NULL, NULL, (StatementProcessor) &streamsStatesExistsResultHandler, &result);
+    executeSingle(sql, sqlSize, NULL, NULL, (StatementProcessor) &existsResultHandler, &result);
     return result;
 }
 
@@ -245,14 +251,6 @@ bool databaseInit(byte* passwordBuffer, unsigned passwordSize, unsigned username
 static void conversationExistsBinder(const unsigned* userId, sqlite3_stmt* statement)
 { assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
 
-static void basicResultHandler(bool* result, sqlite3_stmt* statement) {
-    const int xResult = sqlite3_step(statement);
-
-    if (xResult == SQLITE_ROW) *result = true;
-    else if (xResult == SQLITE_DONE) *result = false;
-    else assert(false);
-}
-
 bool databaseConversationExists(unsigned userId) {
     assert(this);
 
@@ -261,8 +259,8 @@ bool databaseConversationExists(unsigned userId) {
 
     const unsigned sqlSize = SDL_snprintf(
         sql, bufferSize,
-        "select %s from %s where %s = ?",
-        USER_COLUMN, CONVERSATIONS_TABLE, USER_COLUMN
+        "select exists(select 1 from %s where %s = ? limit 1)",
+        CONVERSATIONS_TABLE, USER_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
@@ -270,7 +268,7 @@ bool databaseConversationExists(unsigned userId) {
     executeSingle(
         sql, sqlSize,
         (StatementProcessor) &conversationExistsBinder, &userId,
-        (StatementProcessor) &basicResultHandler, &result
+        (StatementProcessor) &existsResultHandler, &result
     );
     return result;
 }
@@ -324,7 +322,7 @@ bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable fro
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
-        "select rowid from %s where %s = ? and %s = ?", // rowid is the default primary key for tables without explicitly defined primary key, aka builtin id
+        "select exists(select 1 from %s where %s = ? and %s = ? limit 1)",
         MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
@@ -333,7 +331,7 @@ bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable fro
     executeSingle(
         sql, sqlSize,
         (StatementProcessor) &messageExistsBinder, (const void*[2]) {&timestamp, from},
-        (StatementProcessor) &basicResultHandler, &result
+        (StatementProcessor) &existsResultHandler, &result
     );
 
     return result;
