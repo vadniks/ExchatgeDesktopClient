@@ -93,12 +93,12 @@ static void createMessagesTable(void) {
         sql, bufferSize,
         "create table %s ("
             "%s unsigned bigint not null, " // timestamp
-            "%s blob(%u) null, " // from; value of %u may vary by display size, so large buffer is used
+            "%s unsigned int null, " // from
             "%s blob not null, " // text
             "%s unsigned int not null, " // size
             "constraint pk_%s primary key (%s, %s)" // messages, timestamp, from
         ")",
-        MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN, this->usernameSize, TEXT_COLUMN, SIZE_COLUMN,
+        MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN, TEXT_COLUMN, SIZE_COLUMN,
         MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
@@ -245,7 +245,7 @@ bool databaseInit(byte* passwordBuffer, unsigned passwordSize, unsigned username
 static void conversationExistsBinder(const unsigned* userId, sqlite3_stmt* statement)
 { assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
 
-static void conversationExistsResultHandler(bool* result, sqlite3_stmt* statement) {
+static void basicResultHandler(bool* result, sqlite3_stmt* statement) {
     const int xResult = sqlite3_step(statement);
 
     if (xResult == SQLITE_ROW) *result = true;
@@ -270,7 +270,7 @@ bool databaseConversationExists(unsigned userId) {
     executeSingle(
         sql, sqlSize,
         (StatementProcessor) &conversationExistsBinder, &userId,
-        (StatementProcessor) &conversationExistsResultHandler, &result
+        (StatementProcessor) &basicResultHandler, &result
     );
     return result;
 }
@@ -318,7 +318,7 @@ static void messageExistsBinder(const void* const* parameters, sqlite3_stmt* sta
     assert(!(from ? sqlite3_bind_int(statement, 2, (int) *from) : sqlite3_bind_null(statement, 2)));
 }
 
-static bool messageExists(unsigned long timestamp, const unsigned* nullable from) {
+bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable from) {
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
 
@@ -330,7 +330,11 @@ static bool messageExists(unsigned long timestamp, const unsigned* nullable from
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
     unsigned result = 0;
-    executeSingle(sql, sqlSize, (StatementProcessor) &messageExistsBinder, (const void*[2]) {&timestamp, from}, NULL, NULL);
+    executeSingle(
+        sql, sqlSize,
+        (StatementProcessor) &messageExistsBinder, (const void*[2]) {&timestamp, from},
+        (StatementProcessor) &basicResultHandler, &result
+    );
 
     assert(result < 2);
     return result == 0;
@@ -351,7 +355,7 @@ static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statem
 
 bool databaseAddMessage(const unsigned* nullable fromUserId, const ConversationMessage* message) {
     assert(this);
-    if (messageExists(message->timestamp, fromUserId)) return false;
+    if (databaseMessageExists(message->timestamp, fromUserId)) return false;
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -363,6 +367,7 @@ bool databaseAddMessage(const unsigned* nullable fromUserId, const ConversationM
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
+    // TODO: fails here
     executeSingle(sql, sqlSize, (StatementProcessor) &addMessageBinder, (const void*[2]) {fromUserId, message}, NULL, NULL);
     return true;
 }

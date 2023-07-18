@@ -16,12 +16,22 @@ int main(int argc, const char** argv) {
 
     Crypto* crypto = cryptoInit();
     if (!databaseConversationExists(1))
-        SDL_Log("t"),
+        SDL_Log("a t"),
         databaseAddConversation(1, crypto);
     else
-        SDL_Log("f");
+        SDL_Log("a f");
     cryptoDestroy(crypto);
     assert(databaseConversationExists(1));
+
+    const unsigned from = 0;
+    bool messageExists = databaseMessageExists(0, &from);
+    SDL_Log("b %s", boolToStr(messageExists));
+
+    char fromText[16] = {0};
+    char text[10];
+    SDL_memset(text, 'a', 10);
+    ConversationMessage message = {0, fromText, text, 10};
+    if (!messageExists) databaseAddMessage(&from, &message);
 
     databaseClean();
 
