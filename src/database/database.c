@@ -339,14 +339,17 @@ static bool messageExists(unsigned long timestamp, const unsigned* nullable from
 static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statement) {
     const unsigned* nullable fromUserId = parameters[0];
     const ConversationMessage* message = parameters[1];
+    byte* encryptedText = cryptoEncrypt(this->crypto, (byte*) message->text, message->size, false);
 
     assert(!sqlite3_bind_int64(statement, 1, (long) message->timestamp));
     assert(!(fromUserId ? sqlite3_bind_int(statement, 2, *(fromUserId)) : sqlite3_bind_null(statement, 2)));
-    assert(!sqlite3_bind_blob(statement, 3, message->text, (int) this->usernameSize, SQLITE_STATIC));
+    assert(!sqlite3_bind_blob(statement, 3, encryptedText, cryptoSingleEncryptedSize(message->size), SQLITE_STATIC));
     assert(!sqlite3_bind_int(statement, 4, (int) message->size));
+
+    SDL_free(encryptedText);
 }
 
-bool databaseAddMessage(const unsigned* nullable fromUserId, const ConversationMessage* message) { // TODO: test
+bool databaseAddMessage(const unsigned* nullable fromUserId, const ConversationMessage* message) {
     assert(this);
     if (messageExists(message->timestamp, fromUserId)) return false;
 
