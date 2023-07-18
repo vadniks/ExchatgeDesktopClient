@@ -92,12 +92,14 @@ static void createMessagesTable(void) {
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
         "create table %s ("
-            "%s unsigned bigint not null unique, " // timestamp
-            "%s binary(%u) not null, " // from; value of %u may vary by display size, so large buffer is used
+            "%s unsigned bigint not null, " // timestamp
+            "%s blob(%u) null, " // from; value of %u may vary by display size, so large buffer is used
             "%s blob not null, " // text
-            "%s unsigned int not null" // size
+            "%s unsigned int not null, " // size
+            "constraint pk_%s primary key (%s, %s)" // messages, timestamp, from
         ")",
-        MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN, this->usernameSize, TEXT_COLUMN, SIZE_COLUMN
+        MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN, this->usernameSize, TEXT_COLUMN, SIZE_COLUMN,
+        MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
@@ -310,8 +312,55 @@ bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
     return true;
 }
 
-bool databaseAddMessage(const unsigned* nullable userId, const ConversationMessage* message) {
+static void messageExistsBinder(const void* const* parameters, sqlite3_stmt* statement) {
+    const unsigned* from = parameters[1];
+    assert(!sqlite3_bind_int64(statement, 1, *((const unsigned long*) parameters[0])));
+    assert(!(from ? sqlite3_bind_int(statement, 2, (int) *from) : sqlite3_bind_null(statement, 2)));
+}
+
+static bool messageExists(unsigned long timestamp, const unsigned* nullable from) {
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "select count(*) from %s where %s = ? and %s = ?",
+        MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    unsigned result = 0;
+    executeSingle(sql, sqlSize, (StatementProcessor) &messageExistsBinder, (const void*[2]) {&timestamp, from}, NULL, NULL);
+
+    assert(result < 2);
+    return result == 0;
+}
+
+static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statement) {
+    const unsigned* nullable fromUserId = parameters[0];
+    const ConversationMessage* message = parameters[1];
+
+    assert(!sqlite3_bind_int64(statement, 1, (long) message->timestamp));
+    assert(!(fromUserId ? sqlite3_bind_int(statement, 2, *(fromUserId)) : sqlite3_bind_null(statement, 2)));
+    assert(!sqlite3_bind_blob(statement, 3, message->text, (int) this->usernameSize, SQLITE_STATIC));
+    assert(!sqlite3_bind_int(statement, 4, (int) message->size));
+}
+
+bool databaseAddMessage(const unsigned* nullable fromUserId, const ConversationMessage* message) { // TODO: test
     assert(this);
+    if (messageExists(message->timestamp, fromUserId)) return false;
+
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "insert into %s (%s, %s, %s, %s) values (?, ?, ?, ?)",
+        MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN, TEXT_COLUMN, SIZE_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    executeSingle(sql, sqlSize, (StatementProcessor) &addMessageBinder, (const void*[2]) {fromUserId, message}, NULL, NULL);
     return true;
 }
 
