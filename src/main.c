@@ -36,6 +36,17 @@ int main(int argc, const char** argv) {
     databaseMessageDestroy(message);
     assert(databaseMessageExists(0, &from));
 
+    unsigned size = 0;
+    List* messages = databaseGetMessages(0, &size);
+    assert(messages);
+    for (unsigned i = 0; i < listSize(messages); message = listGet(messages, i++)) SDL_Log("%lu %ld %s %u",
+        databaseMessageTimestamp(message),
+        databaseMessageFrom(message) ? (long) *databaseMessageFrom(message) : -1l,
+        databaseMessageText(message),
+        databaseMessageSize(message)
+    );
+    listDestroy(messages);
+
     databaseClean();
 
     SDL_Quit(); // for _Log()

@@ -448,7 +448,10 @@ bool databaseAddMessage(const DatabaseMessage* message) {
 static void getMessagesBinder(const unsigned* userId, sqlite3_stmt* statement)
 { assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
 
-static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { // List* <ConversationMessage*>
+static void getMessagesResultHandler(void** parameters, sqlite3_stmt* statement) { // List* <ConversationMessage*>
+    List* messages = parameters[0];
+    unsigned* size = parameters[1];
+
     DatabaseMessage* message; // TODO: test all
     int result;
     unsigned* from;
@@ -466,10 +469,11 @@ static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { 
             from = NULL;
 
         encryptedTextSize = sqlite3_column_bytes(statement, 2);
-        assert(encryptedTextSize >= cryptoSingleEncryptedSize(0));
+        assert(encryptedTextSize > cryptoSingleEncryptedSize(0));
         encryptedText = sqlite3_column_blob(statement, 2);
 
         text = cryptoDecrypt(this->crypto, encryptedText, encryptedTextSize, false);
+        assert(text); // TODO: fails here on second iteration, but table contains only one row
         textSize = (unsigned) sqlite3_column_int(statement, 3);
         assert(textSize <= this->maxMessageTextSize);
 
@@ -480,6 +484,7 @@ static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { 
             textSize
         );
         listAdd(messages, message);
+        (*size)++;
 
         SDL_free(text);
         SDL_free(from);
@@ -497,7 +502,7 @@ List* nullable databaseGetMessages(unsigned userId, unsigned* size) {
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
         "select * from %s where %s = ?",
-        MESSAGES_TABLE, USER_COLUMN
+        MESSAGES_TABLE, FROM_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
@@ -505,10 +510,15 @@ List* nullable databaseGetMessages(unsigned userId, unsigned* size) {
     executeSingle(
         sql, sqlSize,
         (StatementProcessor) getMessagesBinder, &userId,
-        (StatementProcessor) &getMessagesResultHandler, messages
+        (StatementProcessor) &getMessagesResultHandler, (void*[2]) {messages, size}
     );
 
-    return listSize(messages) ? messages : NULL;
+    if (listSize(messages))
+        return messages;
+    else {
+        listDestroy(messages);
+        return NULL;
+    }
 }
 
 void databaseClean(void) {
