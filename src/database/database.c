@@ -414,10 +414,11 @@ bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable fro
 
 static void addMessageBinder(const DatabaseMessage* message, sqlite3_stmt* statement) {
     byte* encryptedText = cryptoEncrypt(this->crypto, (byte*) message->text, message->size, false);
+    SDL_Log("bb %u", cryptoEncryptedSize(message->size)); // TODO: test only
 
     assert(!sqlite3_bind_int64(statement, 1, (long) message->timestamp));
     assert(!(message->from ? sqlite3_bind_int(statement, 2, *(message->from)) : sqlite3_bind_null(statement, 2)));
-    assert(!sqlite3_bind_blob(statement, 3, encryptedText, cryptoSingleEncryptedSize(message->size), SQLITE_STATIC));
+    assert(!sqlite3_bind_blob(statement, 3, encryptedText, cryptoEncryptedSize(message->size), SQLITE_STATIC));
     assert(!sqlite3_bind_int(statement, 4, (int) message->size));
 
     SDL_free(encryptedText);
@@ -439,7 +440,7 @@ bool databaseAddMessage(const DatabaseMessage* message) {
 
     executeSingle(
         sql, sqlSize,
-        (StatementProcessor) &addMessageBinder, message,
+        (StatementProcessor) &addMessageBinder, (void*) message,
         NULL, NULL
     );
     return true;
@@ -469,13 +470,14 @@ static void getMessagesResultHandler(void** parameters, sqlite3_stmt* statement)
             from = NULL;
 
         encryptedTextSize = sqlite3_column_bytes(statement, 2);
-        assert(encryptedTextSize > cryptoSingleEncryptedSize(0));
+        assert(encryptedTextSize > cryptoEncryptedSize(0));
         encryptedText = sqlite3_column_blob(statement, 2);
+        SDL_Log("aa %u", encryptedTextSize);  // TODO: test only
 
         text = cryptoDecrypt(this->crypto, encryptedText, encryptedTextSize, false);
-        assert(text); // TODO: fails here on second iteration, but table contains only one row
+        assert(text); // TODO: fails here - decryption fails
         textSize = (unsigned) sqlite3_column_int(statement, 3);
-        assert(textSize <= this->maxMessageTextSize);
+        assert(encryptedTextSize == cryptoEncryptedSize(textSize) && textSize <= this->maxMessageTextSize);
 
         message = databaseMessageCreate(
             (unsigned long) sqlite3_column_int64(statement, 0),
