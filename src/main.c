@@ -12,7 +12,7 @@ int main(int argc, const char** argv) {
 
     byte* akaPassword = SDL_malloc(16); // TODO: test only
     SDL_memset(akaPassword, 0, 16);
-    assert(databaseInit(akaPassword, 16, 16));
+    assert(databaseInit(akaPassword, 16, 16, 928));
 
     Crypto* crypto = cryptoInit();
     if (!databaseConversationExists(1))

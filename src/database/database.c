@@ -27,6 +27,7 @@ THIS(
     SDL_mutex* mutex;
     unsigned passwordSize;
     unsigned usernameSize;
+    unsigned maxMessageTextSize;
     sqlite3* db;
     Crypto* crypto;
 )
@@ -121,7 +122,7 @@ static bool streamsStatesExists(void) {
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
 
-    const unsigned sqlSize = SDL_snprintf(
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
         "select exists(select 1 from %s limit 1)",
         SERVICE_TABLE
@@ -221,13 +222,14 @@ static Crypto* initNew(byte* passwordBuffer) {
     return crypto;
 }
 
-bool databaseInit(byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize) {
+bool databaseInit(byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize, unsigned maxMessageTextSize) {
     assert(!this && passwordSize > 0 && usernameSize > 0);
     this = SDL_malloc(sizeof *this);
     this->mutex = SDL_CreateMutex();
     SYNCHRONIZED_BEGIN
     this->passwordSize = passwordSize;
     this->usernameSize = usernameSize;
+    this->maxMessageTextSize = maxMessageTextSize;
 
     bool existedEarlier = !access(FILE_NAME, F_OK | R_OK | W_OK);
     if (sqlite3_open(FILE_NAME, &(this->db)) != 0) {
@@ -257,7 +259,7 @@ bool databaseConversationExists(unsigned userId) {
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
 
-    const unsigned sqlSize = SDL_snprintf(
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
         "select exists(select 1 from %s where %s = ? limit 1)",
         CONVERSATIONS_TABLE, USER_COLUMN
@@ -364,24 +366,87 @@ bool databaseAddMessage(const unsigned* nullable fromUserId, const ConversationM
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
-    executeSingle(sql, sqlSize, (StatementProcessor) &addMessageBinder, (const void*[2]) {fromUserId, message}, NULL, NULL);
+    executeSingle(
+        sql, sqlSize,
+        (StatementProcessor) &addMessageBinder, (const void*[2]) {fromUserId, message},
+        NULL, NULL
+    );
     return true;
 }
 
-bool databaseUserExists(unsigned id) {
-    assert(this);
-    return true;
+static void getMessagesBinder(const unsigned* userId, sqlite3_stmt* statement)
+{ assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
+
+static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { // List* <ConversationMessage*>
+    ConversationMessage* message; // TODO: test all
+    int result;
+    byte* from;
+    unsigned fromId, encryptedTextSize, textSize;
+    const byte* encryptedText;
+    byte* text;
+
+    while ((result = sqlite3_step(statement)) == SQLITE_ROW) {
+
+        if (sqlite3_column_type(statement, 1) != SQLITE_NULL) {
+            fromId = sqlite3_column_int(statement, 1);
+            from = SDL_malloc(sizeof fromId);
+            SDL_memcpy(message->from, &fromId, sizeof fromId);
+        } else
+            from = NULL;
+
+        encryptedTextSize = sqlite3_column_bytes(statement, 2);
+        assert(encryptedTextSize >= cryptoSingleEncryptedSize(0));
+        encryptedText = sqlite3_column_blob(statement, 2);
+
+        text = cryptoDecrypt(this->crypto, encryptedText, encryptedTextSize, false);
+        textSize = (unsigned) sqlite3_column_int(statement, 3);
+        assert(textSize <= this->maxMessageTextSize);
+
+        message = conversationMessageCreate(
+            (unsigned long) sqlite3_column_int64(statement, 0),
+            (char*) from,
+            sizeof fromId,
+            (char*) text,
+            textSize
+        );
+        listAdd(messages, message);
+
+        SDL_free(text);
+        SDL_free(from);
+    }
+
+    assert(result == SQLITE_DONE);
 }
 
 List* nullable databaseGetMessages(unsigned userId, unsigned* size) {
     assert(this);
-    return NULL;
+
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "select * from %s where %s = ?",
+        MESSAGES_TABLE, USER_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    List* messages = listInit((ListDeallocator) &conversationMessageDestroy);
+    executeSingle(
+        sql, sqlSize,
+        (StatementProcessor) getMessagesBinder, &userId,
+        (StatementProcessor) &getMessagesResultHandler, messages
+    );
+
+    return listSize(messages) ? messages : NULL;
 }
 
-
 void databaseClean(void) {
-    assert(this && !sqlite3_close(this->db));
+    assert(this);
+    SYNCHRONIZED_BEGIN
+    assert(!sqlite3_close(this->db));
     if (this->crypto) cryptoDestroy(this->crypto);
+    SYNCHRONIZED_END
     SDL_DestroyMutex(this->mutex);
     SDL_free(this);
 }
