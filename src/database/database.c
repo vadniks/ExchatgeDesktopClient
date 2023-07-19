@@ -246,8 +246,8 @@ static void getConversationBinder(const unsigned* userId, sqlite3_stmt* statemen
 { assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
 
 static void getConversationResultHandler(void* const* parameters, sqlite3_stmt* statement) {
-    byte* encryptedStreamsStates = parameters[0];
-    bool* found = parameters[1];
+    byte* const encryptedStreamsStates = parameters[0];
+    bool* const found = parameters[1];
 
     const int result = sqlite3_step(statement);
     if (result == SQLITE_ROW) {
