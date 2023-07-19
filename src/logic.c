@@ -190,7 +190,7 @@ static void onConversationSetUpInviteReceived(unsigned fromId) {
     lifecycleAsync((LifecycleAsyncActionFunction) &replyToConversationSetUpInvite, xFromId, 0);
 }
 
-static void processCredentials(void** data) {
+static void processCredentials(const void* const* data) {
     const char* username = data[0];
     const char* password = data[1];
     bool logIn = *((bool*) data[2]);
