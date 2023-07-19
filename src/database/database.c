@@ -12,7 +12,6 @@
 
 STATIC_CONST_STRING FILE_NAME = "./database.sqlite3";
 
-STATIC_CONST_STRING SERVICE_TABLE = "service";
 STATIC_CONST_STRING STREAMS_STATES_COLUMN = "streamsStates";
 STATIC_CONST_STRING CONVERSATIONS_TABLE = "conversations";
 STATIC_CONST_STRING USER_COLUMN = "user";
@@ -137,7 +136,7 @@ static void createConversationsTableIfNotExists(void) {
 #endif
 }
 
-static void createMessagesTableIfNotEixts(void) {
+static void createMessagesTableIfNotExits(void) {
     const unsigned bufferSize = 255;
     char sql[bufferSize];
 
@@ -164,7 +163,7 @@ static void createMessagesTableIfNotEixts(void) {
 
 static void createTablesIfNotExists(void) {
     createConversationsTableIfNotExists();
-    createMessagesTableIfNotEixts();
+    createMessagesTableIfNotExits();
 }
 
 static void existsResultHandler(bool* result, sqlite3_stmt* statement) {
