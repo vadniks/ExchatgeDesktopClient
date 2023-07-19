@@ -233,7 +233,7 @@ static void setMachineId() {
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
-    const long id = gethostid();
+    const long id = gethostid(); // check out: man machine-id, man gethostid, cat /etc/machine-id, cat /var/lib/dbus/machine-id
     byte* encryptedId = cryptoEncryptSingle(this->key, (const byte*) &id, sizeof(long));
 
     executeSingle(
