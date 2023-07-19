@@ -239,6 +239,27 @@ bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
     return true;
 }
 
+static void getConversationBinder(const unsigned* userId, sqlite3_stmt* statement)
+{ assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
+
+static void getConversationResultHandler(void* const* parameters, sqlite3_stmt* statement) {
+    byte* encryptedStreamsStates = parameters[0];
+    bool* found = parameters[1];
+
+    const int result = sqlite3_step(statement);
+    if (result == SQLITE_ROW) {
+        const unsigned size = cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE);
+
+        SDL_memcpy(encryptedStreamsStates, sqlite3_column_blob(statement, 0), size);
+        assert((unsigned) sqlite3_column_bytes(statement, 0) == size);
+
+        *found = true;
+    } else if (result == SQLITE_DONE)
+        *found = false;
+    else
+        assert(false);
+}
+
 Crypto* nullable databaseGetConversation(unsigned userId) {
     assert(this);
 
@@ -250,9 +271,24 @@ Crypto* nullable databaseGetConversation(unsigned userId) {
         "select %s from %s where %s = ?",
         STREAMS_STATES_COLUMN, CONVERSATIONS_TABLE, USER_COLUMN
     );
-    // TODO
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
 
-    return NULL;
+    byte encryptedStreamsStates[CRYPTO_STREAMS_STATES_SIZE];
+    bool found = false;
+
+    executeSingle( // TODO: add synchronized blocks everywhere inside this module's publicly exposed functions
+        sql, sqlSize,
+        (StatementProcessor) &getConversationBinder, &userId,
+        (StatementProcessor) &getConversationResultHandler, (void*[2]) {encryptedStreamsStates, &found}
+    );
+    if (!found) return NULL;
+
+    byte* decryptedStreamsStates = cryptoDecryptSingle(this->key, encryptedStreamsStates, cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE));
+    assert(decryptedStreamsStates);
+
+    Crypto* crypto = cryptoInit();
+    cryptoSetUpAutonomous(crypto, this->key, decryptedStreamsStates);
+    return crypto;
 }
 
 static void messageExistsBinder(const void* const* parameters, sqlite3_stmt* statement) {

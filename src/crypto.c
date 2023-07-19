@@ -310,5 +310,6 @@ byte* nullable cryptoDecryptSingle(const byte* key, const byte* bytes, unsigned 
 
 void cryptoDestroy(Crypto* crypto) {
     assert(crypto);
+    cryptoFillWithRandomBytes((byte*) crypto, sizeof(Crypto));
     SDL_free(crypto);
 }
