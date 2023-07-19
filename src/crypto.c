@@ -30,7 +30,7 @@ static const byte serverSignPublicKey[SERVER_SIGN_PUBLIC_KEY_SIZE] = {
     138, 54, 215, 5, 170, 139, 175, 148, 71, 215, 74, 172, 27, 225, 26, 249
 };
 
-static _Atomic bool sodiumInitialized = false;
+static atomic bool sodiumInitialized = false;
 
 struct Crypto_t {
     byte serverPublicKey[CRYPTO_KEY_SIZE]; // clientPublicKey for *AsServer functions

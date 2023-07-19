@@ -12,6 +12,9 @@
 
 #define staticAssert(x) _Static_assert(x, "")
 
+#define atomic _Atomic
+#define generic _Generic
+
 #if !defined(__GNUC__) // && !defined(__clang__) as clang defines __GNUC__ too
 #   error "Project uses gcc extensions"
 #endif
