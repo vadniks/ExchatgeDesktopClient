@@ -84,11 +84,7 @@ void databaseMessageDestroy(DatabaseMessage* message) {
     SDL_free(message);
 }
 
-static void
-#ifdef __clang__
-overloadable
-#endif
-/*static void */executeSingle(
+static void executeSingle(
     const char* sql,
     unsigned sqlSize,
     StatementProcessor nullable binder,
@@ -106,13 +102,7 @@ overloadable
     assert(!sqlite3_finalize(statement));
 }
 
-static inline void
-#ifdef __clang__
-    overloadable executeSingle
-#elif
-    executeSingleminimal
-#endif
-/*static inline void ^executeSingle(|Minimal)$*/(const char* sql, unsigned sqlSize)
+static inline void executeSingleMinimal(const char* sql, unsigned sqlSize)
 { executeSingle(sql, sqlSize, NULL, NULL, NULL, NULL); }
 
 static void createConversationsTableIfNotExists(void) {
@@ -129,11 +119,7 @@ static void createConversationsTableIfNotExists(void) {
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
-#ifdef __clang__
-    executeSingle(sql, sqlSize);
-#elif
     executeSingleMinimal(sql, sqlSize);
-#endif
 }
 
 static void createMessagesTableIfNotExits(void) {
@@ -154,11 +140,7 @@ static void createMessagesTableIfNotExits(void) {
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
-#ifdef __clang__
-    executeSingle(sql, sqlSize);
-#elif
     executeSingleMinimal(sql, sqlSize);
-#endif
 }
 
 static void createTablesIfNotExists(void) {

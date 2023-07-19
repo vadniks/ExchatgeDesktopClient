@@ -30,10 +30,8 @@
 
 #ifdef __clang__
 #   define nullable _Nullable // all pointers without nullable attribute in their declarations are treated as non-nullable pointers in this project
-#   define overloadable __attribute__((overloadable)) // even C has function overloading (as an extension though), why Go doesn't?
 #else
 #   define nullable
-#   define overloadable
 #endif
 
 #define STATIC_CONST_INT static const int
