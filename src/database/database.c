@@ -1,7 +1,6 @@
 
 //#include "sqlite3proxy.h" // precompiled version of this header is included automatically by cmake
 #include <sdl/SDL_stdinc.h>
-#include <sdl/SDL_log.h> // TODO: test only
 #include <sdl/SDL_mutex.h>
 #include <assert.h>
 #include "database.h"
