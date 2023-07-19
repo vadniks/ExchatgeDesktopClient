@@ -39,7 +39,12 @@ struct DatabaseMessage_t {
     unsigned size;
 };
 
-DatabaseMessage* databaseMessageCreate(unsigned long timestamp, const unsigned* nullable from, const byte* text, unsigned size) { // from (user id) null if from this client, the name of the sender otherwise; size of text, whereas size of from is known to all users of this api
+DatabaseMessage* databaseMessageCreate( // from (user id) null if from this client, the name of the sender otherwise; size of text, whereas size of from is known to all users of this api
+    unsigned long timestamp,
+    const unsigned* nullable from,
+    const byte* text,
+    unsigned size
+) {
     DatabaseMessage* message = SDL_malloc(sizeof *message);
     message->timestamp = timestamp;
 
