@@ -4,7 +4,6 @@
 #include <sdl/SDL_log.h> // TODO: test only
 #include <sdl/SDL_mutex.h>
 #include <assert.h>
-#include <unistd.h>
 #include "database.h"
 
 #define SYNCHRONIZED_BEGIN SDL_LockMutex(this->mutex);
@@ -25,11 +24,11 @@ STATIC_CONST_STRING SIZE_COLUMN = "size";
 
 THIS(
     SDL_mutex* mutex;
+    byte* key;
     unsigned passwordSize;
     unsigned usernameSize;
     unsigned maxMessageTextSize;
     sqlite3* db;
-    Crypto* crypto;
 )
 
 typedef void (*StatementProcessor)(void* nullable, sqlite3_stmt*);
@@ -116,31 +115,13 @@ static inline void
 /*static inline void ^executeSingle(|Minimal)$*/(const char* sql, unsigned sqlSize)
 { executeSingle(sql, sqlSize, NULL, NULL, NULL, NULL); }
 
-static void createServiceTable(void) {
+static void createConversationsTableIfNotExists(void) {
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
-        "create table %s (%s blob(%u) not null)",
-        SERVICE_TABLE, STREAMS_STATES_COLUMN, cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE)
-    );
-    assert(sqlSize > 0 && sqlSize <= bufferSize);
-
-#ifdef __clang__
-    executeSingle(sql, sqlSize);
-#elif
-    executeSingleMinimal(sql, sqlSize);
-#endif
-}
-
-static void createConversationsTable(void) {
-    const unsigned bufferSize = 0xff;
-    char sql[bufferSize];
-
-    const unsigned sqlSize = (unsigned) SDL_snprintf(
-        sql, bufferSize,
-        "create table %s ("
+        "create table if not exists %s ("
             "%s unsigned int not null unique, " // user (id)
             "%s blob(%u) not null" // streamsStates
         ")",
@@ -155,13 +136,13 @@ static void createConversationsTable(void) {
 #endif
 }
 
-static void createMessagesTable(void) {
+static void createMessagesTableIfNotEixts(void) {
     const unsigned bufferSize = 255;
     char sql[bufferSize];
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
-        "create table %s ("
+        "create table if not exists %s ("
             "%s unsigned bigint not null, " // timestamp
             "%s unsigned int null, " // from
             "%s blob not null, " // text
@@ -180,10 +161,9 @@ static void createMessagesTable(void) {
 #endif
 }
 
-static void createTables(void) {
-    createServiceTable();
-    createConversationsTable();
-    createMessagesTable();
+static void createTablesIfNotExists(void) {
+    createConversationsTableIfNotExists();
+    createMessagesTableIfNotEixts();
 }
 
 static void existsResultHandler(bool* result, sqlite3_stmt* statement) {
@@ -191,136 +171,29 @@ static void existsResultHandler(bool* result, sqlite3_stmt* statement) {
     *result = sqlite3_column_int(statement, 0) > 0;
 }
 
-static bool streamsStatesExists(void) {
-    const unsigned bufferSize = 0xff;
-    char sql[bufferSize];
-
-    const unsigned sqlSize = (unsigned) SDL_snprintf(
-        sql, bufferSize,
-        "select exists(select 1 from %s limit 1)",
-        SERVICE_TABLE
-    );
-    assert(sqlSize > 0 && sqlSize <= bufferSize);
-
-    bool result = false;
-    executeSingle(sql, sqlSize, NULL, NULL, (StatementProcessor) &existsResultHandler, &result);
-    return result;
-}
-
-static void insertEncryptedStreamStatesBinder(const byte* encryptedStreamsStates, sqlite3_stmt* statement)
-{ assert(!sqlite3_bind_blob(statement, 1, encryptedStreamsStates, cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE), SQLITE_STATIC)); }
-
-static void insertEncryptedStreamsStates(const byte* encryptedStreamsStates) {
-    assert(!streamsStatesExists());
-
-    const unsigned bufferSize = 0xff;
-    char sql[bufferSize];
-
-    const unsigned sqlSize = (unsigned) SDL_snprintf(
-        sql, bufferSize,
-        "insert into %s (%s) values (?)",
-        SERVICE_TABLE, STREAMS_STATES_COLUMN
-    );
-    assert(sqlSize > 0 && sqlSize <= bufferSize);
-
-    executeSingle(
-        sql, sqlSize,
-        (StatementProcessor) &insertEncryptedStreamStatesBinder,
-        (void*) encryptedStreamsStates,
-        NULL, NULL
-    );
-}
-
-static Crypto* nullable init(byte* passwordBuffer, unsigned size, const byte* nullable encryptedStreamsStates) {
-    if (!encryptedStreamsStates) createTables();
-
-    Crypto* crypto = cryptoInit();
-    byte* key = cryptoMakeKey(passwordBuffer, size);
-
-    if (encryptedStreamsStates) {
-        byte* streamsStates = cryptoDecryptSingle(key, encryptedStreamsStates, cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE));
-        if (!streamsStates) {
-            SDL_free(key);
-            cryptoDestroy(crypto);
-            return NULL;
-        }
-
-        cryptoSetUpAutonomous(crypto, key, streamsStates);
-        SDL_free(streamsStates);
-    } else
-        cryptoSetUpAutonomous(crypto, key, NULL);
-
-    cryptoFillWithRandomBytes(key, CRYPTO_KEY_SIZE);
-    SDL_free(key);
-
-    return crypto;
-}
-
-static Crypto* nullable initFromExisted(byte* passwordBuffer) {
-    const unsigned bufferSize = 0xff;
-    char sql[bufferSize];
-
-    unsigned sqlSize = (unsigned) SDL_snprintf(
-        sql, bufferSize,
-        "select %s from %s",
-        STREAMS_STATES_COLUMN, SERVICE_TABLE
-    );
-    assert(sqlSize > 0 && sqlSize <= bufferSize);
-
-    sqlite3_stmt* statement;
-    assert(!sqlite3_prepare(this->db, sql, (int) sqlSize, &statement, NULL));
-    assert(sqlite3_step(statement) == SQLITE_ROW);
-
-    const unsigned encryptedStreamsStatesSize = cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE);
-    const byte* encryptedStreamsStates = sqlite3_column_blob(statement, 0);
-    assert(encryptedStreamsStates && sqlite3_column_bytes(statement, 0) == (int) encryptedStreamsStatesSize);
-
-    Crypto* crypto = init(passwordBuffer, this->passwordSize, encryptedStreamsStates);
-    assert(!sqlite3_finalize(statement));
-
-    return crypto;
-}
-
-static Crypto* initNew(byte* passwordBuffer) {
-    Crypto* crypto = init(passwordBuffer, this->passwordSize, NULL);
-    assert(crypto);
-
-    byte* streamsStates = cryptoExportStreamsStates(crypto);
-    byte* encryptedStreamsStates = cryptoEncryptSingle(cryptoClientKey(crypto), streamsStates, CRYPTO_STREAMS_STATES_SIZE);
-    SDL_free(streamsStates);
-
-    insertEncryptedStreamsStates(encryptedStreamsStates);
-    SDL_free(encryptedStreamsStates);
-
-    return crypto;
-}
-
 bool databaseInit(byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize, unsigned maxMessageTextSize) {
     assert(!this && passwordSize > 0 && usernameSize > 0);
     this = SDL_malloc(sizeof *this);
     this->mutex = SDL_CreateMutex();
     SYNCHRONIZED_BEGIN
+
+    this->key = SDL_malloc(CRYPTO_KEY_SIZE);
+    byte* key = cryptoMakeKey(passwordBuffer, passwordSize);
+    SDL_memcpy(this->key, key, CRYPTO_KEY_SIZE);
+    SDL_free(key);
+
+    cryptoFillWithRandomBytes(passwordBuffer, passwordSize);
+    SDL_free(passwordBuffer);
+
     this->passwordSize = passwordSize;
     this->usernameSize = usernameSize;
     this->maxMessageTextSize = maxMessageTextSize;
 
-    bool existedEarlier = !access(FILE_NAME, F_OK | R_OK | W_OK);
-    if (sqlite3_open(FILE_NAME, &(this->db)) != 0) {
-        SYNCHRONIZED_END
-        cryptoFillWithRandomBytes(passwordBuffer, passwordSize);
-        SDL_free(passwordBuffer);
-        return false;
-    }
+    bool successful = !sqlite3_open(FILE_NAME, &(this->db));
+    if (successful) createTablesIfNotExists();
 
-    if (existedEarlier) this->crypto = initFromExisted(passwordBuffer);
-    else this->crypto = initNew(passwordBuffer);
-    assert(streamsStatesExists());
-
-    SDL_free(passwordBuffer);
     SYNCHRONIZED_END
-
-    if (!this->crypto) return false;
-    else return true;
+    return successful;
 }
 
 static void conversationExistsBinder(const unsigned* userId, sqlite3_stmt* statement)
@@ -359,7 +232,7 @@ bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
     SYNCHRONIZED_BEGIN
 
     byte* streamStates = cryptoExportStreamsStates(crypto);
-    byte* encryptedStreamsStates = cryptoEncrypt(this->crypto, streamStates, CRYPTO_STREAMS_STATES_SIZE, false);
+    byte* encryptedStreamsStates = cryptoEncryptSingle(this->key, streamStates, CRYPTO_STREAMS_STATES_SIZE);
     SDL_free(streamStates);
     assert(encryptedStreamsStates);
 
@@ -383,6 +256,10 @@ bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
     SDL_free(encryptedStreamsStates);
     SYNCHRONIZED_END
     return true;
+}
+
+Crypto* nullable databaseGetConversation(unsigned userId) {
+    // TODO
 }
 
 static void messageExistsBinder(const void* const* parameters, sqlite3_stmt* statement) {
@@ -412,16 +289,13 @@ bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable fro
     return result;
 }
 
-#include <stdio.h> // TODO: test only
-
 static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statement) {
     const DatabaseMessage* message = parameters[0];
     const byte* encryptedText = parameters[1];
-    printBinaryArray(encryptedText, cryptoEncryptedSize(10)) // TODO: test only
 
     assert(!sqlite3_bind_int64(statement, 1, (long) message->timestamp));
     assert(!(message->from ? sqlite3_bind_int(statement, 2, *(message->from)) : sqlite3_bind_null(statement, 2)));
-    assert(!sqlite3_bind_blob(statement, 3, encryptedText, cryptoEncryptedSize(message->size), SQLITE_STATIC));
+    assert(!sqlite3_bind_blob(statement, 3, encryptedText, cryptoSingleEncryptedSize(message->size), SQLITE_STATIC));
     assert(!sqlite3_bind_int(statement, 4, (int) message->size));
 }
 
@@ -439,7 +313,7 @@ bool databaseAddMessage(const DatabaseMessage* message) {
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
-    byte* encryptedText = cryptoEncrypt(this->crypto, (byte*) message->text, message->size, false);
+    byte* encryptedText = cryptoEncryptSingle(this->key, (byte*) message->text, message->size);
     assert(encryptedText);
 
     executeSingle(
@@ -473,14 +347,13 @@ static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { 
             from = NULL;
 
         encryptedText = sqlite3_column_blob(statement, 2);
-        printBinaryArray(encryptedText, cryptoEncryptedSize(10)) // TODO: test only
         encryptedTextSize = sqlite3_column_bytes(statement, 2);
-        assert(encryptedTextSize > cryptoEncryptedSize(0));
+        assert(encryptedTextSize > cryptoSingleEncryptedSize(0));
 
-        text = cryptoDecrypt(this->crypto, encryptedText, encryptedTextSize, false);
-        assert(text); // TODO: fails here - decryption fails... again!
+        text = cryptoDecryptSingle(this->key, encryptedText, encryptedTextSize);
+        assert(text);
         textSize = (unsigned) sqlite3_column_int(statement, 3);
-        assert(encryptedTextSize == cryptoEncryptedSize(textSize) && textSize <= this->maxMessageTextSize);
+        assert(encryptedTextSize == cryptoSingleEncryptedSize(textSize) && textSize <= this->maxMessageTextSize);
 
         message = databaseMessageCreate(
             (unsigned long) sqlite3_column_int64(statement, 0),
@@ -528,8 +401,10 @@ List* nullable databaseGetMessages(unsigned userId) {
 void databaseClean(void) {
     assert(this);
     SYNCHRONIZED_BEGIN
+
+    SDL_free(this->key);
     assert(!sqlite3_close(this->db));
-    if (this->crypto) cryptoDestroy(this->crypto);
+
     SYNCHRONIZED_END
     SDL_DestroyMutex(this->mutex);
     SDL_free(this);
