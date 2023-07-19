@@ -223,8 +223,6 @@ static void setMachineIdBinder(const byte* encryptedId, sqlite3_stmt* statement)
 { assert(!sqlite3_bind_blob(statement, 1, encryptedId, (int) cryptoSingleEncryptedSize(sizeof(long)), SQLITE_STATIC)); }
 
 static void setMachineId() {
-    assert(!getMachineId());
-
     const unsigned bufferSize = 255;
     char sql[bufferSize];
 
@@ -260,10 +258,14 @@ bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned us
 
     this->maxMessageTextSize = maxMessageTextSize;
 
-    bool successful = !sqlite3_open(FILE_NAME, &(this->db)); // TODO: add a service table and put there some known bytes, encrypt them on first db initialization and then check the passed password so it can decrypt back those bytes
+    bool successful = !sqlite3_open(FILE_NAME, &(this->db));
     if (successful) createTablesIfNotExists();
-    if (!checkKey()) successful = false;
 
+    long* machineId = getMachineId();  // TODO: test this: add a service table and put there some known bytes, encrypt them on first db initialization and then check the passed password so it can decrypt back those bytes
+    if (!machineId) setMachineId();
+    SDL_free(machineId);
+
+    if (!checkKey()) successful = false;
     SYNCHRONIZED_END
     return successful;
 }
