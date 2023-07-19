@@ -211,11 +211,11 @@ static long* nullable getMachineId(void) {
 }
 
 static bool checkKey(void) {
-    long* xId = getMachineId();
-    if (!xId) return true;
+    long* id = getMachineId();
+    if (!id) return true;
 
-    bool checked = *xId == gethostid();
-    SDL_free(xId);
+    bool checked = *id == gethostid();
+    SDL_free(id);
     return checked;
 }
 
