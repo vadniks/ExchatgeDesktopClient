@@ -411,18 +411,18 @@ bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable fro
 
     return result;
 }
-#include <stdio.h>
-static void addMessageBinder(const DatabaseMessage* message, sqlite3_stmt* statement) {
-    byte* encryptedText = cryptoEncrypt(this->crypto, (byte*) message->text, message->size, false);
-    printBinaryArray(encryptedText, cryptoEncryptedSize(message->size))
-    SDL_Log("bb %u", cryptoEncryptedSize(message->size)); // TODO: test only
+
+#include <stdio.h> // TODO: test only
+
+static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statement) {
+    const DatabaseMessage* message = parameters[0];
+    const byte* encryptedText = parameters[1];
+    printBinaryArray(encryptedText, cryptoEncryptedSize(10)) // TODO: test only
 
     assert(!sqlite3_bind_int64(statement, 1, (long) message->timestamp));
     assert(!(message->from ? sqlite3_bind_int(statement, 2, *(message->from)) : sqlite3_bind_null(statement, 2)));
     assert(!sqlite3_bind_blob(statement, 3, encryptedText, cryptoEncryptedSize(message->size), SQLITE_STATIC));
     assert(!sqlite3_bind_int(statement, 4, (int) message->size));
-
-    SDL_free(encryptedText);
 }
 
 bool databaseAddMessage(const DatabaseMessage* message) {
@@ -439,21 +439,23 @@ bool databaseAddMessage(const DatabaseMessage* message) {
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
+    byte* encryptedText = cryptoEncrypt(this->crypto, (byte*) message->text, message->size, false);
+    assert(encryptedText);
+
     executeSingle(
         sql, sqlSize,
-        (StatementProcessor) &addMessageBinder, (void*) message,
+        (StatementProcessor) &addMessageBinder, (const void*[2]) {message, encryptedText},
         NULL, NULL
     );
+    SDL_free(encryptedText);
+
     return true;
 }
 
 static void getMessagesBinder(const unsigned* userId, sqlite3_stmt* statement)
 { assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
 
-static void getMessagesResultHandler(void** parameters, sqlite3_stmt* statement) { // List* <ConversationMessage*>
-    List* messages = parameters[0];
-    unsigned* size = parameters[1];
-
+static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { // List* <ConversationMessage*>
     DatabaseMessage* message;
     int result;
     unsigned* from;
@@ -471,13 +473,12 @@ static void getMessagesResultHandler(void** parameters, sqlite3_stmt* statement)
             from = NULL;
 
         encryptedText = sqlite3_column_blob(statement, 2);
+        printBinaryArray(encryptedText, cryptoEncryptedSize(10)) // TODO: test only
         encryptedTextSize = sqlite3_column_bytes(statement, 2);
         assert(encryptedTextSize > cryptoEncryptedSize(0));
-        printBinaryArray(encryptedText, encryptedTextSize) // TODO: first 16 bytes of encryptedText get overwritten by smth else (encryptedText here and in addMessageBinder when addition is performed not equal) - memory corruption occurs smwhr nearby
-        SDL_Log("aa %u", encryptedTextSize);  // TODO: test only
 
         text = cryptoDecrypt(this->crypto, encryptedText, encryptedTextSize, false);
-        assert(text); // TODO: fails here - decryption fails
+        assert(text); // TODO: fails here - decryption fails... again!
         textSize = (unsigned) sqlite3_column_int(statement, 3);
         assert(encryptedTextSize == cryptoEncryptedSize(textSize) && textSize <= this->maxMessageTextSize);
 
@@ -488,7 +489,6 @@ static void getMessagesResultHandler(void** parameters, sqlite3_stmt* statement)
             textSize
         );
         listAdd(messages, message);
-        (*size)++;
 
         SDL_free(text);
         SDL_free(from);
@@ -497,7 +497,7 @@ static void getMessagesResultHandler(void** parameters, sqlite3_stmt* statement)
     assert(result == SQLITE_DONE);
 }
 
-List* nullable databaseGetMessages(unsigned userId, unsigned* size) {
+List* nullable databaseGetMessages(unsigned userId) {
     assert(this);
 
     const unsigned bufferSize = 0xff;
@@ -514,7 +514,7 @@ List* nullable databaseGetMessages(unsigned userId, unsigned* size) {
     executeSingle(
         sql, sqlSize,
         (StatementProcessor) getMessagesBinder, &userId,
-        (StatementProcessor) &getMessagesResultHandler, (void*[2]) {messages, size}
+        (StatementProcessor) &getMessagesResultHandler, messages
     );
 
     if (listSize(messages))
