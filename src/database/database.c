@@ -3,6 +3,7 @@
 #include <sdl/SDL_stdinc.h>
 #include <sdl/SDL_mutex.h>
 #include <assert.h>
+#include <unistd.h>
 #include "database.h"
 
 #define SYNCHRONIZED_BEGIN SDL_LockMutex(this->mutex);
@@ -11,14 +12,16 @@
 
 STATIC_CONST_STRING FILE_NAME = "./database.sqlite3";
 
-STATIC_CONST_STRING STREAMS_STATES_COLUMN = "streamsStates";
 STATIC_CONST_STRING CONVERSATIONS_TABLE = "conversations";
 STATIC_CONST_STRING USER_COLUMN = "user";
+STATIC_CONST_STRING STREAMS_STATES_COLUMN = "streamsStates";
 STATIC_CONST_STRING MESSAGES_TABLE = "messages";
 STATIC_CONST_STRING TIMESTAMP_COLUMN = "timestamp";
-STATIC_CONST_STRING FROM_COLUMN = "\"from\"";
+STATIC_CONST_STRING FROM_COLUMN = "\"from\""; // quotes are used 'cause it's a reserved keyword in the sql lang
 STATIC_CONST_STRING TEXT_COLUMN = "text";
 STATIC_CONST_STRING SIZE_COLUMN = "size";
+STATIC_CONST_STRING SERVICE_TABLE = "service";
+STATIC_CONST_STRING MACHINE_ID_COLUMN = "machineId";
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
@@ -148,15 +151,101 @@ static void createMessagesTableIfNotExits(void) {
     executeSingleMinimal(sql, sqlSize);
 }
 
+static void createServiceTableIfNotExists(void) {
+    const unsigned bufferSize = 255;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "create table if not exists %s(%s blob(%u))",
+        SERVICE_TABLE, MACHINE_ID_COLUMN, cryptoSingleEncryptedSize(sizeof(long))
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    executeSingleMinimal(sql, sqlSize);
+}
+
 static void createTablesIfNotExists(void) {
     createConversationsTableIfNotExists();
     createMessagesTableIfNotExits();
+    createServiceTableIfNotExists();
 }
 
-static void existsResultHandler(bool* result, sqlite3_stmt* statement) {
-    assert(sqlite3_step(statement) == SQLITE_ROW);
-    *result = sqlite3_column_int(statement, 0) > 0;
+static void getMachineIdResultHandler(byte* nullable* encryptedId, sqlite3_stmt* statement) {
+    const int result = sqlite3_step(statement);
+
+    if (result == SQLITE_ROW) {
+        const unsigned size = cryptoSingleEncryptedSize(sizeof(long));
+        assert((unsigned) sqlite3_column_bytes(statement, 0) == size);
+
+        *encryptedId = SDL_malloc(size);
+        SDL_memcpy(*encryptedId, sqlite3_column_blob(statement, 0), size);
+    } else if (result == SQLITE_DONE)
+        *encryptedId = NULL;
+    else
+        assert(false);
 }
+
+static long* nullable getMachineId(void) {
+    const unsigned bufferSize = 255;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "select %s from %s",
+        MACHINE_ID_COLUMN, SERVICE_TABLE
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    byte* encryptedId = NULL;
+    executeSingle(
+        sql, sqlSize,
+        NULL, NULL,
+        (StatementProcessor) &getMachineIdResultHandler, &encryptedId
+    );
+    if (!encryptedId) return NULL;
+
+    byte* id = cryptoDecryptSingle(this->key, encryptedId, cryptoSingleEncryptedSize(sizeof(long)));
+    assert(id);
+    return (long*) id;
+}
+
+static bool checkKey(void) {
+    long* xId = getMachineId();
+    if (!xId) return true;
+
+    bool checked = *xId == gethostid();
+    SDL_free(xId);
+    return checked;
+}
+
+static void setMachineIdBinder(const byte* encryptedId, sqlite3_stmt* statement)
+{ assert(!sqlite3_bind_blob(statement, 1, encryptedId, (int) cryptoSingleEncryptedSize(sizeof(long)), SQLITE_STATIC)); }
+
+static void setMachineId() {
+    assert(!getMachineId());
+
+    const unsigned bufferSize = 255;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "insert into %s (%s) values (?)",
+        SERVICE_TABLE, MACHINE_ID_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    const long id = gethostid();
+    byte* encryptedId = cryptoEncryptSingle(this->key, (const byte*) &id, sizeof(long));
+
+    executeSingle(
+        sql, sqlSize,
+        (StatementProcessor) &setMachineIdBinder, encryptedId,
+        NULL, NULL
+    );
+}
+
+// TODO: test all those ~~~~~^
 
 bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize, unsigned maxMessageTextSize) {
     assert(!this && passwordSize > 0 && usernameSize > 0);
@@ -173,9 +262,15 @@ bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned us
 
     bool successful = !sqlite3_open(FILE_NAME, &(this->db)); // TODO: add a service table and put there some known bytes, encrypt them on first db initialization and then check the passed password so it can decrypt back those bytes
     if (successful) createTablesIfNotExists();
+    if (!checkKey()) successful = false;
 
     SYNCHRONIZED_END
     return successful;
+}
+
+static void existsResultHandler(bool* result, sqlite3_stmt* statement) {
+    assert(sqlite3_step(statement) == SQLITE_ROW);
+    *result = sqlite3_column_int(statement, 0) > 0;
 }
 
 static void conversationExistsBinder(const unsigned* userId, sqlite3_stmt* statement)
