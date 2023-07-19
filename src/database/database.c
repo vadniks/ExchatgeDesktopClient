@@ -222,7 +222,7 @@ static bool checkKey(void) {
 static void setMachineIdBinder(const byte* encryptedId, sqlite3_stmt* statement)
 { assert(!sqlite3_bind_blob(statement, 1, encryptedId, (int) cryptoSingleEncryptedSize(sizeof(long)), SQLITE_STATIC)); }
 
-static void setMachineId() {
+static void setMachineId(void) {
     const unsigned bufferSize = 255;
     char sql[bufferSize];
 
@@ -241,6 +241,8 @@ static void setMachineId() {
         (StatementProcessor) &setMachineIdBinder, encryptedId,
         NULL, NULL
     );
+
+    SDL_free(encryptedId);
 }
 
 // TODO: test all those ~~~~~^
