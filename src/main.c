@@ -23,6 +23,12 @@ int main(int argc, const char** argv) {
     cryptoDestroy(crypto);
     assert(databaseConversationExists(1));
 
+    crypto = databaseGetConversation(1);
+    assert(crypto);
+    cryptoDestroy(crypto);
+    crypto = databaseGetConversation(2);
+    assert(!crypto);
+
     const unsigned from = 0;
     bool messageExists = databaseMessageExists(0, &from);
     SDL_Log("b %s", boolToStr(messageExists));
