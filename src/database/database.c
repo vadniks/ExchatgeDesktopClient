@@ -257,7 +257,8 @@ bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
 }
 
 Crypto* nullable databaseGetConversation(unsigned userId) {
-    // TODO
+    assert(this);
+    return NULL;
 }
 
 static void messageExistsBinder(const void* const* parameters, sqlite3_stmt* statement) {
@@ -267,6 +268,8 @@ static void messageExistsBinder(const void* const* parameters, sqlite3_stmt* sta
 }
 
 bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable from) {
+    assert(this);
+
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
 
