@@ -22,14 +22,15 @@ STATIC_CONST_STRING FROM_COLUMN = "\"from\"";
 STATIC_CONST_STRING TEXT_COLUMN = "text";
 STATIC_CONST_STRING SIZE_COLUMN = "size";
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
     SDL_mutex* mutex;
     byte* key;
-    unsigned passwordSize;
-    unsigned usernameSize;
     unsigned maxMessageTextSize;
     sqlite3* db;
 )
+#pragma clang diagnostic pop
 
 typedef void (*StatementProcessor)(void* nullable, sqlite3_stmt*);
 
@@ -185,8 +186,6 @@ bool databaseInit(byte* passwordBuffer, unsigned passwordSize, unsigned username
     cryptoFillWithRandomBytes(passwordBuffer, passwordSize);
     SDL_free(passwordBuffer);
 
-    this->passwordSize = passwordSize;
-    this->usernameSize = usernameSize;
     this->maxMessageTextSize = maxMessageTextSize;
 
     bool successful = !sqlite3_open(FILE_NAME, &(this->db));
