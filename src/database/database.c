@@ -371,7 +371,7 @@ bool databaseAddMessage(const DatabaseMessage* message) {
 static void getMessagesBinder(const unsigned* userId, sqlite3_stmt* statement)
 { assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
 
-static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { // List* <ConversationMessage*>
+static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { // List* <DatabaseMessage*>
     DatabaseMessage* message;
     int result;
     unsigned* from;

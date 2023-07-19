@@ -22,5 +22,5 @@ bool databaseAddConversation(unsigned userId, const Crypto* crypto);
 Crypto* nullable databaseGetConversation(unsigned userId);
 bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable from);
 bool databaseAddMessage(const DatabaseMessage* message); // from (user id) inside the message may be null if the message came from the current user
-List* nullable databaseGetMessages(unsigned userId); // returns an array of messages <ConversationMessage*> (which is expected to be deallocated by the caller) on success; inside each message there's fromId unsigned int in bytes (sizeof 4)
+List* nullable databaseGetMessages(unsigned userId); // returns an array of messages <DatabaseMessage*> (which is expected to be deallocated by the caller) on success; inside each message there's fromId unsigned int in bytes (sizeof 4)
 void databaseClean(void);
