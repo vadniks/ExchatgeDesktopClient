@@ -5,8 +5,6 @@
 
 staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8 && sizeof(void*) == 8);
 
-#define FLAG(x, y) STATIC_CONST_INT FLAG_ ## x = y;
-
 #define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->mutex));
 #define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->mutex));
 #define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
