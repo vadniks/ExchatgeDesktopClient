@@ -71,6 +71,7 @@ void renderShowDisconnectedError(void);
 void renderShowUnableToConnectToTheServerError(void); // TODO: too long name
 void renderShowRegistrationSucceededSystemMessage(void);
 void renderShowUserIsOfflineError(void);
+void renderShowUnableToDecryptDatabaseError(void);
 
 void renderShowInfiniteProgressBar(void); // showed only on pages that support it (log in/register, not splash as it's a special case)
 void renderHideInfiniteProgressBar(void);

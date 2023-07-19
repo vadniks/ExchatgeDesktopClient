@@ -8,6 +8,7 @@
 #include "user.h"
 #include "conversationMessage.h"
 #include "lifecycle.h"
+#include "database/database.h"
 #include "logic.h"
 
 typedef enum : unsigned {
@@ -27,6 +28,7 @@ THIS(
     volatile unsigned state;
     char* currentUserName; // TODO: the server shouldn't know groups in which users are, so group information stays on clients, the server just transmits messages
     unsigned toUserId; // the id of the user, the current user (logged in via this client) wanna speak to
+    volatile bool databaseInitialized;
 )
 #pragma clang diagnostic pop
 
@@ -193,6 +195,14 @@ static void processCredentials(void** data) {
     const char* password = data[1];
     bool logIn = *((bool*) data[2]);
 
+    if (!databaseInit((byte*) password, NET_UNHASHED_PASSWORD_SIZE, NET_USERNAME_SIZE, NET_MESSAGE_BODY_SIZE)) { // password that's used to sign in also used to encrypt messages & other stuff in the database
+        databaseClean();
+        renderShowUnableToDecryptDatabaseError();
+        renderHideInfiniteProgressBar();
+        goto cleanup;
+    } else
+        this->databaseInitialized = true;
+
     assert(this);
     this->netInitialized = netInit(
         &onMessageReceived,
@@ -212,6 +222,7 @@ static void processCredentials(void** data) {
     }
     if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
 
+    cleanup:
     logicCredentialsRandomFiller(data[0], NET_USERNAME_SIZE);
     logicCredentialsRandomFiller(data[1], NET_UNHASHED_PASSWORD_SIZE);
 
@@ -425,6 +436,8 @@ void logicOnUpdateUsersListClicked(void) {
 
 void logicClean(void) {
     assert(this);
+
+    if (this->databaseInitialized) databaseClean();
 
     SDL_free(this->currentUserName);
 

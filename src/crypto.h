@@ -21,7 +21,7 @@ byte* nullable cryptoInitializeCoderStreams(Crypto* crypto, const byte* serverSt
 bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedBytes, unsigned unsignedSize);
 
 // as an autonomous client (without need for server)
-byte* cryptoMakeKey(byte* passwordBuffer, unsigned size); // makes KEY_SIZE-sized key (deallocation's required) from a 'size'-sized password which is filled with random bytes and freed afterwords
+byte* cryptoMakeKey(const byte* passwordBuffer, unsigned size); // makes KEY_SIZE-sized key (deallocation's required) from a 'size'-sized password
 void cryptoSetUpAutonomous(Crypto* crypto, const byte* key, const byte* nullable streamsStates); // sets up for standalone encryption with either creation of new encryption/decryption streams or with recreation of the existed ones, in which case the streamsStates mustn't be null; key must be a KEY_SIZE-sized byte array
 byte* cryptoExportStreamsStates(const Crypto* crypto); // exports encryption/decryption streams states in a byte array form with size of STREAMS_STATES_SIZE which requires freeing
 const byte* cryptoClientKey(const Crypto* crypto); // returns client key which used for creating secret streams

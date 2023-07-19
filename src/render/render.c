@@ -54,6 +54,7 @@ STATIC_CONST_STRING INVITATION_RECEIVED = "Invitation received";
 STATIC_CONST_STRING YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER = "You are invited to create conversation by user ";
 STATIC_CONST_STRING ACCEPT = "Accept";
 STATIC_CONST_STRING DECLINE = "Decline";
+STATIC_CONST_STRING UNABLE_TO_DECRYPT_DATABASE = "Unable to decrypt the database";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -429,6 +430,7 @@ void renderShowDisconnectedError(void) { postSystemMessage(DISCONNECTED, true); 
 void renderShowUnableToConnectToTheServerError(void) { postSystemMessage(UNABLE_TO_CONNECT_TO_THE_SERVER, true); }
 void renderShowRegistrationSucceededSystemMessage(void) { postSystemMessage(REGISTRATION_SUCCEEDED, false); }
 void renderShowUserIsOfflineError(void) { postSystemMessage(USER_IS_OFFLINE, true); }
+void renderShowUnableToDecryptDatabaseError(void) { postSystemMessage(UNABLE_TO_DECRYPT_DATABASE, true); }
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);

@@ -16,7 +16,7 @@ const byte* databaseMessageText(const DatabaseMessage* message);
 unsigned databaseMessageSize(const DatabaseMessage* message);
 void databaseMessageDestroy(DatabaseMessage* message);
 
-bool databaseInit(byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize, unsigned maxMessageTextSize); // returns true on success (either true or false returned, cleanup is needed to be performed anyway), 'passwordSize'-sized buffer is filled with random bytes after initiating and is freed afterwords
+bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize, unsigned maxMessageTextSize); // returns true on success (either true or false returned, cleanup is needed to be performed anyway), 'passwordSize'-sized buffer
 bool databaseConversationExists(unsigned userId);
 bool databaseAddConversation(unsigned userId, const Crypto* crypto);
 Crypto* nullable databaseGetConversation(unsigned userId);
