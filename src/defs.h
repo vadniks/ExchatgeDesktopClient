@@ -24,7 +24,7 @@
 #endif
 
 #ifndef __LINUX__
-#   warning "Project targets linux systems"
+#   error "Project targets linux systems"
 #endif
 
 #ifndef __x86_64__
