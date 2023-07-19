@@ -133,10 +133,11 @@ static void createMessagesTableIfNotExits(void) {
             "%s unsigned int null, " // from
             "%s blob not null, " // text
             "%s unsigned int not null, " // size
-            "constraint pk_%s primary key (%s, %s)" // messages, timestamp, from
+            "primary key (%s, %s), " // timestamp, from
+            "foreign key (%s) references %s(%s)" // from, conversations, user
         ")",
         MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN, TEXT_COLUMN, SIZE_COLUMN,
-        MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN
+        TIMESTAMP_COLUMN, FROM_COLUMN, FROM_COLUMN, CONVERSATIONS_TABLE, USER_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
@@ -240,6 +241,17 @@ bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
 
 Crypto* nullable databaseGetConversation(unsigned userId) {
     assert(this);
+
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "select %s from %s where %s = ?",
+        STREAMS_STATES_COLUMN, CONVERSATIONS_TABLE, USER_COLUMN
+    );
+    // TODO
+
     return NULL;
 }
 
