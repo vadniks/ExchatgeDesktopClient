@@ -1,8 +1,4 @@
 
-// TODO: check client's authentication by token
-// TODO: check client signature on server and check server signature on client
-// TODO: add compression
-
 #include <sdl_net/SDL_net.h>
 #include <assert.h>
 #include "net.h"
