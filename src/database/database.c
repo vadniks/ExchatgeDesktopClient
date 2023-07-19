@@ -292,6 +292,7 @@ Crypto* nullable databaseGetConversation(unsigned userId) {
 
     Crypto* crypto = cryptoInit();
     cryptoSetUpAutonomous(crypto, this->key, decryptedStreamsStates);
+    SDL_free(decryptedStreamsStates);
 
     SYNCHRONIZED_END
     return crypto;
