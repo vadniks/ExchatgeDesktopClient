@@ -182,6 +182,7 @@ static void conversationExistsBinder(const unsigned* userId, sqlite3_stmt* state
 
 bool databaseConversationExists(unsigned userId) {
     assert(this);
+    SYNCHRONIZED_BEGIN
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -199,6 +200,8 @@ bool databaseConversationExists(unsigned userId) {
         (StatementProcessor) &conversationExistsBinder, &userId,
         (StatementProcessor) &existsResultHandler, &result
     );
+
+    SYNCHRONIZED_END
     return result;
 }
 
@@ -262,6 +265,7 @@ static void getConversationResultHandler(void* const* parameters, sqlite3_stmt* 
 
 Crypto* nullable databaseGetConversation(unsigned userId) {
     assert(this);
+    SYNCHRONIZED_BEGIN
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -276,7 +280,7 @@ Crypto* nullable databaseGetConversation(unsigned userId) {
     byte encryptedStreamsStates[CRYPTO_STREAMS_STATES_SIZE];
     bool found = false;
 
-    executeSingle( // TODO: add synchronized blocks everywhere inside this module's publicly exposed functions
+    executeSingle(
         sql, sqlSize,
         (StatementProcessor) &getConversationBinder, &userId,
         (StatementProcessor) &getConversationResultHandler, (void*[2]) {encryptedStreamsStates, &found}
@@ -288,6 +292,8 @@ Crypto* nullable databaseGetConversation(unsigned userId) {
 
     Crypto* crypto = cryptoInit();
     cryptoSetUpAutonomous(crypto, this->key, decryptedStreamsStates);
+
+    SYNCHRONIZED_END
     return crypto;
 }
 
@@ -299,6 +305,7 @@ static void messageExistsBinder(const void* const* parameters, sqlite3_stmt* sta
 
 bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable from) {
     assert(this);
+    SYNCHRONIZED_BEGIN
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -317,6 +324,7 @@ bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable fro
         (StatementProcessor) &existsResultHandler, &result
     );
 
+    SYNCHRONIZED_END
     return result;
 }
 
@@ -333,6 +341,7 @@ static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statem
 bool databaseAddMessage(const DatabaseMessage* message) {
     assert(this);
     if (databaseMessageExists(message->timestamp, message->from)) return false;
+    SYNCHRONIZED_BEGIN
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -354,6 +363,7 @@ bool databaseAddMessage(const DatabaseMessage* message) {
     );
     SDL_free(encryptedText);
 
+    SYNCHRONIZED_END
     return true;
 }
 
@@ -403,6 +413,7 @@ static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { 
 
 List* nullable databaseGetMessages(unsigned userId) {
     assert(this);
+    SYNCHRONIZED_BEGIN
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -421,6 +432,7 @@ List* nullable databaseGetMessages(unsigned userId) {
         (StatementProcessor) &getMessagesResultHandler, messages
     );
 
+    SYNCHRONIZED_END
     if (listSize(messages))
         return messages;
     else {
