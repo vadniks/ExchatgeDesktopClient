@@ -335,7 +335,7 @@ static void continueConversation(void** parameters) {
     renderSetControlsBlocking(false);
 }
 
-static void createOrDeleteConversation(unsigned id, bool create) {
+static void createOrLoadConversation(unsigned id, bool create) {
     const User* user = findUser(id);
     assert(user);
 
@@ -355,9 +355,15 @@ static void createOrDeleteConversation(unsigned id, bool create) {
 }
 
 static void deleteConversation(unsigned* id) {
-    assert(this && !this->databaseInitialized && databaseConversationExists(*id));
-    databaseRemoveConversation(*id);
+    assert(this && !this->databaseInitialized);
+
+    if (databaseConversationExists(*id)) databaseRemoveConversation(*id);
+    else renderShowConversationDoesntExist();
+
     SDL_free(id);
+
+    renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
 }
 
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant) {
@@ -369,9 +375,12 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
     switch (chooseVariant) {
         case RENDER_START_CONVERSATION:
         case RENDER_CONTINUE_CONVERSATION:
-            createOrDeleteConversation(id, chooseVariant == RENDER_START_CONVERSATION);
+            createOrLoadConversation(id, chooseVariant == RENDER_START_CONVERSATION);
             break;
         case RENDER_DELETE_CONVERSATION:
+            renderShowInfiniteProgressBar();
+            renderSetControlsBlocking(true);
+
             unsigned* xId = SDL_malloc(sizeof(int));
             *xId = id;
             lifecycleAsync((LifecycleAsyncActionFunction) &deleteConversation, xId, 0);
