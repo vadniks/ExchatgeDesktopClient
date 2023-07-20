@@ -11,6 +11,9 @@
 #include "database/database.h"
 #include "logic.h"
 
+#define USERS_LIST_SYNCHRONIZED(x) SDL_LockMutex(this->usersListLock); x SDL_UnlockMutex(this->usersListLock);
+#define MESSAGES_LIST_SYNCHRONIZED(x) SDL_LockMutex(this->messagesListLock); x SDL_UnlockMutex(this->messagesListLock);
+
 typedef enum : unsigned {
     STATE_UNAUTHENTICATED = 0,
     STATE_AWAITING_AUTHENTICATION = 1,
@@ -30,6 +33,8 @@ THIS(
     unsigned toUserId; // the id of the user, the current user (logged in via this client) wanna speak to
     volatile bool databaseInitialized;
     Crypto* nullable currentConversationCrypto;
+    SDL_mutex* usersListLock;
+    SDL_mutex* messagesListLock;
 )
 #pragma clang diagnostic pop
 
@@ -57,6 +62,8 @@ void logicInit(unsigned argc, const char** argv) {
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
     this->databaseInitialized = false;
     this->currentConversationCrypto = NULL;
+    this->usersListLock = SDL_CreateMutex();
+    this->messagesListLock = SDL_CreateMutex();
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
@@ -113,7 +120,9 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     databaseAddMessage(dbMessage);
     databaseMessageDestroy(dbMessage);
 
-    listAdd(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
+    MESSAGES_LIST_SYNCHRONIZED(
+        listAdd(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
+    )
     SDL_free(message);
 }
 
@@ -161,15 +170,15 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
         info = infos[i];
         id = netUserInfoId(info);
 
-        if (id != netCurrentUserId())
-            listAdd(this->usersList,userCreate(
+        if (id != netCurrentUserId()) {
+            USERS_LIST_SYNCHRONIZED(listAdd(this->usersList, userCreate(
                 id,
                 (const char*) netUserInfoName(info),
                 NET_USERNAME_SIZE,
                 databaseConversationExists(id),
                 netUserInfoConnected(info)
-            ));
-        else {
+            ));)
+        } else {
             SDL_memcpy(this->currentUserName, netUserInfoName(info), NET_USERNAME_SIZE);
             renderSetWindowTitle(this->currentUserName);
         }
@@ -312,7 +321,7 @@ static void startConversation(void** parameters) {
 
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
-    logicOnUpdateUsersListClicked(); // TODO: wrap edit calls to lists in synchronized blocks (add mutexes to lists)
+    logicOnUpdateUsersListClicked();
 
     SDL_Log("establishing secured connection with invited user %s", crypto ? "succeeded" : "failed"); // TODO: test only
 }
@@ -374,7 +383,7 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
     assert(this);
     this->state = STATE_EXCHANGING_MESSAGES;
     this->toUserId = id;
-    listClear(this->messagesList);
+    MESSAGES_LIST_SYNCHRONIZED(listClear(this->messagesList);)
 
     switch (chooseVariant) {
         case RENDER_START_CONVERSATION:
@@ -509,7 +518,9 @@ void logicOnSendClicked(const char* text, unsigned size) {
     params[1] = SDL_malloc(sizeof(int));
     *((unsigned*) params[1]) = size;
 
-    listAdd(this->messagesList, conversationMessageCreate(logicCurrentTimeMillis(), NULL, 0, text, size));
+    MESSAGES_LIST_SYNCHRONIZED(
+        listAdd(this->messagesList, conversationMessageCreate(logicCurrentTimeMillis(), NULL, 0, text, size));
+    )
     lifecycleAsync((LifecycleAsyncActionFunction) &sendMessage, params, 0);
 }
 
@@ -519,7 +530,7 @@ void logicOnUpdateUsersListClicked(void) {
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);
 
-    listClear(this->usersList);
+    USERS_LIST_SYNCHRONIZED(listClear(this->usersList);)
     renderShowUsersList(this->currentUserName);
 
     lifecycleAsync((LifecycleAsyncActionFunction) &netFetchUsers, NULL, 0);
@@ -529,6 +540,9 @@ unsigned logicUnencryptedMessageBodySize(void) { return NET_MESSAGE_BODY_SIZE - 
 
 void logicClean(void) {
     assert(this);
+
+    SDL_DestroyMutex(this->usersListLock);
+    SDL_DestroyMutex(this->messagesListLock);
 
     SDL_free(this->currentConversationCrypto);
     if (this->databaseInitialized) databaseClean();
