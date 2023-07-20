@@ -176,6 +176,7 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
     }
 
     renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
     renderShowUsersList(this->currentUserName);
 }
 
@@ -311,6 +312,7 @@ static void startConversation(void** parameters) {
 
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
+    logicOnUpdateUsersListClicked(); // TODO: wrap edit calls to lists in synchronized blocks (add mutexes to lists)
 
     SDL_Log("establishing secured connection with invited user %s", crypto ? "succeeded" : "failed"); // TODO: test only
 }
@@ -333,6 +335,7 @@ static void continueConversation(void** parameters) {
 
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
+    logicOnUpdateUsersListClicked();
 }
 
 static void createOrLoadConversation(unsigned id, bool create) {
@@ -364,6 +367,7 @@ static void deleteConversation(unsigned* id) {
 
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
+    logicOnUpdateUsersListClicked();
 }
 
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant) {
@@ -511,6 +515,9 @@ void logicOnSendClicked(const char* text, unsigned size) {
 
 void logicOnUpdateUsersListClicked(void) {
     assert(this);
+
+    renderShowInfiniteProgressBar();
+    renderSetControlsBlocking(true);
 
     listClear(this->usersList);
     renderShowUsersList(this->currentUserName);
