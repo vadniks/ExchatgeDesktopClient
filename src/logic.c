@@ -433,7 +433,7 @@ unsigned long logicCurrentTimeMillis(void) {
     return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
 }
 
-static void sendMessage(void** params) { // TODO: block controls while sending/receiving a message
+static void sendMessage(void** params) { // TODO: block controls and show inf progress bar while sending/receiving a message
     assert(this && params && this->databaseInitialized && this->currentConversationCrypto);
 
     unsigned size = *((unsigned*) params[1]), encryptedSize = cryptoEncryptedSize(size);
