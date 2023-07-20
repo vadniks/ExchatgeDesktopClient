@@ -101,8 +101,6 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     const User* user = findUser(fromId);
     assert(user);
 
-    SDL_Log("message received from %u %s", fromId, user->name); // TODO: test only
-
     listAdd(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
 }
 

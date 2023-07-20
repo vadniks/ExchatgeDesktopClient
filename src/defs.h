@@ -1,6 +1,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+#   error "Only the C - only hardcore!"
+#endif
+
 #define THIS(x) \
     typedef struct { x } This; \
     static This* this = NULL;
