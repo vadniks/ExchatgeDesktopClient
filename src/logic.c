@@ -184,9 +184,8 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     unsigned xFromId = *fromId;
     SDL_free(fromId);
 
-    if (databaseConversationExists(xFromId)) {
-        //databaseRemoveConversation // TODO: existence of a conversation when receiving an invite means that user, from whom this invite came, has deleted conversation with the current user, so to make users messaging again, remove the outdated conversation on the current user's side
-    }
+    if (databaseConversationExists(xFromId))
+        databaseRemoveConversation(xFromId); // existence of a conversation when receiving an invite means that user, from whom this invite came, has deleted conversation with the current user, so to make users messaging again, remove the outdated conversation on the current user's side
 
     const User* user = findUser(xFromId);
     assert(user);
@@ -292,7 +291,7 @@ static void startConversation(void** parameters) {
     const User* user = parameters[1];
     Crypto* crypto = NULL;
 
-    assert(id && this->databaseInitialized && !(this->currentConversationCrypto));
+    assert(this && this->databaseInitialized && !(this->currentConversationCrypto));
 
     if (databaseConversationExists(*id)) {
         renderShowConversationAlreadyExists();
@@ -320,7 +319,7 @@ static void continueConversation(void** parameters) {
     unsigned* id = parameters[0];
     const User* user = parameters[1];
 
-    assert(id && this->databaseInitialized && this->currentConversationCrypto);
+    assert(this && this->databaseInitialized && !(this->currentConversationCrypto));
 
     Crypto* crypto = databaseGetConversation(*id);
     if (!crypto)
@@ -336,8 +335,6 @@ static void continueConversation(void** parameters) {
     renderSetControlsBlocking(false);
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpedantic"
 static void createOrDeleteConversation(unsigned id, bool create) {
     const User* user = findUser(id);
     assert(user);
@@ -351,15 +348,16 @@ static void createOrDeleteConversation(unsigned id, bool create) {
     renderSetControlsBlocking(true);
 
     void** parameters = SDL_malloc(2 * sizeof(void*));
-    (parameters[0] = SDL_malloc(sizeof(int))) && (*((unsigned*) parameters[0]) = id) ? 0 : assert(false); // pedantic: o (int) and void - bypassing type safety - just silence 'cause I know that it's gonna work
+    (parameters[0] = SDL_malloc(sizeof(int))) && (*((unsigned*) parameters[0]) = id);
     ((const void**) parameters)[1] = user;
 
     lifecycleAsync((LifecycleAsyncActionFunction) (create ? &startConversation : &continueConversation), parameters, 0); // TODO: update users list after start/continue is performed
 }
-#pragma clang diagnostic pop
 
-static void deleteConversation(unsigned id) {
-    //databaseRemoveConversation // TODO
+static void deleteConversation(unsigned* id) {
+    assert(this && !this->databaseInitialized && databaseConversationExists(*id));
+    databaseRemoveConversation(*id);
+    SDL_free(id);
 }
 
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant) {
@@ -374,7 +372,9 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
             createOrDeleteConversation(id, chooseVariant == RENDER_START_CONVERSATION);
             break;
         case RENDER_DELETE_CONVERSATION:
-            deleteConversation(id);
+            unsigned* xId = SDL_malloc(sizeof(int));
+            *xId = id;
+            lifecycleAsync((LifecycleAsyncActionFunction) &deleteConversation, xId, 0);
             break;
         default:
             assert(false);

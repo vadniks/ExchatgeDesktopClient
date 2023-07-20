@@ -18,9 +18,10 @@ void databaseMessageDestroy(DatabaseMessage* message);
 
 bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize, unsigned maxMessageTextSize); // returns true on success (either true or false returned, cleanup is needed to be performed anyway), 'passwordSize'-sized buffer
 bool databaseConversationExists(unsigned userId);
-bool databaseAddConversation(unsigned userId, const Crypto* crypto);
+bool databaseAddConversation(unsigned userId, const Crypto* crypto); // the user of this api must check for existence of the entity being added before actually adding that entity, otherwise the function's gonna throw... ...smth that the caller surely doesn't want to be thrown into him
 Crypto* nullable databaseGetConversation(unsigned userId);
+void databaseRemoveConversation(unsigned userId); // check for existence first
 bool databaseMessageExists(unsigned long timestamp, const unsigned* nullable from);
-bool databaseAddMessage(const DatabaseMessage* message); // from (user id) inside the message may be null if the message came from the current user
+bool databaseAddMessage(const DatabaseMessage* message); // check for existence first; from (user id) inside the message may be null if the message came from the current user
 List* nullable databaseGetMessages(unsigned userId); // returns an array of messages <DatabaseMessage*> (which is expected to be deallocated by the caller) on success; inside each message there's fromId unsigned int in bytes (sizeof 4)
 void databaseClean(void);

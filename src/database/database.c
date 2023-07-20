@@ -312,7 +312,6 @@ static void addConversationBinder(const void* const* parameters, sqlite3_stmt* s
 
 bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
     assert(this);
-    if (databaseConversationExists(userId)) return false;
     SYNCHRONIZED_BEGIN
 
     byte* streamStates = cryptoExportStreamsStates(crypto);
@@ -398,6 +397,32 @@ Crypto* nullable databaseGetConversation(unsigned userId) {
     return crypto;
 }
 
+static void removeConversationBinder(const unsigned* userId, sqlite3_stmt* statement)
+{ assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
+
+void databaseRemoveConversation(unsigned userId) {
+    assert(this);
+    SYNCHRONIZED_BEGIN
+
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "delete from %s where %s = ?",
+        CONVERSATIONS_TABLE, USER_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    executeSingle(
+        sql, sqlSize,
+        (StatementProcessor) &removeConversationBinder, &userId,
+        NULL, NULL
+    );
+
+    SYNCHRONIZED_END
+}
+
 static void messageExistsBinder(const void* const* parameters, sqlite3_stmt* statement) {
     const unsigned* from = parameters[1];
     assert(!sqlite3_bind_int64(statement, 1, (long) *((const unsigned long*) parameters[0])));
@@ -441,7 +466,6 @@ static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statem
 
 bool databaseAddMessage(const DatabaseMessage* message) {
     assert(this);
-    if (databaseMessageExists(message->timestamp, message->from)) return false;
     SYNCHRONIZED_BEGIN
 
     const unsigned bufferSize = 0xff;
