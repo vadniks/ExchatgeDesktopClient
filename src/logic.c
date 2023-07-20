@@ -54,6 +54,7 @@ void logicInit(unsigned argc, const char** argv) {
     parseArguments(argc, argv);
     this->state = STATE_UNAUTHENTICATED;
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
+    this->databaseInitialized = false;
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
