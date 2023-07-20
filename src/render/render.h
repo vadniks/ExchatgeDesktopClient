@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <sdl/SDL.h> // TODO: store messages (encrypted) on the client side
+#include <sdl/SDL.h>
 #include <stdbool.h>
 #include "collections/list.h"
 #include "../defs.h"
