@@ -73,6 +73,8 @@ void renderShowRegistrationSucceededSystemMessage(void);
 void renderShowUserIsOfflineError(void);
 void renderShowUnableToDecryptDatabaseError(void);
 void renderShowUnableToCreateConversation(void);
+void renderShowConversationDoesntExist(void);
+void renderShowConversationAlreadyExists(void);
 
 void renderShowInfiniteProgressBar(void); // showed only on pages that support it (log in/register, not splash as it's a special case)
 void renderHideInfiniteProgressBar(void);

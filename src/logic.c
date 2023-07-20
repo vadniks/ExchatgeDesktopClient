@@ -283,30 +283,58 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
     logIn ? renderShowLogIn() : renderShowRegister();
 }
 
-static void createConversation(unsigned* id) {
-    assert(id && this->databaseInitialized && !databaseConversationExists(*id));
+static void startConversation(void** parameters) {
+    unsigned* id = parameters[0];
+    const User* user = parameters[1];
+    Crypto* crypto = NULL;
 
-    Crypto* crypto = netCreateConversation(*id);
-    assert(!(this->currentConversationCrypto));
-    this->currentConversationCrypto = crypto;
+    assert(id && this->databaseInitialized && !(this->currentConversationCrypto));
 
-    const User* user = findUser(*id);
-    assert(user);
+    if (databaseConversationExists(*id)) {
+        renderShowConversationAlreadyExists();
+        goto cleanup;
+    }
 
-    if (crypto)
+    if ((crypto = netCreateConversation(*id)))
+        this->currentConversationCrypto = crypto,
         databaseAddConversation(*id, crypto),
         renderShowConversation(user->name);
     else
         renderShowUnableToCreateConversation();
 
+    cleanup:
     SDL_free(id);
+    SDL_free(parameters);
+
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
 
     SDL_Log("establishing secured connection with invited user %s", crypto ? "succeeded" : "failed"); // TODO: test only
 }
 
-static void startConversation(unsigned id) {
+static void continueConversation(void** parameters) {
+    unsigned* id = parameters[0];
+    const User* user = parameters[1];
+
+    assert(id && this->databaseInitialized && this->currentConversationCrypto);
+
+    Crypto* crypto = databaseGetConversation(*id);
+    if (!crypto)
+        renderShowConversationDoesntExist();
+    else
+        this->currentConversationCrypto = crypto,
+        renderShowConversation(user->name);
+
+    SDL_free(id);
+    SDL_free(parameters);
+
+    renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
+}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpedantic"
+static void createOrDeleteConversation(unsigned id, bool create) {
     const User* user = findUser(id);
     assert(user);
 
@@ -318,17 +346,16 @@ static void startConversation(unsigned id) {
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);
 
-    unsigned* xId = SDL_malloc(sizeof(int));
-    *xId = id;
-    lifecycleAsync((LifecycleAsyncActionFunction) &createConversation, xId, 0);
-}
+    void** parameters = SDL_malloc(2 * sizeof(void*));
+    (parameters[0] = SDL_malloc(sizeof(int))) && (*((unsigned*) parameters[0]) = id) ? 0 : assert(false); // pedantic: o (int) and void - bypassing type safety - just silence 'cause I know that it's gonna work
+    ((const void**) parameters)[1] = user;
 
-static void continueConversation(unsigned id) {
-
+    lifecycleAsync((LifecycleAsyncActionFunction) (create ? &startConversation : &continueConversation), parameters, 0); // TODO: update users list after start/continue is performed
 }
+#pragma clang diagnostic pop
 
 static void deleteConversation(unsigned id) {
-
+    // TODO
 }
 
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant) {
@@ -339,10 +366,8 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
 
     switch (chooseVariant) {
         case RENDER_START_CONVERSATION:
-            startConversation(id);
-            break;
         case RENDER_CONTINUE_CONVERSATION:
-            continueConversation(id);
+            createOrDeleteConversation(id, chooseVariant == RENDER_START_CONVERSATION);
             break;
         case RENDER_DELETE_CONVERSATION:
             deleteConversation(id);
@@ -361,9 +386,8 @@ void logicOnServerShutdownRequested(void) {
 }
 
 void logicOnReturnFromConversationPageRequested(void) {
-    assert(this && this->databaseInitialized);
+    assert(this && this->databaseInitialized && this->currentConversationCrypto);
 
-    assert(this->currentConversationCrypto);
     SDL_free(this->currentConversationCrypto);
     this->currentConversationCrypto = NULL;
 

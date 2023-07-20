@@ -56,6 +56,8 @@ STATIC_CONST_STRING ACCEPT = "Accept";
 STATIC_CONST_STRING DECLINE = "Decline";
 STATIC_CONST_STRING UNABLE_TO_DECRYPT_DATABASE = "Unable to decrypt the database";
 STATIC_CONST_STRING UNABLE_TO_CREATE_CONVERSATION = "Unable to create the conversation";
+STATIC_CONST_STRING CONVERSATION_DOESNT_EXIST = "Conversation doesn't exist";
+STATIC_CONST_STRING CONVERSATION_ALREADY_EXISTS = "Conversation already exists";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -436,6 +438,8 @@ void renderShowRegistrationSucceededSystemMessage(void) { postSystemMessage(REGI
 void renderShowUserIsOfflineError(void) { postSystemMessage(USER_IS_OFFLINE, true); }
 void renderShowUnableToDecryptDatabaseError(void) { postSystemMessage(UNABLE_TO_DECRYPT_DATABASE, true); }
 void renderShowUnableToCreateConversation(void) { postSystemMessage(UNABLE_TO_CREATE_CONVERSATION, true); }
+void renderShowConversationDoesntExist(void) { postSystemMessage(CONVERSATION_DOESNT_EXIST, true); }
+void renderShowConversationAlreadyExists(void) { postSystemMessage(CONVERSATION_ALREADY_EXISTS, true); }
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);
