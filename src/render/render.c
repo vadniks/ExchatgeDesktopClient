@@ -55,6 +55,7 @@ STATIC_CONST_STRING YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER = "You are in
 STATIC_CONST_STRING ACCEPT = "Accept";
 STATIC_CONST_STRING DECLINE = "Decline";
 STATIC_CONST_STRING UNABLE_TO_DECRYPT_DATABASE = "Unable to decrypt the database";
+STATIC_CONST_STRING UNABLE_TO_CREATE_CONVERSATION = "Unable to create the conversation";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -149,7 +150,6 @@ void renderInit(
     RenderCredentialsRandomFiller credentialsRandomFiller,
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser,
     RenderUserForConversationChosenCallback onUserForConversationChosen,
-    unsigned maxMessageSize,
     unsigned conversationNameSize,
     RenderOnServerShutdownRequested onServerShutdownRequested,
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested,
@@ -182,7 +182,6 @@ void renderInit(
     this->usersList = NULL;
     this->onUserForConversationChosen = onUserForConversationChosen;
     this->conversationMessagesList = NULL;
-    this->maxMessageSize = maxMessageSize;
     this->conversationName = SDL_calloc(this->usernameSize, sizeof(char));
 
     this->conversationNameSize = conversationNameSize;
@@ -255,6 +254,11 @@ void renderInit(
     setStyle();
 
     this->colorf = (struct nk_colorf) { 0.10f, 0.18f, 0.24f, 1.00f };
+}
+
+void renderSetMaxMessageSize(unsigned size) {
+    assert(this);
+    this->maxMessageSize = size;
 }
 
 void renderSetAdminMode(bool mode) {
@@ -431,6 +435,7 @@ void renderShowUnableToConnectToTheServerError(void) { postSystemMessage(UNABLE_
 void renderShowRegistrationSucceededSystemMessage(void) { postSystemMessage(REGISTRATION_SUCCEEDED, false); }
 void renderShowUserIsOfflineError(void) { postSystemMessage(USER_IS_OFFLINE, true); }
 void renderShowUnableToDecryptDatabaseError(void) { postSystemMessage(UNABLE_TO_DECRYPT_DATABASE, true); }
+void renderShowUnableToCreateConversation(void) { postSystemMessage(UNABLE_TO_CREATE_CONVERSATION, true); }
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);

@@ -20,4 +20,5 @@ char* logicMillisToDateTime(unsigned long millis); // result is a null-terminate
 unsigned long logicCurrentTimeMillis(void);
 void logicOnSendClicked(const char* text, unsigned size); // expects a string with 'size' in range (0, NET_MESSAGE_BODY_SIZE] which is copied
 void logicOnUpdateUsersListClicked(void);
+unsigned logicUnencryptedMessageBodySize(void);
 void logicClean(void);

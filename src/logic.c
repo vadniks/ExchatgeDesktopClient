@@ -29,6 +29,7 @@ THIS(
     char* currentUserName; // TODO: the server shouldn't know groups in which users are, so group information stays on clients, the server just transmits messages
     unsigned toUserId; // the id of the user, the current user (logged in via this client) wanna speak to
     volatile bool databaseInitialized;
+    Crypto* nullable currentConversationCrypto;
 )
 #pragma clang diagnostic pop
 
@@ -55,6 +56,7 @@ void logicInit(unsigned argc, const char** argv) {
     this->state = STATE_UNAUTHENTICATED;
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
     this->databaseInitialized = false;
+    this->currentConversationCrypto = NULL;
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
@@ -95,13 +97,24 @@ static const User* nullable findUser(unsigned id) {
     return NULL;
 }
 
-static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* message, unsigned size) {
-    assert(this);
+static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* encryptedMessage, unsigned encryptedSize) {
+    assert(this && this->databaseInitialized && this->currentConversationCrypto);
 
     const User* user = findUser(fromId);
     assert(user);
 
+    const unsigned size = encryptedSize - cryptoEncryptedSize(0);
+    assert(size > 0 && size <= logicUnencryptedMessageBodySize());
+
+    byte* message = cryptoDecrypt(this->currentConversationCrypto, encryptedMessage, encryptedSize, false);
+    assert(message);
+
+    DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, &fromId, (byte*) message, size);
+    databaseAddMessage(dbMessage);
+    databaseMessageDestroy(dbMessage);
+
     listAdd(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
+    SDL_free(message);
 }
 
 static void onLogInResult(bool successful) {
@@ -141,7 +154,7 @@ static void onDisconnected(void) { // TODO: forbid using username 'admin' more t
 }
 
 static void onUsersFetched(NetUserInfo** infos, unsigned size) {
-    assert(this);
+    assert(this && this->databaseInitialized);
 
     NetUserInfo* info;
     for (unsigned i = 0, id; i < size; i++) {
@@ -153,7 +166,7 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
                 id,
                 (const char*) netUserInfoName(info),
                 NET_USERNAME_SIZE,
-                i % 5 == 0, // TODO: client side's business whether a conversation with a particular user exists
+                databaseConversationExists(id),
                 netUserInfoConnected(info)
             ));
         else {
@@ -175,10 +188,19 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     assert(user);
 
     Crypto* crypto = netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
-    SDL_Log("establishing secured connection with inviter %s", crypto ? "succeeded" : "failed");
-    SDL_free(crypto); // TODO: test only
+    assert(!(this->currentConversationCrypto));
+    this->currentConversationCrypto = crypto;
+
+    if (crypto)
+        databaseAddConversation(xFromId, crypto),
+        renderShowConversation(user->name);
+    else
+        renderShowUnableToCreateConversation();
+
     renderSetControlsBlocking(false);
     renderHideInfiniteProgressBar();
+
+    SDL_Log("establishing secured connection with inviter %s", crypto ? "succeeded" : "failed"); // TODO: test only
 }
 
 static void onConversationSetUpInviteReceived(unsigned fromId) {
@@ -262,14 +284,26 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
 }
 
 static void createConversation(unsigned* id) {
-    assert(id);
+    assert(id && this->databaseInitialized && !databaseConversationExists(*id));
+
     Crypto* crypto = netCreateConversation(*id);
+    assert(!(this->currentConversationCrypto));
+    this->currentConversationCrypto = crypto;
+
+    const User* user = findUser(*id);
+    assert(user);
+
+    if (crypto)
+        databaseAddConversation(*id, crypto),
+        renderShowConversation(user->name);
+    else
+        renderShowUnableToCreateConversation();
+
     SDL_free(id);
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
 
-    SDL_Log("establishing secured connection with invited user %s", crypto ? "succeeded" : "failed");
-    SDL_free(crypto); // TODO: test only
+    SDL_Log("establishing secured connection with invited user %s", crypto ? "succeeded" : "failed"); // TODO: test only
 }
 
 static void startConversation(unsigned id) {
@@ -327,7 +361,12 @@ void logicOnServerShutdownRequested(void) {
 }
 
 void logicOnReturnFromConversationPageRequested(void) {
-    assert(this);
+    assert(this && this->databaseInitialized);
+
+    assert(this->currentConversationCrypto);
+    SDL_free(this->currentConversationCrypto);
+    this->currentConversationCrypto = NULL;
+
     renderShowUsersList(this->currentUserName);
 }
 
@@ -395,15 +434,24 @@ unsigned long logicCurrentTimeMillis(void) {
 }
 
 static void sendMessage(void** params) {
-    assert(this && params);
+    assert(this && params && this->databaseInitialized && this->currentConversationCrypto);
 
-    unsigned size = *((unsigned*) params[1]);
+    unsigned size = *((unsigned*) params[1]), encryptedSize = cryptoEncryptedSize(size);
+    assert(size && encryptedSize <= NET_MESSAGE_BODY_SIZE);
+
+    const byte* text = params[0];
+    DatabaseMessage* dbMessage = databaseMessageCreate(logicCurrentTimeMillis(), NULL, text, size);
+    databaseAddMessage(dbMessage);
+    databaseMessageDestroy(dbMessage);
+
+    byte* encryptedText = cryptoEncrypt(this->currentConversationCrypto, text, size, false);
+
     byte body[NET_MESSAGE_BODY_SIZE];
-
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
-    SDL_memcpy(body, (const char*) params[0], size);
+    SDL_memcpy(body, encryptedText, encryptedSize);
+    SDL_free(encryptedText);
 
-    netSend(NET_FLAG_PROCEED, body, size, this->toUserId);
+    netSend(NET_FLAG_PROCEED, body, encryptedSize, this->toUserId); // TODO: test all
 
     SDL_free(params[0]);
     SDL_free(params[1]);
@@ -433,9 +481,12 @@ void logicOnUpdateUsersListClicked(void) {
     lifecycleAsync((LifecycleAsyncActionFunction) &netFetchUsers, NULL, 0);
 }
 
+unsigned logicUnencryptedMessageBodySize(void) { return NET_MESSAGE_BODY_SIZE - cryptoEncryptedSize(0); } // 928 - 17 = 911
+
 void logicClean(void) {
     assert(this);
 
+    SDL_free(this->currentConversationCrypto);
     if (this->databaseInitialized) databaseClean();
 
     SDL_free(this->currentUserName);

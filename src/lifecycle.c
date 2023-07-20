@@ -115,7 +115,6 @@ bool lifecycleInit(unsigned argc, const char** argv) {
         &logicCredentialsRandomFiller,
         &logicOnLoginRegisterPageQueriedByUser,
         &logicOnUserForConversationChosen,
-        NET_MESSAGE_BODY_SIZE,
         NET_USERNAME_SIZE,
         &logicOnServerShutdownRequested,
         &logicOnReturnFromConversationPageRequested,
@@ -124,6 +123,7 @@ bool lifecycleInit(unsigned argc, const char** argv) {
         &logicOnUpdateUsersListClicked
     );
     logicInit(argc, argv);
+    renderSetMaxMessageSize(logicUnencryptedMessageBodySize());
     renderSetAdminMode(logicIsAdminMode());
     renderSetUsersList(logicUsersList());
     renderSetMessagesList(logicMessagesList());

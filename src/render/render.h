@@ -37,7 +37,6 @@ void renderInit(
     RenderCredentialsRandomFiller credentialsRandomFiller,
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser,
     RenderUserForConversationChosenCallback onUserForConversationChosen,
-    unsigned maxMessageSize,
     unsigned conversationNameSize,
     RenderOnServerShutdownRequested onServerShutdownRequested,
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested,
@@ -46,6 +45,7 @@ void renderInit(
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked
 );
 
+void renderSetMaxMessageSize(unsigned size);
 void renderSetAdminMode(bool mode);
 void renderSetUsersList(const List* usersList); // <User*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
 void renderSetMessagesList(const List* messagesList); // <ConversationMessage*> must be deallocated by the caller after this module gets shut down
@@ -72,6 +72,7 @@ void renderShowUnableToConnectToTheServerError(void); // TODO: too long name
 void renderShowRegistrationSucceededSystemMessage(void);
 void renderShowUserIsOfflineError(void);
 void renderShowUnableToDecryptDatabaseError(void);
+void renderShowUnableToCreateConversation(void);
 
 void renderShowInfiniteProgressBar(void); // showed only on pages that support it (log in/register, not splash as it's a special case)
 void renderHideInfiniteProgressBar(void);
