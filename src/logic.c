@@ -184,6 +184,10 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     unsigned xFromId = *fromId;
     SDL_free(fromId);
 
+    if (databaseConversationExists(xFromId)) {
+        //databaseRemoveConversation // TODO: existence of a conversation when receiving an invite means that user, from whom this invite came, has deleted conversation with the current user, so to make users messaging again, remove the outdated conversation on the current user's side
+    }
+
     const User* user = findUser(xFromId);
     assert(user);
 
@@ -355,7 +359,7 @@ static void createOrDeleteConversation(unsigned id, bool create) {
 #pragma clang diagnostic pop
 
 static void deleteConversation(unsigned id) {
-    // TODO
+    //databaseRemoveConversation // TODO
 }
 
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant) {
