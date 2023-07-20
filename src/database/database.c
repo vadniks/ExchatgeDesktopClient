@@ -187,7 +187,7 @@ static void getMachineIdResultHandler(byte* nullable* encryptedId, sqlite3_stmt*
 }
 
 static long* nullable getMachineId(void) {
-    const unsigned bufferSize = 255;
+    const unsigned bufferSize = 0xff;
     char sql[bufferSize];
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
@@ -206,6 +206,8 @@ static long* nullable getMachineId(void) {
     if (!encryptedId) return NULL;
 
     byte* id = cryptoDecryptSingle(this->key, encryptedId, cryptoSingleEncryptedSize(sizeof(long)));
+    SDL_free(encryptedId);
+
     assert(id);
     return (long*) id;
 }
@@ -245,8 +247,6 @@ static void setMachineId(void) {
     SDL_free(encryptedId);
 }
 
-// TODO: test all those ~~~~~^
-
 bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize, unsigned maxMessageTextSize) {
     assert(!this && passwordSize > 0 && usernameSize > 0);
     this = SDL_malloc(sizeof *this);
@@ -263,7 +263,7 @@ bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned us
     bool successful = !sqlite3_open(FILE_NAME, &(this->db));
     if (successful) createTablesIfNotExists();
 
-    long* machineId = getMachineId();  // TODO: test this: add a service table and put there some known bytes, encrypt them on first db initialization and then check the passed password so it can decrypt back those bytes
+    long* machineId = getMachineId();
     if (!machineId) setMachineId();
     SDL_free(machineId);
 
