@@ -358,7 +358,7 @@ static void createOrLoadConversation(unsigned id, bool create) {
 }
 
 static void deleteConversation(unsigned* id) {
-    assert(this && !this->databaseInitialized);
+    assert(this && this->databaseInitialized);
 
     if (databaseConversationExists(*id)) databaseRemoveConversation(*id);
     else renderShowConversationDoesntExist();
