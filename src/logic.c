@@ -196,6 +196,8 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     unsigned xFromId = *fromId;
     SDL_free(fromId);
 
+    MESSAGES_LIST_SYNCHRONIZED(listClear(this->messagesList);)
+
     if (databaseConversationExists(xFromId))
         databaseRemoveConversation(xFromId); // existence of a conversation when receiving an invite means that user, from whom this invite came, has deleted conversation with the current user, so to make users messaging again, remove the outdated conversation on the current user's side
 
