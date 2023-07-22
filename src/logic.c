@@ -87,20 +87,11 @@ const List* logicMessagesList(void) {
     return this->messagesList;
 }
 
-static const User* nullable findUser(unsigned id) { // TODO: store users with their ids as keys in a map
-    const unsigned size = listSize(this->usersList);
-    const User* user = NULL;
+static int usersComparator(const unsigned* xId, const User* const* b)
+{ return *xId < (*b)->id ? -1 : (*xId > (*b)->id ? 1 : 0); }
 
-    for (unsigned i = 0; i < size; i++) {
-        user = listGet(this->usersList, i);
-        assert(user);
-
-        if (user->id == id)
-            return user;
-    }
-
-    return NULL;
-}
+static const User* nullable findUser(unsigned id)
+{ return listBSearch(this->usersList, &id, (int (*)(const void*, const void*)) &usersComparator); }
 
 static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* encryptedMessage, unsigned encryptedSize) {
     assert(this && this->databaseInitialized);
