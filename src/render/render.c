@@ -679,7 +679,7 @@ static void drawUsersList(void) {
 
     const unsigned size = listSize(this->usersList);
     for (unsigned i = 0; i < size; i++) {
-        User* user = (User*) listGet(this->usersList, i);
+        const User* user = (User*) listGet(this->usersList, i);
 
         char idString[MAX_U32_DEC_DIGITS_COUNT];
         assert(SDL_snprintf(idString, MAX_U32_DEC_DIGITS_COUNT, "%u", user->id) <= (int) MAX_U32_DEC_DIGITS_COUNT);
@@ -692,7 +692,7 @@ static void drawUsersList(void) {
 
 static void drawConversationMessage(
     float charHeight,
-    ConversationMessage* message,
+    const ConversationMessage* message,
     float timestampRatio,
     float fromRatio,
     float textRatio,
@@ -781,7 +781,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
 
     const unsigned size = listSize(this->conversationMessagesList);
     for (unsigned i = 0; i < size; i++) {
-        ConversationMessage* message = listGet(this->conversationMessagesList, i);
+        const ConversationMessage* message = listGet(this->conversationMessagesList, i);
 
         drawConversationMessage(
             height * 0.05f,

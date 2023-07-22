@@ -37,7 +37,7 @@ void listAddFront(List* list, void* value) {
     list->values = temp;
 }
 
-void* listGet(const List* list, unsigned index) {
+const void* listGet(const List* list, unsigned index) {
     assert(list && list->values && list->size > 0 && list->size < MAX_SIZE && index < MAX_SIZE);
     return list->values[index];
 }
