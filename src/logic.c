@@ -213,8 +213,6 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
 
     renderSetControlsBlocking(false);
     renderHideInfiniteProgressBar();
-
-    SDL_Log("establishing secured connection with inviter %s", crypto ? "succeeded" : "failed"); // TODO: test only
 }
 
 static void onConversationSetUpInviteReceived(unsigned fromId) {
@@ -313,8 +311,6 @@ static void startConversation(void** parameters) {
             renderShowConversation(user->name);
         else
             renderShowUnableToCreateConversation();
-
-        SDL_Log("establishing secured connection with invited user %s", crypto ? "succeeded" : "failed"); // TODO: test only
     }
 
     SDL_free(id);
