@@ -112,7 +112,7 @@ static void executeSingle(
 static inline void executeSingleMinimal(const char* sql, unsigned sqlSize)
 { executeSingle(sql, sqlSize, NULL, NULL, NULL, NULL); }
 
-static void disableWalResultHandler(__attribute_maybe_unused__ void* _, sqlite3_stmt* statement)
+static void disableJournalingResultHandler(__attribute_maybe_unused__ void* _, sqlite3_stmt* statement)
 { assert(sqlite3_step(statement) == SQLITE_ROW); }
 
 static void disableJournaling(void) {
@@ -128,7 +128,7 @@ static void disableJournaling(void) {
     executeSingle(
         sql, sqlSize,
         NULL, NULL,
-        &disableWalResultHandler, NULL
+        &disableJournalingResultHandler, NULL
     );
 }
 
