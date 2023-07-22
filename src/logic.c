@@ -87,8 +87,8 @@ const List* logicMessagesList(void) {
     return this->messagesList;
 }
 
-static int findUserComparator(const unsigned* xId, const User* const* b)
-{ return *xId < (*b)->id ? -1 : (*xId > (*b)->id ? 1 : 0); }
+static int findUserComparator(const unsigned* xId, const User* const* user)
+{ return *xId < (*user)->id ? -1 : (*xId > (*user)->id ? 1 : 0); }
 
 static const User* nullable findUser(unsigned id)
 { return listBinarySearch(this->usersList, &id, (ListComparator) &findUserComparator); }
