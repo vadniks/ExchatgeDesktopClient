@@ -208,7 +208,6 @@ static long* nullable getMachineId(void) {
     byte* id = cryptoDecryptSingle(this->key, encryptedId, cryptoSingleEncryptedSize(sizeof(long)));
     SDL_free(encryptedId);
 
-    assert(id);
     return (long*) id;
 }
 
