@@ -185,11 +185,43 @@ static void createServiceTableIfNotExists(void) {
     executeSingleMinimal(sql, sqlSize);
 }
 
-static void createTablesIfNotExists(void) { // TODO: create indexes
+static void createConversationsIndexIfNotExists(void) {
+    const unsigned bufferSize = 255;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "create unique index if not exists index_%s on %s(%s)",
+        CONVERSATIONS_TABLE, CONVERSATIONS_TABLE, USER_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    executeSingleMinimal(sql, sqlSize);
+}
+
+static void createMessagesIndexIfNotExists(void) {
+    const unsigned bufferSize = 255;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "create unique index if not exists index_%s on %s(%s, %s)",
+        MESSAGES_TABLE, MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    executeSingleMinimal(sql, sqlSize);
+}
+
+static void createTablesIfNotExists(void) {
     disableJournaling();
+
     createConversationsTableIfNotExists();
     createMessagesTableIfNotExits();
     createServiceTableIfNotExists();
+
+    createConversationsIndexIfNotExists();
+    createMessagesIndexIfNotExists();
 }
 
 static void getMachineIdResultHandler(byte* nullable* encryptedId, sqlite3_stmt* statement) {
