@@ -112,6 +112,26 @@ static void executeSingle(
 static inline void executeSingleMinimal(const char* sql, unsigned sqlSize)
 { executeSingle(sql, sqlSize, NULL, NULL, NULL, NULL); }
 
+static void disableWalResultHandler(__attribute_maybe_unused__ void* _, sqlite3_stmt* statement)
+{ assert(sqlite3_step(statement) == SQLITE_ROW); }
+
+static void disableWal(void) {
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "pragma journal_mode = off"
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    executeSingle(
+        sql, sqlSize,
+        NULL, NULL,
+        &disableWalResultHandler, NULL
+    );
+}
+
 static void createConversationsTableIfNotExists(void) {
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -165,7 +185,8 @@ static void createServiceTableIfNotExists(void) {
     executeSingleMinimal(sql, sqlSize);
 }
 
-static void createTablesIfNotExists(void) {
+static void createTablesIfNotExists(void) { // TODO: create indexes
+    disableWal();
     createConversationsTableIfNotExists();
     createMessagesTableIfNotExits();
     createServiceTableIfNotExists();
