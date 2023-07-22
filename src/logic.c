@@ -321,7 +321,6 @@ static void startConversation(void** parameters) {
 
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
-    logicOnUpdateUsersListClicked();
 }
 
 static void continueConversation(void** parameters) {
@@ -340,7 +339,6 @@ static void continueConversation(void** parameters) {
 
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
-    logicOnUpdateUsersListClicked();
 }
 
 static void createOrLoadConversation(unsigned id, bool create) {
