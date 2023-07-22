@@ -11,8 +11,8 @@
 #include "database/database.h"
 #include "logic.h"
 
-#define USERS_LIST_SYNCHRONIZED(x) SDL_LockMutex(this->usersListLock); x SDL_UnlockMutex(this->usersListLock);
-#define MESSAGES_LIST_SYNCHRONIZED(x) SDL_LockMutex(this->messagesListLock); x SDL_UnlockMutex(this->messagesListLock);
+#define USERS_LIST_SYNCHRONIZED(x) assert(!SDL_LockMutex(this->usersListLock)); x assert(!SDL_UnlockMutex(this->usersListLock));
+#define MESSAGES_LIST_SYNCHRONIZED(x) assert(!SDL_LockMutex(this->messagesListLock)); x assert(!SDL_UnlockMutex(this->messagesListLock));
 
 typedef enum : unsigned {
     STATE_UNAUTHENTICATED = 0,

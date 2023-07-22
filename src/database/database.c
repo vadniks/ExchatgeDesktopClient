@@ -6,8 +6,8 @@
 #include <unistd.h>
 #include "database.h"
 
-#define SYNCHRONIZED_BEGIN SDL_LockMutex(this->mutex);
-#define SYNCHRONIZED_END SDL_UnlockMutex(this->mutex);
+#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->mutex));
+#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->mutex));
 #define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
 
 STATIC_CONST_STRING FILE_NAME = "./database.sqlite3";
