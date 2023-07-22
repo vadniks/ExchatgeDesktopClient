@@ -153,7 +153,7 @@ static void onRegisterResult(bool successful) {
     renderHideInfiniteProgressBar();
 }
 
-static void onDisconnected(void) { // TODO: forbid using username 'admin' more than one time on the server side
+static void onDisconnected(void) {
     assert(this);
 
     this->netInitialized = false;
