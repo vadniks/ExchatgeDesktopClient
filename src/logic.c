@@ -91,7 +91,7 @@ static int findUserComparator(const unsigned* xId, const User* const* b)
 { return *xId < (*b)->id ? -1 : (*xId > (*b)->id ? 1 : 0); }
 
 static const User* nullable findUser(unsigned id)
-{ return listBSearch(this->usersList, &id, (int (*)(const void*, const void*)) &findUserComparator); }
+{ return listBinarySearch(this->usersList, &id, (int (*)(const void*, const void*)) &findUserComparator); }
 
 static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* encryptedMessage, unsigned encryptedSize) {
     assert(this && this->databaseInitialized);
