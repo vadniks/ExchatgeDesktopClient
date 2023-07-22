@@ -20,10 +20,21 @@ List* listInit(ListDeallocator nullable deallocator) {
     return list;
 }
 
-void listAdd(List* list, void* value) {
+void listAddBack(List* list, void* value) {
     assert(list && list->size < MAX_SIZE);
     list->values = SDL_realloc(list->values, ++(list->size) * VOID_PTR_SIZE);
     list->values[list->size - 1] = value;
+}
+
+void listAddFront(List* list, void* value) {
+    assert(list && list->size < MAX_SIZE);
+
+    void** temp = SDL_malloc(++(list->size) * VOID_PTR_SIZE);
+    temp[0] = value;
+    for (unsigned i = 1; i < list->size; temp[i] = (list->values)[i - 1], i++);
+
+    SDL_free(list->values);
+    list->values = temp;
 }
 
 void* listGet(const List* list, unsigned index) {

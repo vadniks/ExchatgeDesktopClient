@@ -526,7 +526,7 @@ static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { 
             text,
             textSize
         );
-        listAdd(messages, message);
+        listAddBack(messages, message);
 
         SDL_free(text);
         SDL_free(from);
@@ -544,8 +544,8 @@ List* nullable databaseGetMessages(unsigned userId) {
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
-        "select * from %s where %s = ?",
-        MESSAGES_TABLE, FROM_COLUMN
+        "select * from %s where %s = ? order by %s desc",
+        MESSAGES_TABLE, FROM_COLUMN, TIMESTAMP_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 

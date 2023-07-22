@@ -10,7 +10,8 @@ typedef struct List_t List;
 typedef void (*ListDeallocator)(void*);
 
 List* listInit(ListDeallocator nullable deallocator);
-void listAdd(List* list, void* value);
+void listAddBack(List* list, void* value);
+void listAddFront(List* list, void* value);
 void* listGet(const List* list, unsigned index);
 unsigned listSize(const List* list);
 void listClear(List* list);

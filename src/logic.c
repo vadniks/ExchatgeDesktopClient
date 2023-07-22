@@ -87,7 +87,7 @@ const List* logicMessagesList(void) {
     return this->messagesList;
 }
 
-static const User* nullable findUser(unsigned id) {
+static const User* nullable findUser(unsigned id) { // TODO: store users with their ids as keys in a map
     const unsigned size = listSize(this->usersList);
     const User* user = NULL;
 
@@ -106,13 +106,13 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     assert(this && this->databaseInitialized);
 
     const User* user = findUser(fromId);
-    assert(user);
+    if (!user) return;
 
     const unsigned size = encryptedSize - cryptoEncryptedSize(0);
     assert(size > 0 && size <= logicUnencryptedMessageBodySize());
 
     Crypto* crypto = databaseGetConversation(fromId);
-    assert(crypto);
+    if (!crypto) return;
 
     byte* message = cryptoDecrypt(crypto, encryptedMessage, encryptedSize, false);
     assert(message);
@@ -123,7 +123,7 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     databaseMessageDestroy(dbMessage);
 
     MESSAGES_LIST_SYNCHRONIZED(
-        listAdd(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
+        listAddFront(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
     )
     SDL_free(message);
 }
@@ -173,7 +173,7 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
         id = netUserInfoId(info);
 
         if (id != netCurrentUserId()) {
-            USERS_LIST_SYNCHRONIZED(listAdd(this->usersList, userCreate(
+            USERS_LIST_SYNCHRONIZED(listAddBack(this->usersList, userCreate(
                 id,
                 (const char*) netUserInfoName(info),
                 NET_USERNAME_SIZE,
@@ -508,7 +508,7 @@ void logicOnSendClicked(const char* text, unsigned size) {
     *((unsigned*) params[1]) = size;
 
     MESSAGES_LIST_SYNCHRONIZED(
-        listAdd(this->messagesList, conversationMessageCreate(logicCurrentTimeMillis(), NULL, 0, text, size));
+        listAddFront(this->messagesList, conversationMessageCreate(logicCurrentTimeMillis(), NULL, 0, text, size));
     )
     lifecycleAsync((LifecycleAsyncActionFunction) &sendMessage, params, 0);
 }
