@@ -29,10 +29,9 @@ THIS(
     List* messagesList; // <ConversationMessage*>
     bool adminMode;
     volatile unsigned state;
-    char* currentUserName; // TODO: the server shouldn't know groups in which users are, so group information stays on clients, the server just transmits messages
+    char* currentUserName;
     unsigned toUserId; // the id of the user, the current user (logged in via this client) wanna speak to
     volatile bool databaseInitialized;
-    Crypto* nullable currentConversationCrypto;
     SDL_mutex* usersListLock;
     SDL_mutex* messagesListLock;
 )
@@ -61,7 +60,6 @@ void logicInit(unsigned argc, const char** argv) {
     this->state = STATE_UNAUTHENTICATED;
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
     this->databaseInitialized = false;
-    this->currentConversationCrypto = NULL;
     this->usersListLock = SDL_CreateMutex();
     this->messagesListLock = SDL_CreateMutex();
 
@@ -105,7 +103,7 @@ static const User* nullable findUser(unsigned id) {
 }
 
 static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* encryptedMessage, unsigned encryptedSize) {
-    assert(this && this->databaseInitialized && this->currentConversationCrypto);
+    assert(this && this->databaseInitialized);
 
     const User* user = findUser(fromId);
     assert(user);
@@ -113,8 +111,12 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     const unsigned size = encryptedSize - cryptoEncryptedSize(0);
     assert(size > 0 && size <= logicUnencryptedMessageBodySize());
 
-    byte* message = cryptoDecrypt(this->currentConversationCrypto, encryptedMessage, encryptedSize, false);
+    Crypto* crypto = databaseGetConversation(fromId);
+    assert(crypto);
+
+    byte* message = cryptoDecrypt(crypto, encryptedMessage, encryptedSize, false);
     assert(message);
+    cryptoDestroy(crypto);
 
     DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, &fromId, (byte*) message, size);
     databaseAddMessage(dbMessage);
@@ -201,11 +203,9 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     assert(user);
 
     Crypto* crypto = netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
-    assert(!(this->currentConversationCrypto));
-    this->currentConversationCrypto = crypto;
-
     if (crypto)
         databaseAddConversation(xFromId, crypto),
+        cryptoDestroy(crypto),
         renderShowConversation(user->name);
     else
         renderShowUnableToCreateConversation();
@@ -299,44 +299,40 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
 static void startConversation(void** parameters) {
     unsigned* id = parameters[0];
     const User* user = parameters[1];
-    Crypto* crypto = NULL;
 
-    assert(this && this->databaseInitialized && !(this->currentConversationCrypto));
+    assert(this && this->databaseInitialized);
 
-    if (databaseConversationExists(*id)) {
+    if (databaseConversationExists(*id))
         renderShowConversationAlreadyExists();
-        goto cleanup;
+    else {
+        Crypto* crypto = NULL;
+        if ((crypto = netCreateConversation(*id)))
+            databaseAddConversation(*id, crypto),
+            cryptoDestroy(crypto),
+            renderShowConversation(user->name);
+        else
+            renderShowUnableToCreateConversation();
+
+        SDL_Log("establishing secured connection with invited user %s", crypto ? "succeeded" : "failed"); // TODO: test only
     }
 
-    if ((crypto = netCreateConversation(*id)))
-        this->currentConversationCrypto = crypto,
-        databaseAddConversation(*id, crypto),
-        renderShowConversation(user->name);
-    else
-        renderShowUnableToCreateConversation();
-
-    cleanup:
     SDL_free(id);
     SDL_free(parameters);
 
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
     logicOnUpdateUsersListClicked();
-
-    SDL_Log("establishing secured connection with invited user %s", crypto ? "succeeded" : "failed"); // TODO: test only
 }
 
 static void continueConversation(void** parameters) {
     unsigned* id = parameters[0];
     const User* user = parameters[1];
 
-    assert(this && this->databaseInitialized && !(this->currentConversationCrypto));
+    assert(this && this->databaseInitialized);
 
-    Crypto* crypto = databaseGetConversation(*id);
-    if (!crypto)
+    if (!databaseConversationExists(*id))
         renderShowConversationDoesntExist();
     else
-        this->currentConversationCrypto = crypto,
         renderShowConversation(user->name);
 
     SDL_free(id);
@@ -412,15 +408,11 @@ void logicOnServerShutdownRequested(void) {
 }
 
 void logicOnReturnFromConversationPageRequested(void) {
-    assert(this && this->databaseInitialized && this->currentConversationCrypto);
-
-    SDL_free(this->currentConversationCrypto);
-    this->currentConversationCrypto = NULL;
-
+    assert(this && this->databaseInitialized);
     renderShowUsersList(this->currentUserName);
 }
 
-static void utos(char* buffer, unsigned length, unsigned number) { // unsigned to string
+static void utoa(char* buffer, unsigned length, unsigned number) { // unsigned to ascii (string)
     byte* digits = NULL;
     unsigned digitsSize = 0;
 
@@ -430,10 +422,7 @@ static void utos(char* buffer, unsigned length, unsigned number) { // unsigned t
         number /= 10;
     }
 
-    if (length < digitsSize) {
-        assert(false);
-        //return;
-    }
+    assert(length >= digitsSize);
 
     for (unsigned i = digitsSize, j = 0; i < length; i++, j++)
         buffer[j] = '0' + 0;
@@ -460,18 +449,18 @@ char* logicMillisToDateTime(unsigned long millis) {
     // 'hh:mm:ss mmm-dd-yyyy'  20 + \0 = 21
     char* text = SDL_calloc(21, sizeof(char));
 
-    utos(text, 2, tm->tm_hour);
+    utoa(text, 2, tm->tm_hour);
     text[2] = ':';
-    utos(text + 3, 2, tm->tm_min);
+    utoa(text + 3, 2, tm->tm_min);
     text[5] = ':';
-    utos(text + 6, 2, tm->tm_sec);
+    utoa(text + 6, 2, tm->tm_sec);
     text[8] = ' ';
 
     monthToName(text + 9, tm->tm_mon);
     text[12] = '-';
-    utos(text + 13, 2, tm->tm_mday);
+    utoa(text + 13, 2, tm->tm_mday);
     text[15] = '-';
-    utos(text + 16, 4, tm->tm_year + 1900);
+    utoa(text + 16, 4, tm->tm_year + 1900);
     text[20] = 0;
 
     return text;
@@ -484,7 +473,7 @@ unsigned long logicCurrentTimeMillis(void) {
 }
 
 static void sendMessage(void** params) { // TODO: block controls and show inf progress bar while sending/receiving a message
-    assert(this && params && this->databaseInitialized && this->currentConversationCrypto);
+    assert(this && params && this->databaseInitialized);
 
     unsigned size = *((unsigned*) params[1]), encryptedSize = cryptoEncryptedSize(size);
     assert(size && encryptedSize <= NET_MESSAGE_BODY_SIZE);
@@ -494,7 +483,10 @@ static void sendMessage(void** params) { // TODO: block controls and show inf pr
     databaseAddMessage(dbMessage);
     databaseMessageDestroy(dbMessage);
 
-    byte* encryptedText = cryptoEncrypt(this->currentConversationCrypto, text, size, false);
+    Crypto* crypto = databaseGetConversation(this->toUserId);
+    assert(crypto);
+    byte* encryptedText = cryptoEncrypt(crypto, text, size, false);
+    cryptoDestroy(crypto);
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
@@ -544,7 +536,6 @@ void logicClean(void) {
     SDL_DestroyMutex(this->usersListLock);
     SDL_DestroyMutex(this->messagesListLock);
 
-    SDL_free(this->currentConversationCrypto);
     if (this->databaseInitialized) databaseClean();
 
     SDL_free(this->currentUserName);
