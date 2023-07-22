@@ -115,7 +115,7 @@ static inline void executeSingleMinimal(const char* sql, unsigned sqlSize)
 static void disableWalResultHandler(__attribute_maybe_unused__ void* _, sqlite3_stmt* statement)
 { assert(sqlite3_step(statement) == SQLITE_ROW); }
 
-static void disableWal(void) {
+static void disableJournaling(void) {
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
 
@@ -186,7 +186,7 @@ static void createServiceTableIfNotExists(void) {
 }
 
 static void createTablesIfNotExists(void) { // TODO: create indexes
-    disableWal();
+    disableJournaling();
     createConversationsTableIfNotExists();
     createMessagesTableIfNotExits();
     createServiceTableIfNotExists();
