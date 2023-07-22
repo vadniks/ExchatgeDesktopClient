@@ -204,6 +204,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
 
     Crypto* crypto = netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
     if (crypto)
+        this->toUserId = *fromId, // not only in python there's indentation based scoping, here's an emulation though
         databaseAddConversation(xFromId, crypto),
         cryptoDestroy(crypto),
         renderShowConversation(user->name);
