@@ -49,8 +49,8 @@ unsigned listSize(const List* list) {
 
 void* nullable listBinarySearch(const List* list, const void* key, int (*comparator)(const void*, const void*)) {
     assert(list && list->values && list->size > 0);
-    const unsigned long offset = (void**) SDL_bsearch(key, list->values, list->size, VOID_PTR_SIZE, comparator) - list->values;
-    return offset >= list->size ? NULL : list->values[offset];
+    const unsigned long index = (void**) SDL_bsearch(key, list->values, list->size, VOID_PTR_SIZE, comparator) - list->values;
+    return index >= list->size ? NULL : list->values[index];
 }
 
 static void destroyValuesIfNotEmpty(List* list) {
