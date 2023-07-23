@@ -21,7 +21,7 @@ typedef struct {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
-    volatile bool running;
+    atomic bool running;
     SDL_TimerID threadsSynchronizerTimerId;
     unsigned updateThreadCounter;
     SDL_cond* netUpdateCond;

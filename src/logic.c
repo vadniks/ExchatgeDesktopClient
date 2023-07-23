@@ -21,16 +21,14 @@ typedef enum : unsigned {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
-    volatile bool netInitialized;
+    atomic bool netInitialized;
     List* usersList; // <User*>
     List* messagesList; // <ConversationMessage*>
     bool adminMode;
-    volatile unsigned state;
+    atomic unsigned state;
     char* currentUserName;
     unsigned toUserId; // the id of the user, the current user (logged in via this client) wanna speak to
-    volatile bool databaseInitialized;
-    SDL_mutex* usersListLock;
-    SDL_mutex* messagesListLock;
+    atomic bool databaseInitialized;
 )
 #pragma clang diagnostic pop
 
@@ -57,8 +55,6 @@ void logicInit(unsigned argc, const char** argv) {
     this->state = STATE_UNAUTHENTICATED;
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
     this->databaseInitialized = false;
-    this->usersListLock = SDL_CreateMutex();
-    this->messagesListLock = SDL_CreateMutex();
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
@@ -193,6 +189,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     Crypto* crypto = netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
     if (crypto)
         this->toUserId = xFromId, // not only in python there's indentation based scoping, here's an emulation though
+        this->state = STATE_EXCHANGING_MESSAGES,
         databaseAddConversation(xFromId, crypto),
         cryptoDestroy(crypto),
         renderShowConversation(user->name);
@@ -513,9 +510,6 @@ unsigned logicUnencryptedMessageBodySize(void) { return NET_MESSAGE_BODY_SIZE - 
 
 void logicClean(void) {
     assert(this);
-
-    SDL_DestroyMutex(this->usersListLock);
-    SDL_DestroyMutex(this->messagesListLock);
 
     if (this->databaseInitialized) databaseClean();
 
