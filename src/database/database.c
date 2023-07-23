@@ -17,6 +17,7 @@ STATIC_CONST_STRING USER_COLUMN = "user";
 STATIC_CONST_STRING STREAMS_STATES_COLUMN = "streamsStates";
 STATIC_CONST_STRING MESSAGES_TABLE = "messages";
 STATIC_CONST_STRING TIMESTAMP_COLUMN = "timestamp";
+STATIC_CONST_STRING CONVERSATION_COLUMN = "conversation";
 STATIC_CONST_STRING FROM_COLUMN = "\"from\""; // quotes are used 'cause it's a reserved keyword in the sql lang
 STATIC_CONST_STRING TEXT_COLUMN = "text";
 STATIC_CONST_STRING SIZE_COLUMN = "size";
@@ -37,6 +38,7 @@ typedef void (*StatementProcessor)(void* nullable, sqlite3_stmt*);
 
 struct DatabaseMessage_t {
     unsigned long timestamp;
+    unsigned conversation;
     unsigned from;
     byte* text;
     unsigned size;
@@ -44,12 +46,14 @@ struct DatabaseMessage_t {
 
 DatabaseMessage* databaseMessageCreate( // from (user id) null if from this client, the name of the sender otherwise; size of text, whereas size of from is known to all users of this api
     unsigned long timestamp,
+    unsigned conversation,
     unsigned from,
     const byte* text,
     unsigned size
 ) {
     DatabaseMessage* message = SDL_malloc(sizeof *message);
     message->timestamp = timestamp;
+    message->conversation = conversation;
     message->from = from;
 
     message->text = SDL_malloc(size);
@@ -62,6 +66,11 @@ DatabaseMessage* databaseMessageCreate( // from (user id) null if from this clie
 unsigned long databaseMessageTimestamp(const DatabaseMessage* message) {
     assert(message);
     return message->timestamp;
+}
+
+unsigned databaseMessageConversation(const DatabaseMessage* message) {
+    assert(message);
+    return message->conversation;
 }
 
 unsigned databaseMessageFrom(const DatabaseMessage* message) {
@@ -146,21 +155,22 @@ static void createConversationsTableIfNotExists(void) {
 }
 
 static void createMessagesTableIfNotExits(void) {
-    const unsigned bufferSize = 0xff;
+    const unsigned bufferSize = (1 << 9) - 1; // 511
     char sql[bufferSize];
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
-        "create table if not exists %s ("
+        "create table if not exists %s (" // messages
             "%s unsigned bigint not null, " // timestamp
+            "%s unsigned int not null, " // conversation
             "%s unsigned int not null, " // from
             "%s blob not null, " // text
             "%s unsigned int not null, " // size
-            "primary key (%s, %s), " // timestamp, from
-            "foreign key (%s) references %s(%s)" // from, conversations, user
+            "primary key (%s, %s, %s), " // conversation, timestamp, from
+            "foreign key (%s) references %s(%s)" // conversation, conversations, user
         ")",
-        MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN, TEXT_COLUMN, SIZE_COLUMN,
-        TIMESTAMP_COLUMN, FROM_COLUMN, FROM_COLUMN, CONVERSATIONS_TABLE, USER_COLUMN
+        MESSAGES_TABLE, TIMESTAMP_COLUMN, CONVERSATION_COLUMN, FROM_COLUMN, TEXT_COLUMN, SIZE_COLUMN,
+        CONVERSATION_COLUMN, TIMESTAMP_COLUMN, FROM_COLUMN, CONVERSATION_COLUMN, CONVERSATIONS_TABLE, USER_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
@@ -168,7 +178,7 @@ static void createMessagesTableIfNotExits(void) {
 }
 
 static void createServiceTableIfNotExists(void) {
-    const unsigned bufferSize = 255;
+    const unsigned bufferSize = 0xff;
     char sql[bufferSize];
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
@@ -182,7 +192,7 @@ static void createServiceTableIfNotExists(void) {
 }
 
 static void createConversationsIndexIfNotExists(void) {
-    const unsigned bufferSize = 255;
+    const unsigned bufferSize = 0xff;
     char sql[bufferSize];
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
@@ -196,13 +206,13 @@ static void createConversationsIndexIfNotExists(void) {
 }
 
 static void createMessagesIndexIfNotExists(void) {
-    const unsigned bufferSize = 255;
+    const unsigned bufferSize = 0xff;
     char sql[bufferSize];
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
-        "create unique index if not exists index_%s on %s(%s, %s)",
-        MESSAGES_TABLE, MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN
+        "create unique index if not exists index_%s on %s(%s, %s, %s)",
+        MESSAGES_TABLE, MESSAGES_TABLE, CONVERSATION_COLUMN, TIMESTAMP_COLUMN, FROM_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
@@ -471,44 +481,15 @@ void databaseRemoveConversation(unsigned userId) {
     SYNCHRONIZED_END
 }
 
-static void messageExistsBinder(const void* const* parameters, sqlite3_stmt* statement) {
-    assert(!sqlite3_bind_int64(statement, 1, (long) *((const unsigned long*) parameters[0])));
-    assert(!(sqlite3_bind_int(statement, 2, (int) *((const unsigned*) parameters[1]))));
-}
-
-bool databaseMessageExists(unsigned long timestamp, unsigned from) {
-    assert(this);
-    SYNCHRONIZED_BEGIN
-
-    const unsigned bufferSize = 0xff;
-    char sql[bufferSize];
-
-    const unsigned sqlSize = (unsigned) SDL_snprintf(
-        sql, bufferSize,
-        "select exists(select 1 from %s where %s = ? and %s = ? limit 1)",
-        MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN
-    );
-    assert(sqlSize > 0 && sqlSize <= bufferSize);
-
-    bool result = false;
-    executeSingle(
-        sql, sqlSize,
-        (StatementProcessor) &messageExistsBinder, (const void*[2]) {&timestamp, &from},
-        (StatementProcessor) &existsResultHandler, &result
-    );
-
-    SYNCHRONIZED_END
-    return result;
-}
-
 static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statement) {
     const DatabaseMessage* message = parameters[0];
     const byte* encryptedText = parameters[1];
 
     assert(!sqlite3_bind_int64(statement, 1, (long) message->timestamp));
-    assert(!sqlite3_bind_int(statement, 2, message->from));
-    assert(!sqlite3_bind_blob(statement, 3, encryptedText, cryptoSingleEncryptedSize(message->size), SQLITE_STATIC));
-    assert(!sqlite3_bind_int(statement, 4, (int) message->size));
+    assert(!sqlite3_bind_int(statement, 2, (int) message->conversation));
+    assert(!sqlite3_bind_int(statement, 3, (int) message->from));
+    assert(!sqlite3_bind_blob(statement, 4, encryptedText, cryptoSingleEncryptedSize(message->size), SQLITE_STATIC));
+    assert(!sqlite3_bind_int(statement, 5, (int) message->size));
 }
 
 bool databaseAddMessage(const DatabaseMessage* message) {
@@ -520,8 +501,8 @@ bool databaseAddMessage(const DatabaseMessage* message) {
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
-        "insert into %s (%s, %s, %s, %s) values (?, ?, ?, ?)",
-        MESSAGES_TABLE, TIMESTAMP_COLUMN, FROM_COLUMN, TEXT_COLUMN, SIZE_COLUMN
+        "insert into %s (%s, %s, %s, %s, %s) values (?, ?, ?, ?, ?)",
+        MESSAGES_TABLE, TIMESTAMP_COLUMN, CONVERSATION_COLUMN, FROM_COLUMN, TEXT_COLUMN, SIZE_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
@@ -539,8 +520,8 @@ bool databaseAddMessage(const DatabaseMessage* message) {
     return true;
 }
 
-static void getMessagesBinder(const unsigned* userId, sqlite3_stmt* statement)
-{ assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
+static void getMessagesBinder(const unsigned* conversation, sqlite3_stmt* statement)
+{ assert(!sqlite3_bind_int(statement, 1, (int) *conversation)); }
 
 static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { // List* <DatabaseMessage*>
     DatabaseMessage* message;
@@ -550,18 +531,19 @@ static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { 
     byte* text;
 
     while ((result = sqlite3_step(statement)) == SQLITE_ROW) {
-        encryptedText = sqlite3_column_blob(statement, 2);
-        encryptedTextSize = sqlite3_column_bytes(statement, 2);
+        encryptedText = sqlite3_column_blob(statement, 3);
+        encryptedTextSize = sqlite3_column_bytes(statement, 3);
         assert(encryptedTextSize > cryptoSingleEncryptedSize(0));
 
         text = cryptoDecryptSingle(this->key, encryptedText, encryptedTextSize);
         assert(text);
-        textSize = (unsigned) sqlite3_column_int(statement, 3);
+        textSize = (unsigned) sqlite3_column_int(statement, 4);
         assert(encryptedTextSize == cryptoSingleEncryptedSize(textSize) && textSize <= this->maxMessageTextSize);
 
         message = databaseMessageCreate(
             (unsigned long) sqlite3_column_int64(statement, 0),
-            sqlite3_column_int(statement, 1),
+            (unsigned) sqlite3_column_int(statement, 1),
+            (unsigned) sqlite3_column_int(statement, 2),
             text,
             textSize
         );
@@ -573,7 +555,7 @@ static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { 
     assert(result == SQLITE_DONE);
 }
 
-List* nullable databaseGetMessages(unsigned userId) {
+List* nullable databaseGetMessages(unsigned conversation) {
     assert(this);
     SYNCHRONIZED_BEGIN
 
@@ -583,14 +565,14 @@ List* nullable databaseGetMessages(unsigned userId) {
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
         "select * from %s where %s = ? order by %s desc",
-        MESSAGES_TABLE, FROM_COLUMN, TIMESTAMP_COLUMN
+        MESSAGES_TABLE, CONVERSATION_COLUMN, TIMESTAMP_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
     List* messages = listInit((ListDeallocator) &databaseMessageDestroy);
     executeSingle(
         sql, sqlSize,
-        (StatementProcessor) getMessagesBinder, &userId,
+        (StatementProcessor) getMessagesBinder, &conversation,
         (StatementProcessor) &getMessagesResultHandler, messages
     );
 
