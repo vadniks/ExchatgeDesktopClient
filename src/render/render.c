@@ -503,7 +503,8 @@ static void onProceedClickedAfterLogInRegister(bool logIn) {
         logIn
     );
 
-    (*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer, this->usernameSize + this->passwordSize);
+    (*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer, this->usernameSize + this->passwordSize); // TODO: deprecated(credentialsRandomFiller)
+    SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize);
     this->enteredUsernameSize = 0;
     this->enteredPasswordSize = 0;
 }

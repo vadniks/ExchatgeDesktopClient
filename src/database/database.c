@@ -219,7 +219,7 @@ static void createMessagesIndexIfNotExists(void) {
     executeSingleMinimal(sql, sqlSize);
 }
 
-static void createTablesIfNotExists(void) {
+static void createTablesIfNotExist(void) {
     disableJournaling();
 
     createConversationsTableIfNotExists();
@@ -245,7 +245,7 @@ static void getMachineIdResultHandler(byte* nullable* encryptedId, sqlite3_stmt*
         assert(false);
 }
 
-static long* nullable getMachineId(void) {
+static long* nullable getMachineId(bool* exists) {
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
 
@@ -263,20 +263,12 @@ static long* nullable getMachineId(void) {
         (StatementProcessor) &getMachineIdResultHandler, &encryptedId
     );
     if (!encryptedId) return NULL;
+    *exists = true;
 
     byte* id = cryptoDecryptSingle(this->key, encryptedId, cryptoSingleEncryptedSize(sizeof(long)));
     SDL_free(encryptedId);
 
     return (long*) id;
-}
-
-static bool checkKey(void) {
-    long* id = getMachineId();
-    if (!id) return true;
-
-    bool checked = *id == gethostid();
-    SDL_free(id);
-    return checked;
 }
 
 static void setMachineIdBinder(const byte* encryptedId, sqlite3_stmt* statement)
@@ -305,6 +297,21 @@ static void setMachineId(void) {
     SDL_free(encryptedId);
 }
 
+static bool checkKey(void) {
+    bool machineIdAlreadyInserted = false;
+
+    long* id = getMachineId(&machineIdAlreadyInserted);
+    if (!machineIdAlreadyInserted) {
+        assert(!id);
+        setMachineId();
+        return true;
+    }
+
+    bool checked = id ? *id == gethostid() : false;
+    SDL_free(id);
+    return checked;
+}
+
 bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize, unsigned maxMessageTextSize) {
     assert(!this && passwordSize > 0 && usernameSize > 0);
     this = SDL_malloc(sizeof *this);
@@ -319,11 +326,7 @@ bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned us
     this->maxMessageTextSize = maxMessageTextSize;
 
     bool successful = !sqlite3_open(FILE_NAME, &(this->db));
-    if (successful) createTablesIfNotExists();
-
-    long* machineId = getMachineId();
-    if (!machineId) setMachineId();
-    SDL_free(machineId);
+    if (successful) createTablesIfNotExist();
 
     if (!checkKey()) successful = false;
     SYNCHRONIZED_END
@@ -595,4 +598,5 @@ void databaseClean(void) {
     SYNCHRONIZED_END
     SDL_DestroyMutex(this->mutex);
     SDL_free(this);
+    this = NULL;
 }

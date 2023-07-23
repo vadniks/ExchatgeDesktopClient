@@ -242,15 +242,16 @@ static void processCredentials(void** data) {
     const char* password = data[1];
     bool logIn = *((bool*) data[2]);
 
+    assert(this);
     if (!this->databaseInitialized && !databaseInit((byte*) password, NET_UNHASHED_PASSWORD_SIZE, NET_USERNAME_SIZE, NET_MESSAGE_BODY_SIZE)) { // password that's used to sign in also used to encrypt messages & other stuff in the database
         databaseClean();
         renderShowUnableToDecryptDatabaseError();
         renderHideInfiniteProgressBar();
+        this->state = STATE_UNAUTHENTICATED;
         goto cleanup;
     } else
         this->databaseInitialized = true;
 
-    assert(this);
     this->netInitialized = netInit(
         &onMessageReceived,
         &onLogInResult,
