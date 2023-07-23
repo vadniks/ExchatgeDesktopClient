@@ -15,7 +15,8 @@ Client side uses the following libraries:
 [SDL2](https://github.com/libsdl-org/SDL), 
 [SDL2Net](https://github.com/libsdl-org/SDL_net), 
 [LibSodium](https://github.com/jedisct1/libsodium), 
-[Nuklear](https://github.com/Immediate-Mode-UI/Nuklear).
+[Nuklear](https://github.com/Immediate-Mode-UI/Nuklear),
+[SQLite3](https://sqlite.org).
 
 ## The project is currently in `Beta` stage
 
