@@ -17,7 +17,7 @@ Client side uses the following libraries:
 [LibSodium](https://github.com/jedisct1/libsodium), 
 [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear).
 
-## The project is in development stage
+## The project is currently in `Beta` stage
 
 [The server](https://github.com/vadniks/ExchatgeServer)
 
