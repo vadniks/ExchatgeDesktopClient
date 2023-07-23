@@ -4,6 +4,9 @@
 #include <assert.h>
 #include "list.h"
 
+#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(list->mutex));
+#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(list->mutex));
+
 STATIC_CONST_UNSIGNED VOID_PTR_SIZE = sizeof(void*);
 STATIC_CONST_UNSIGNED MAX_SIZE = 0xfffffffe;
 
@@ -27,18 +30,18 @@ List* listInit(ListDeallocator nullable deallocator) {
 
 void listAddBack(List* list, void* value) {
     assert(list && !list->destroyed);
-    assert(!SDL_LockMutex(list->mutex));
+    SYNCHRONIZED_BEGIN
     assert(list->size < MAX_SIZE);
 
     list->values = SDL_realloc(list->values, ++(list->size) * VOID_PTR_SIZE);
     list->values[list->size - 1] = value;
 
-    assert(!SDL_UnlockMutex(list->mutex));
+    SYNCHRONIZED_END
 }
 
 void listAddFront(List* list, void* value) {
     assert(list && !list->destroyed);
-    assert(!SDL_LockMutex(list->mutex));
+    SYNCHRONIZED_BEGIN
     assert(list->size < MAX_SIZE);
 
     void** temp = SDL_malloc(++(list->size) * VOID_PTR_SIZE);
@@ -48,16 +51,16 @@ void listAddFront(List* list, void* value) {
     SDL_free(list->values);
     list->values = temp;
 
-    assert(!SDL_UnlockMutex(list->mutex));
+    SYNCHRONIZED_END
 }
 
 const void* listGet(const List* list, unsigned index) {
     assert(list && !list->destroyed);
-    SDL_LockMutex(list->mutex);
+    SYNCHRONIZED_BEGIN
     assert(list->values && list->size > 0 && list->size < MAX_SIZE && index < MAX_SIZE);
 
     const void* value = list->values[index];
-    SDL_UnlockMutex(list->mutex);
+    SYNCHRONIZED_END
     return value;
 }
 
@@ -68,13 +71,13 @@ unsigned listSize(const List* list) {
 
 const void* nullable listBinarySearch(const List* list, const void* key, ListComparator comparator) {
     assert(list && !list->destroyed);
-    SDL_LockMutex(list->mutex);
+    SYNCHRONIZED_BEGIN
     assert(list->values && list->size > 0);
 
     const unsigned long index = (void**) SDL_bsearch(key, list->values, list->size, VOID_PTR_SIZE, comparator) - list->values;
     const void* value = index >= list->size ? NULL : list->values[index];
 
-    SDL_UnlockMutex(list->mutex);
+    SYNCHRONIZED_END
     return value;
 }
 
@@ -86,7 +89,7 @@ static void destroyValuesIfNotEmpty(List* list) {
 
 void listClear(List* list) {
     assert(list && !list->destroyed);
-    assert(!SDL_LockMutex(list->mutex));
+    SYNCHRONIZED_BEGIN
 
     destroyValuesIfNotEmpty(list);
     list->size = 0;
@@ -94,7 +97,7 @@ void listClear(List* list) {
     SDL_free(list->values);
     list->values = NULL;
 
-    assert(!SDL_UnlockMutex(list->mutex));
+    SYNCHRONIZED_END
 }
 
 void listDestroy(List* list) {

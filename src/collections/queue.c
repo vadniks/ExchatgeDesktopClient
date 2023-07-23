@@ -5,6 +5,9 @@
 #include <stdbool.h>
 #include "queue.h"
 
+#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(queue->mutex));
+#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(queue->mutex));
+
 STATIC_CONST_UNSIGNED VOID_PTR_SIZE = sizeof(void*);
 
 struct Queue_t {
@@ -27,18 +30,18 @@ Queue* queueInit(QueueDeallocator nullable deallocator) {
 
 void queuePush(Queue* queue, void* value) {
     assert(queue && !queue->destroyed);
-    assert(!SDL_LockMutex(queue->mutex));
+    SYNCHRONIZED_BEGIN
     assert(queue->size < 0xfffffffe);
 
     queue->values = SDL_realloc(queue->values, ++(queue->size) * VOID_PTR_SIZE);
     queue->values[queue->size - 1] = value;
 
-    assert(!SDL_UnlockMutex(queue->mutex));
+    SYNCHRONIZED_END
 }
 
 void* queuePop(Queue* queue) {
     assert(queue && !queue->destroyed);
-    assert(!SDL_LockMutex(queue->mutex));
+    SYNCHRONIZED_BEGIN
     assert(queue->values && queue->size > 0);
 
     void* value = queue->values[0];
@@ -48,7 +51,7 @@ void* queuePop(Queue* queue) {
         SDL_free(queue->values);
         queue->values = NULL;
         queue->size = 0;
-        assert(!SDL_UnlockMutex(queue->mutex));
+        SYNCHRONIZED_END
         return value;
     }
 
@@ -60,7 +63,7 @@ void* queuePop(Queue* queue) {
 
     queue->size = newSize;
 
-    assert(!SDL_UnlockMutex(queue->mutex));
+    SYNCHRONIZED_END
     return value;
 }
 
