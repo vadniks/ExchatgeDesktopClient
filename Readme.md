@@ -5,8 +5,9 @@ The purpose of this project is to easily exchange messages
 via binary protocol using an encrypted communication channel 
 in the realtime. Each client-to-server connection is encrypted, 
 each client-to-client connection is also encrypted. All messages 
-go through server, but the second layer of encryption 
-between clients makes any interception of messages by the server useless.
+go through server, but because of presence of the second layer 
+of encryption between clients, any interception of messages by 
+the server or anyone else is useless.
 
 ## `TODO`
 * Add file exchanging mechanism
