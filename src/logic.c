@@ -173,8 +173,34 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
     renderShowUsersList(this->currentUserName);
 }
 
+static void tryLoadPreviousMessages(unsigned id) {
+    assert(this && this->databaseInitialized);
+    listClear(this->messagesList);
+
+    List* messages = databaseGetMessages(id);
+    if (!messages) return;
+
+    const User* user = findUser(id);
+    assert(user);
+
+    const DatabaseMessage* dbMessage;
+    for (unsigned i = 0; i < listSize(messages); i++) {
+        dbMessage = listGet(messages, i);
+
+        listAddBack(this->messagesList, conversationMessageCreate(
+            databaseMessageTimestamp(dbMessage),
+            databaseMessageFrom(dbMessage) ? user->name : NULL,
+            NET_USERNAME_SIZE,
+            (const char*) databaseMessageText(dbMessage),
+            databaseMessageSize(dbMessage)
+        ));
+    }
+
+    listDestroy(messages);
+}
+
 static void replyToConversationSetUpInvite(unsigned* fromId) {
-    assert(fromId);
+    assert(this && fromId);
     unsigned xFromId = *fromId;
     SDL_free(fromId);
 
@@ -192,6 +218,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
         this->state = STATE_EXCHANGING_MESSAGES,
         databaseAddConversation(xFromId, crypto),
         cryptoDestroy(crypto),
+        tryLoadPreviousMessages(xFromId),
         renderShowConversation(user->name);
     else
         renderShowUnableToCreateConversation();
@@ -293,6 +320,7 @@ static void startConversation(void** parameters) {
         if ((crypto = netCreateConversation(*id)))
             databaseAddConversation(*id, crypto),
             cryptoDestroy(crypto),
+            tryLoadPreviousMessages(*id),
             renderShowConversation(user->name);
         else
             renderShowUnableToCreateConversation();
@@ -314,6 +342,7 @@ static void continueConversation(void** parameters) {
     if (!databaseConversationExists(*id))
         renderShowConversationDoesntExist();
     else
+        tryLoadPreviousMessages(*id),
         renderShowConversation(user->name);
 
     SDL_free(id);
@@ -327,7 +356,7 @@ static void createOrLoadConversation(unsigned id, bool create) {
     const User* user = findUser(id);
     assert(user);
 
-    if (!(user->online)) {
+    if (create && !(user->online)) {
         renderShowUserIsOfflineError();
         return;
     }

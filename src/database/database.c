@@ -140,9 +140,11 @@ static void createConversationsTableIfNotExists(void) {
         sql, bufferSize,
         "create table if not exists %s ("
             "%s unsigned int not null unique, " // user (id)
-            "%s blob(%u) not null" // streamsStates
+            "%s blob(%u) not null, " // streamsStates
+            "primary key (%s)" // user
         ")",
-        CONVERSATIONS_TABLE, USER_COLUMN, STREAMS_STATES_COLUMN, cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE)
+        CONVERSATIONS_TABLE, USER_COLUMN, STREAMS_STATES_COLUMN,
+        cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE), USER_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 

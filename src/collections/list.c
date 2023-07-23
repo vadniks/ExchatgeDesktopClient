@@ -28,7 +28,7 @@ List* listInit(ListDeallocator nullable deallocator) {
     return list;
 }
 
-void listAddBack(List* list, void* value) {
+void listAddBack(List* list, const void* value) {
     assert(list && !list->destroyed);
     SYNCHRONIZED_BEGIN
     assert(list->size < MAX_SIZE);
@@ -39,7 +39,7 @@ void listAddBack(List* list, void* value) {
     SYNCHRONIZED_END
 }
 
-void listAddFront(List* list, void* value) {
+void listAddFront(List* list, const void* value) {
     assert(list && !list->destroyed);
     SYNCHRONIZED_BEGIN
     assert(list->size < MAX_SIZE);

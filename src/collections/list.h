@@ -11,8 +11,8 @@ typedef void (*ListDeallocator)(void*);
 typedef int (*ListComparator)(const void*, const void*);
 
 List* listInit(ListDeallocator nullable deallocator);
-void listAddBack(List* list, void* value);
-void listAddFront(List* list, void* value);
+void listAddBack(List* list, const void* value);
+void listAddFront(List* list, const void* value);
 const void* listGet(const List* list, unsigned index);
 unsigned listSize(const List* list);
 const void* nullable listBinarySearch(const List* list, const void* key, ListComparator comparator);

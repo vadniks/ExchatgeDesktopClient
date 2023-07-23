@@ -28,7 +28,7 @@ Queue* queueInit(QueueDeallocator nullable deallocator) {
     return queue;
 }
 
-void queuePush(Queue* queue, void* value) {
+void queuePush(Queue* queue, const void* value) {
     assert(queue && !queue->destroyed);
     SYNCHRONIZED_BEGIN
     assert(queue->size < 0xfffffffe);
