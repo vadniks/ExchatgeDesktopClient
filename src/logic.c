@@ -106,7 +106,8 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     databaseAddMessage(dbMessage);
     databaseMessageDestroy(dbMessage);
 
-    listAddFront(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
+    if (fromId == this->toUserId)
+        listAddFront(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
     SDL_free(message);
 }
 
