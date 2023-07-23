@@ -102,7 +102,7 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     assert(message);
     cryptoDestroy(crypto);
 
-    DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, &fromId, (byte*) message, size);
+    DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, (byte*) message, size);
     databaseAddMessage(dbMessage);
     databaseMessageDestroy(dbMessage);
 
@@ -189,7 +189,7 @@ static void tryLoadPreviousMessages(unsigned id) {
 
         listAddBack(this->messagesList, conversationMessageCreate(
             databaseMessageTimestamp(dbMessage),
-            databaseMessageFrom(dbMessage) ? user->name : NULL,
+            databaseMessageFrom(dbMessage) != netCurrentUserId() ? user->name : NULL,
             NET_USERNAME_SIZE,
             (const char*) databaseMessageText(dbMessage),
             databaseMessageSize(dbMessage)
@@ -488,7 +488,7 @@ static void sendMessage(void** params) { // TODO: block controls and show inf pr
     assert(size && encryptedSize <= NET_MESSAGE_BODY_SIZE);
 
     const byte* text = params[0];
-    DatabaseMessage* dbMessage = databaseMessageCreate(logicCurrentTimeMillis(), NULL, text, size);
+    DatabaseMessage* dbMessage = databaseMessageCreate(logicCurrentTimeMillis(), netCurrentUserId(), text, size);
     databaseAddMessage(dbMessage);
     databaseMessageDestroy(dbMessage);
 
