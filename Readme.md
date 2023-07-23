@@ -1,8 +1,9 @@
 
-# Exchatge - a secured message exchanger (client)
+# Exchatge - a secured message exchanger (desktop client)
 
-The purpose of this project is to easily exchange messages using an 
-encrypted communication channel in the realtime.
+The purpose of this project is to easily exchange messages 
+via binary protocol using an encrypted communication channel 
+in the realtime.
 
 ## `TODO`
 * Add file exchanging mechanism
