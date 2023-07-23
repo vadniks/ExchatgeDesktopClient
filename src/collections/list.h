@@ -5,7 +5,7 @@
 #include "defs.h"
 
 struct List_t;
-typedef struct List_t List;
+typedef struct List_t List; // thread-safe
 
 typedef void (*ListDeallocator)(void*);
 typedef int (*ListComparator)(const void*, const void*);

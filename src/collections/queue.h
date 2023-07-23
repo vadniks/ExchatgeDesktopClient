@@ -4,7 +4,7 @@
 #include "defs.h"
 
 struct Queue_t;
-typedef struct Queue_t Queue;
+typedef struct Queue_t Queue; // thread-safe
 
 typedef void (*QueueDeallocator)(void*);
 

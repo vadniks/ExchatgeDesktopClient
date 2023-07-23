@@ -1,15 +1,13 @@
 
 #include <assert.h>
 #include <time.h>
+#include <stdlib.h>
 #include "render/render.h"
 #include "defs.h"
 #include "net.h"
 #include "logic.h"
 #include "collections/queue.h"
 #include "lifecycle.h"
-
-#define ASYNC_ACTIONS_QUEUE_SYNCHRONIZED(x) \
-    assert(!SDL_LockMutex(this->asyncActionsQueueMutex)); x assert(!SDL_UnlockMutex(this->asyncActionsQueueMutex));
 
 static const unsigned UI_UPDATE_PERIOD = 1000 / 60;
 static const unsigned NET_UPDATE_PERIOD = 60 / 15;
@@ -30,7 +28,6 @@ THIS(
     SDL_mutex* netUpdateLock;
     SDL_Thread* netThread;
     Queue* asyncActionsQueue; // <AsyncAction*>
-    SDL_mutex* asyncActionsQueueMutex;
     SDL_Thread* asyncActionsThread;
 )
 #pragma clang diagnostic pop
@@ -64,17 +61,16 @@ void lifecycleAsync(LifecycleAsyncActionFunction function, void* nullable parame
     action->parameter = parameter;
     action->delayMillis = delayMillis;
 
-    ASYNC_ACTIONS_QUEUE_SYNCHRONIZED(queuePush(this->asyncActionsQueue, action);)
+    queuePush(this->asyncActionsQueue, action);
 }
 
 static void sleep(unsigned long delayMillis) {
     assert(delayMillis > 0 && delayMillis <= 10000);
+    const ldiv_t dv = ldiv((long) delayMillis, (long) 1e3f);
 
-#   define X_MILLIS(x) (long) delayMillis x (long) 1e3f
     struct timespec timespec;
-    timespec.tv_sec = X_MILLIS(/);
-    timespec.tv_nsec = (X_MILLIS(%)) * (long) 1e6f;
-#   undef X_MILLIS
+    timespec.tv_sec = dv.quot;
+    timespec.tv_nsec = dv.rem * (long) 1e6f;
 
     nanosleep(&timespec, NULL);
 }
@@ -84,8 +80,7 @@ static void asyncActionDeallocator(AsyncAction* action) { SDL_free(action); }
 static void asyncActionsThreadLooper(void) {
     while (this->running) {
         if (!queueSize(this->asyncActionsQueue)) continue;
-
-        ASYNC_ACTIONS_QUEUE_SYNCHRONIZED(AsyncAction* action = queuePop(this->asyncActionsQueue);)
+        AsyncAction* action = queuePop(this->asyncActionsQueue);
 
         if (action->delayMillis > 0) sleep(action->delayMillis);
         (*(action->function))(action->parameter);
@@ -102,7 +97,6 @@ bool lifecycleInit(unsigned argc, const char** argv) {
     this->netUpdateLock = SDL_CreateMutex();
     this->netThread = SDL_CreateThread((int (*)(void*)) &netThread, "netThread", NULL);
     this->asyncActionsQueue = queueInit((QueueDeallocator) &asyncActionDeallocator);
-    this->asyncActionsQueueMutex = SDL_CreateMutex();
     this->asyncActionsThread = SDL_CreateThread((SDL_ThreadFunction) &asyncActionsThreadLooper, "asyncActionsThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "1"); // TODO: optimize ui for highDpi displays
@@ -177,7 +171,6 @@ void lifecycleClean(void) {
     if (!this) return;
 
     SDL_WaitThread(this->asyncActionsThread, NULL);
-    SDL_DestroyMutex(this->asyncActionsQueueMutex);
     queueDestroy(this->asyncActionsQueue);
 
     logicClean();

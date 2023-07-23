@@ -1,14 +1,18 @@
 
 #include <sdl/SDL_stdinc.h>
+#include <sdl/SDL_mutex.h>
 #include <assert.h>
+#include <stdbool.h>
 #include "queue.h"
 
 STATIC_CONST_UNSIGNED VOID_PTR_SIZE = sizeof(void*);
 
 struct Queue_t {
     void** values;
-    unsigned size;
+    atomic unsigned size;
     QueueDeallocator nullable deallocator;
+    SDL_mutex* mutex;
+    atomic bool destroyed;
 };
 
 Queue* queueInit(QueueDeallocator nullable deallocator) {
@@ -16,17 +20,27 @@ Queue* queueInit(QueueDeallocator nullable deallocator) {
     queue->values = NULL;
     queue->size = 0;
     queue->deallocator = deallocator;
+    queue->mutex = SDL_CreateMutex();
+    queue->destroyed = false;
     return queue;
 }
 
 void queuePush(Queue* queue, void* value) {
-    assert(queue && queue->size < 0xfffffffe);
+    assert(queue && !queue->destroyed);
+    assert(!SDL_LockMutex(queue->mutex));
+    assert(queue->size < 0xfffffffe);
+
     queue->values = SDL_realloc(queue->values, ++(queue->size) * VOID_PTR_SIZE);
     queue->values[queue->size - 1] = value;
+
+    assert(!SDL_UnlockMutex(queue->mutex));
 }
 
 void* queuePop(Queue* queue) {
-    assert(queue && queue->values && queue->size > 0);
+    assert(queue && !queue->destroyed);
+    assert(!SDL_LockMutex(queue->mutex));
+    assert(queue->values && queue->size > 0);
+
     void* value = queue->values[0];
 
     const unsigned newSize = queue->size - 1;
@@ -34,6 +48,7 @@ void* queuePop(Queue* queue) {
         SDL_free(queue->values);
         queue->values = NULL;
         queue->size = 0;
+        assert(!SDL_UnlockMutex(queue->mutex));
         return value;
     }
 
@@ -44,22 +59,28 @@ void* queuePop(Queue* queue) {
     queue->values = temp;
 
     queue->size = newSize;
+
+    assert(!SDL_UnlockMutex(queue->mutex));
     return value;
 }
 
 unsigned queueSize(const Queue* queue) {
-    assert(queue);
+    assert(queue && !queue->destroyed);
     return queue->size;
 }
 
 static void destroyValuesIfNotEmpty(Queue* queue) {
     if (!queue->deallocator) return;
+    assert(queue->size && queue->values || !(queue->size) && !(queue->values));
     for (unsigned i = 0; i < queue->size; (*(queue->deallocator))(queue->values[i++]));
 }
 
 void queueDestroy(Queue* queue) {
-    assert(queue);
+    assert(queue && !queue->destroyed);
+    queue->destroyed = true;
+
     destroyValuesIfNotEmpty(queue);
     SDL_free(queue->values);
+    SDL_DestroyMutex(queue->mutex);
     SDL_free(queue);
 }

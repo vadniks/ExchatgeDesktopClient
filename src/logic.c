@@ -11,9 +11,6 @@
 #include "database/database.h"
 #include "logic.h"
 
-#define USERS_LIST_SYNCHRONIZED(x) assert(!SDL_LockMutex(this->usersListLock)); x assert(!SDL_UnlockMutex(this->usersListLock));
-#define MESSAGES_LIST_SYNCHRONIZED(x) assert(!SDL_LockMutex(this->messagesListLock)); x assert(!SDL_UnlockMutex(this->messagesListLock));
-
 typedef enum : unsigned {
     STATE_UNAUTHENTICATED = 0,
     STATE_AWAITING_AUTHENTICATION = 1,
@@ -113,9 +110,7 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     databaseAddMessage(dbMessage);
     databaseMessageDestroy(dbMessage);
 
-    MESSAGES_LIST_SYNCHRONIZED(
-        listAddFront(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
-    )
+    listAddFront(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
     SDL_free(message);
 }
 
@@ -164,13 +159,13 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
         id = netUserInfoId(info);
 
         if (id != netCurrentUserId()) {
-            USERS_LIST_SYNCHRONIZED(listAddBack(this->usersList, userCreate(
+            listAddBack(this->usersList, userCreate(
                 id,
                 (const char*) netUserInfoName(info),
                 NET_USERNAME_SIZE,
                 databaseConversationExists(id),
                 netUserInfoConnected(info)
-            ));)
+            ));
         } else {
             SDL_memcpy(this->currentUserName, netUserInfoName(info), NET_USERNAME_SIZE);
             renderSetWindowTitle(this->currentUserName);
@@ -187,7 +182,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     unsigned xFromId = *fromId;
     SDL_free(fromId);
 
-    MESSAGES_LIST_SYNCHRONIZED(listClear(this->messagesList);)
+    listClear(this->messagesList);
 
     if (databaseConversationExists(xFromId))
         databaseRemoveConversation(xFromId); // existence of a conversation when receiving an invite means that user, from whom this invite came, has deleted conversation with the current user, so to make users messaging again, remove the outdated conversation on the current user's side
@@ -367,7 +362,7 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
     assert(this);
     this->state = STATE_EXCHANGING_MESSAGES;
     this->toUserId = id;
-    MESSAGES_LIST_SYNCHRONIZED(listClear(this->messagesList);)
+    listClear(this->messagesList);
 
     switch (chooseVariant) {
         case RENDER_START_CONVERSATION:
@@ -498,9 +493,7 @@ void logicOnSendClicked(const char* text, unsigned size) {
     params[1] = SDL_malloc(sizeof(int));
     *((unsigned*) params[1]) = size;
 
-    MESSAGES_LIST_SYNCHRONIZED(
-        listAddFront(this->messagesList, conversationMessageCreate(logicCurrentTimeMillis(), NULL, 0, text, size));
-    )
+    listAddFront(this->messagesList, conversationMessageCreate(logicCurrentTimeMillis(), NULL, 0, text, size));
     lifecycleAsync((LifecycleAsyncActionFunction) &sendMessage, params, 0);
 }
 
@@ -510,7 +503,7 @@ void logicOnUpdateUsersListClicked(void) {
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);
 
-    USERS_LIST_SYNCHRONIZED(listClear(this->usersList);)
+    listClear(this->usersList);
     renderShowUsersList(this->currentUserName);
 
     lifecycleAsync((LifecycleAsyncActionFunction) &netFetchUsers, NULL, 0);
