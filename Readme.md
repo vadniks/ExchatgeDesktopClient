@@ -9,6 +9,8 @@ go through server, but because of presence of the second layer
 of encryption between clients, any interception of messages by 
 the server or anyone else is useless.
 
+Project is created for Linux x86_64 desktop platforms (PCs).
+
 ## `TODO`
 * Add file exchanging mechanism
 * Maybe add unit tests
