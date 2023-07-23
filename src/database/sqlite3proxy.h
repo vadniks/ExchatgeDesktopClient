@@ -1,3 +1,4 @@
+/** Proxy for header precompilation */
 
 #pragma once
 
