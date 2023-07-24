@@ -765,6 +765,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
         if (bytesWritten < NET_MESSAGE_BODY_SIZE) break;
     }
 
+    SYNCHRONIZED(this->exchangingFile = false;)
     return true; // TODO
 }
 
