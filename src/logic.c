@@ -528,11 +528,17 @@ static void sendMessage(void** params) { // TODO: block controls and show inf pr
     SDL_free(params[0]);
     SDL_free(params[1]);
     SDL_free(params);
+
+    renderSetControlsBlocking(false);
+    renderHideInfiniteProgressBar();
 }
 
 void logicOnSendClicked(const char* text, unsigned size) {
     assert(this);
     if (!size) return;
+
+    renderSetControlsBlocking(true);
+    renderShowInfiniteProgressBar();
 
     void** params = SDL_malloc(2 * sizeof(void*));
 
