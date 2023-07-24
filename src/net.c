@@ -726,7 +726,12 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     return crypto;
 }
 
-bool netBeginFileExchange(unsigned toId) {
+bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
+    byte body[NET_MESSAGE_BODY_SIZE];
+
+    if (!netSend(FLAG_FILE_ASK, body, fileSize, toId)) return false;
+    // TODO
+
     return false; // TODO
 }
 

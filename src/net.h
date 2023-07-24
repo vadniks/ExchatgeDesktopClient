@@ -28,7 +28,7 @@ typedef void (*NetServiceCallback)(int); // receives message's flag
 typedef void (*NetCallback)(void);
 typedef unsigned long (*NetCurrentTimeMillisGetter)(void);
 typedef void (*NetOnConversationSetUpInviteReceived)(unsigned/*fromId*/); // must call replyToPendingConversationSetUpInvite() after this
-typedef void (*NetOnFileExchangeInviteReceived)(unsigned fromId); // must then call replyToFileExchangeInvite
+typedef void (*NetOnFileExchangeInviteReceived)(unsigned fromId, unsigned fileSize); // must then call replyToFileExchangeInvite
 typedef bool (*NetNextFileChunkSupplier)(unsigned index, byte* buffer); // returns true if no more chunks available (current chunk included), if this is first time this callback is called, the false return is treated as occurrence of error and the operation gets aborted; copies the another chunk's bytes into the buffer; the buffer is deallocated automatically
 
 struct NetUserInfo_t;
@@ -67,6 +67,6 @@ bool netUserInfoConnected(const NetUserInfo* info);
 const byte* netUserInfoName(const NetUserInfo* info);
 Crypto* nullable netCreateConversation(unsigned id); // returns the Crypto object associated with newly created conversation on success, expects the id of the user, the current user wanna create conversation with; blocks the caller thread until either a denial received or creation of the conversation succeeds (if an acceptation received) or fails
 Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId); // returns the same as createConversation does, must be called after getting invoked by the onConversationSetUpInviteReceived callback to reply to inviter, returns true on success; blocks the caller thread just like createConversation does
-bool netBeginFileExchange(unsigned toId); // returns true if another user (identified by toId) accepted the invite
-bool netReplyToFileExchangeInvite(unsigned fromId, bool accept); // returns true on success; must be called only after an invite from this user received & processed
+bool netBeginFileExchange(unsigned toId, unsigned fileSize); // blocks the caller thread; returns true if another user (identified by toId) accepted the invite
+bool netReplyToFileExchangeInvite(unsigned fromId, bool accept); // blocks the caller thread; returns true on success; must be called only after an invite from this user received & processed
 void netClean(void);

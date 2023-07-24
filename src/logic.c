@@ -255,7 +255,7 @@ static void onConversationSetUpInviteReceived(unsigned fromId) {
     lifecycleAsync((LifecycleAsyncActionFunction) &replyToConversationSetUpInvite, xFromId, 0);
 }
 
-static void onFileExchangeInviteReceived(unsigned fromId) {
+static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
     netReplyToFileExchangeInvite(fromId, false); // TODO
 }
 
