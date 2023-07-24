@@ -636,6 +636,8 @@ Crypto* nullable netCreateConversation(unsigned id) {
     return crypto;
 }
 
+static inline bool timeoutExceeded(void) { return (*(this->currentTimeMillisGetter))() - this->conversationSetUpStartMillis > TIMEOUT; }
+
 Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     assert(this);
     assert(this->settingUpConversation);
@@ -643,7 +645,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
-    if ((*(this->currentTimeMillisGetter))() - this->conversationSetUpStartMillis >= TIMEOUT) {
+    if (timeoutExceeded()) {
         SYNCHRONIZED(this->settingUpConversation = false;)
         return NULL;
     }
@@ -779,7 +781,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
 bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accept) {
     assert(this->exchangingFile);
 
-    if ((*(this->currentTimeMillisGetter))() - this->conversationSetUpStartMillis >= TIMEOUT) {
+    if (timeoutExceeded()) {
         SYNCHRONIZED(this->exchangingFile = false;)
         return false;
     }
