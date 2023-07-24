@@ -37,6 +37,9 @@ Client side uses the following libraries:
 * File exchange - in process,
 * Fetching of messages other users sent to the current while he/she was offline
 
+The implemented features are in beta stage - they work but maybe a little more 
+time for testing is worth spending for them.
+
 [The server](https://github.com/vadniks/ExchatgeServer)
 
 ## Concept screenshots
