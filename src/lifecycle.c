@@ -131,7 +131,8 @@ bool lifecycleInit(unsigned argc, const char** argv) {
         &logicOnReturnFromConversationPageRequested,
         &logicMillisToDateTime,
         &logicOnSendClicked,
-        &logicOnUpdateUsersListClicked
+        &logicOnUpdateUsersListClicked,
+        &logicFileChooseResultHandler
     );
     logicInit(argc, argv);
     renderSetMaxMessageSize(logicUnencryptedMessageBodySize());

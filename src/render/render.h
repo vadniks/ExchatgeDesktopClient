@@ -36,6 +36,7 @@ typedef void (*RenderOnReturnFromConversationPageRequested)(void);
 typedef char* (*RenderMillisToDateTimeConverter)(unsigned long); // returns null-terminated formatted string with date & time that must be deallocated by the caller
 typedef void (*RenderOnSendClicked)(const char* text, unsigned size); // receives an auto deallocated text of the message the user wanna send, text length is equal to size which is in range (0, this->maxMessageSize]
 typedef void (*RenderOnUpdateUsersListClicked)(void);
+typedef void (*RenderFileChooseResultHandler)(const char* nullable filePath); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null if no file was chosen or error occurred
 
 typedef enum {
     RENDER_DELETE_CONVERSATION = -1,
@@ -59,7 +60,8 @@ void renderInit(
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested,
     RenderMillisToDateTimeConverter millisToDateTimeConverter,
     RenderOnSendClicked onSendClicked,
-    RenderOnUpdateUsersListClicked onUpdateUsersListClicked
+    RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
+    RenderFileChooseResultHandler fileChooseResultHandler
 );
 
 void renderSetMaxMessageSize(unsigned size);
@@ -77,6 +79,7 @@ void renderShowLogIn(void);
 void renderShowRegister(void);
 void renderShowUsersList(const char* currentUserName); // the name of the user who is currently logged in via this client, this->usernameSize-sized, copied
 void renderShowConversation(const char* conversationName); // expects the name (which is copied) (with length == this->conversationNameSize) of the user with whom the current user will have a conversation or the name of that conversation
+void renderShowFileChooser(void);
 
 bool renderShowInviteOrRequestDialog(unsigned fileSize, const char* fromUserName); // fileSize == 0 for conversation creation and non-zero for file exchange request; blocks the caller thread, returns true if user accepted the invitation, expects a this->username-sized string - the name of the user who has sent the invitation
 

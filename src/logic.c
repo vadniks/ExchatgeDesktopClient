@@ -19,6 +19,7 @@
 #include <sdl/SDL.h>
 #include <assert.h>
 #include <time.h>
+#include <sdl/SDL_rwops.h>
 #include "render/render.h"
 #include "crypto.h"
 #include "net.h"
@@ -264,6 +265,14 @@ static unsigned nextFileChunkSupplier(unsigned index, byte* buffer) {
 }
 
 static void nextFileChunkReceiver(unsigned index, unsigned fileSize, unsigned receivedBytesCount, const byte* buffer) {
+    // TODO
+}
+
+void logicFileChooseResultHandler(const char* nullable filePath) {
+    // TODO
+}
+
+static void requestFileExchange(void) {
     // TODO
 }
 

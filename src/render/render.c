@@ -38,7 +38,8 @@ typedef enum : unsigned {
     STATE_LOG_IN = 1,
     STATE_REGISTER = 2,
     STATE_USERS_LIST = 3,
-    STATE_CONVERSATION = 4
+    STATE_CONVERSATION = 4,
+    STATE_FILE_CHOOSER = 5
 } States;
 
 STATIC_CONST_STRING TITLE = "Exchatge";
@@ -125,6 +126,7 @@ THIS(
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked;
     char* currentUserName; // the name of the user who is currently logged in this client
     bool allowInput;
+    RenderFileChooseResultHandler fileChooseResultHandler;
 )
 #pragma clang diagnostic pop
 
@@ -175,7 +177,8 @@ void renderInit(
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested,
     RenderMillisToDateTimeConverter millisToDateTimeConverter,
     RenderOnSendClicked onSendClicked,
-    RenderOnUpdateUsersListClicked onUpdateUsersListClicked
+    RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
+    RenderFileChooseResultHandler fileChooseResultHandler
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -223,6 +226,7 @@ void renderInit(
     this->onUpdateUsersListClicked = onUpdateUsersListClicked;
     this->currentUserName = SDL_calloc(this->usernameSize, sizeof(char));
     this->allowInput = true;
+    this->fileChooseResultHandler = fileChooseResultHandler;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -374,6 +378,11 @@ void renderShowConversation(const char* conversationName) {
     this->state = STATE_CONVERSATION;
 
     SYNCHRONIZED_END
+}
+
+void renderShowFileChooser(void) {
+    assert(this);
+    // TODO
 }
 
 bool renderShowInviteOrRequestDialog(unsigned fileSize, const char* fromUserName) {
