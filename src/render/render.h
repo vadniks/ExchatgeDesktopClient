@@ -37,6 +37,7 @@ typedef char* (*RenderMillisToDateTimeConverter)(unsigned long); // returns null
 typedef void (*RenderOnSendClicked)(const char* text, unsigned size); // receives an auto deallocated text of the message the user wanna send, text length is equal to size which is in range (0, this->maxMessageSize]
 typedef void (*RenderOnUpdateUsersListClicked)(void);
 typedef void (*RenderFileChooseResultHandler)(const char* nullable filePath); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null if no file was chosen or error occurred
+typedef List* (*RenderFilesListGetter)(const char* currentPath); // returns List*<TODO> of files
 
 typedef enum {
     RENDER_DELETE_CONVERSATION = -1,
