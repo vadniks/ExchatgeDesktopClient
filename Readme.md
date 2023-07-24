@@ -31,7 +31,11 @@ Client side uses the following libraries:
 * [SQLite3](https://sqlite.org),
 * [GNU C Library (GLIBC)](https://www.gnu.org/software/libc).
 
-## The project is currently in `Beta` stage
+## The project is currently in ~~Beta~~ development stage
+
+-- A few more features needed to be implemented:
+* File exchange - in process,
+* Fetching of messages other users sent to the current while he/she was offline
 
 [The server](https://github.com/vadniks/ExchatgeServer)
 
