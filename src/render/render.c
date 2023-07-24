@@ -382,7 +382,7 @@ void renderShowConversation(const char* conversationName) {
 
 void renderShowFileChooser(void) {
     assert(this);
-    // TODO
+    SYNCHRONIZED(this->state = STATE_FILE_CHOOSER;)
 }
 
 bool renderShowInviteOrRequestDialog(unsigned fileSize, const char* fromUserName) {
@@ -845,6 +845,10 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     nk_layout_row_end(this->context);
 }
 
+static void drawFileChooser(void) {
+    // TODO
+}
+
 static void drawErrorIfNeeded(void) {
     this->systemMessageTicks++;
 
@@ -891,6 +895,9 @@ static void drawPage(void) {
             break;
         case STATE_CONVERSATION:
             drawConversation();
+            break;
+        case STATE_FILE_CHOOSER:
+            drawFileChooser();
             break;
         default: assert(false);
     }
