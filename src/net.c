@@ -41,7 +41,7 @@ typedef enum : unsigned {
     STATE_FINISHED_WITH_ERROR = 7
 } States;
 
-static const char* HOST = "127.0.0.1";
+static const char* HOST = "127.0.0.1"; // TODO: add possibility to change this
 STATIC_CONST_UNSIGNED PORT = 8080;
 
 STATIC_CONST_UNSIGNED INT_SIZE = sizeof(int);
@@ -74,6 +74,9 @@ typedef enum : int {
     FLAG_EXCHANGE_HEADERS = 0x000000c0, // Next part, B generates encoder stream and sends his header to A
     FLAG_EXCHANGE_HEADERS_DONE = 0x000000d0, // A receives the B's encoder header, creates decoder and encoder, then A sends his encoder header to B
     // B receives A's header and creates decoder stream. After that, both A and B have keys and working encoders/decoders to begin an encrypted conversation
+
+    FLAG_FILE_ASK = 0x000000e0, // firstly current user (A) sends file exchanging invite (flag_file_ask) to another user (B); if B accepts the invitation, he sends back to A flag_file_ask with size == 1, if he declines size == 0;
+    FLAG_FILE = 0x000000f0, // secondly if B accepted the invite, A can proceed: A reads file by net_message_body_size-sized chunks, encapsulates those chunks in messages and sends them to B; B then accepts them, reads & writes those chunks to a newly created file
 
     FLAG_SHUTDOWN = 0x7fffffff
 } Flags;
