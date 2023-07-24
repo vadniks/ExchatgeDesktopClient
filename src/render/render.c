@@ -75,6 +75,7 @@ STATIC_CONST_STRING UNABLE_TO_DECRYPT_DATABASE = "Unable to decrypt the database
 STATIC_CONST_STRING UNABLE_TO_CREATE_CONVERSATION = "Unable to create the conversation";
 STATIC_CONST_STRING CONVERSATION_DOESNT_EXIST = "Conversation doesn't exist";
 STATIC_CONST_STRING CONVERSATION_ALREADY_EXISTS = "Conversation already exists";
+STATIC_CONST_STRING FILEX_EXCHANGE_REQUESTED_BY_USER = "File exchange requested by user ";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -375,14 +376,17 @@ void renderShowConversation(const char* conversationName) {
     SYNCHRONIZED_END
 }
 
-bool renderShowInviteDialog(const char* fromUserName) {
+bool renderShowInviteOrRequestDialog(unsigned fileSize, const char* fromUserName) {
     assert(this);
 
     const unsigned messageSize = SDL_strlen(YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER),
         xMessageSize = messageSize + 1 + this->usernameSize + 1;
 
     char xMessage[xMessageSize];
-    SDL_memcpy(xMessage, YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER, messageSize);
+    SDL_memcpy(xMessage,
+        !fileSize ? YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER : FILEX_EXCHANGE_REQUESTED_BY_USER,
+        messageSize);
+
     xMessage[messageSize] = ' ';
     SDL_memcpy(xMessage + messageSize + 1, fromUserName, this->usernameSize);
     xMessage[xMessageSize - 1] = 0;

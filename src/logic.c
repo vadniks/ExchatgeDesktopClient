@@ -232,7 +232,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     const User* user = findUser(xFromId);
     assert(user);
 
-    Crypto* crypto = netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
+    Crypto* crypto = netReplyToPendingConversationSetUpInvite(renderShowInviteOrRequestDialog(0, user->name), xFromId);
     if (crypto)
         this->toUserId = xFromId, // not only in python there's indentation based scoping, here's an emulation though
         this->state = STATE_EXCHANGING_MESSAGES,
