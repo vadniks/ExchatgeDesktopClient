@@ -39,6 +39,8 @@ typedef void (*RenderOnUpdateUsersListClicked)(void);
 typedef void (*RenderFileChooseResultHandler)(const char* nullable filePath); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null if no file was chosen or error occurred
 typedef List* (*RenderFilesListGetter)(const char* currentPath); // returns List*<TODO> of files
 
+// TODO: or maybe just send the first file in the this program executable file's dir? - It's just too much work to do only for getting the needed file's path
+
 typedef enum {
     RENDER_DELETE_CONVERSATION = -1,
     RENDER_START_CONVERSATION = false, // 0
