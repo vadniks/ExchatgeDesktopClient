@@ -255,6 +255,14 @@ static void onConversationSetUpInviteReceived(unsigned fromId) {
     lifecycleAsync((LifecycleAsyncActionFunction) &replyToConversationSetUpInvite, xFromId, 0);
 }
 
+static void onFileExchangeInviteReceived(unsigned fromId) {
+    netReplyToFileExchangeInvite(fromId, false); // TODO
+}
+
+static bool nextFileChunkSupplier(unsigned index, byte* buffer) {
+    return false; // TODO
+}
+
 static void processCredentials(void** data) {
     const char* username = data[0];
     const char* password = data[1];
@@ -278,7 +286,9 @@ static void processCredentials(void** data) {
         &onDisconnected,
         &logicCurrentTimeMillis,
         &onUsersFetched,
-        &onConversationSetUpInviteReceived
+        &onConversationSetUpInviteReceived,
+        &onFileExchangeInviteReceived,
+        &nextFileChunkSupplier
     );
 
     if (!this->netInitialized) {

@@ -119,6 +119,8 @@ THIS(
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived;
     unsigned long conversationSetUpStartMillis;
     SDL_mutex* mutex;
+    NetOnFileExchangeInviteReceived onFileExchangeInviteReceived;
+    NetNextFileChunkSupplier nextFileChunkSupplier;
 )
 #pragma clang diagnostic pop
 
@@ -198,7 +200,9 @@ bool netInit(
     NetCallback onDisconnected,
     NetCurrentTimeMillisGetter currentTimeMillisGetter,
     NetOnUsersFetched onUsersFetched,
-    NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived
+    NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived,
+    NetOnFileExchangeInviteReceived onFileExchangeInviteReceived,
+    NetNextFileChunkSupplier nextFileChunkSupplier
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
@@ -212,7 +216,7 @@ bool netInit(
     this->connectionCrypto = NULL;
     this->messageBuffer = NULL;
     SDL_memset(this->tokenAnonymous, 0, TOKEN_SIZE);
-    SDL_memset(this->tokenServerUnsignedValue, (1 << 8) - 1, TOKEN_UNSIGNED_VALUE_SIZE);
+    SDL_memset(this->tokenServerUnsignedValue, (1 << 8) - 1/*255 or xff*/, TOKEN_UNSIGNED_VALUE_SIZE);
     SDL_memcpy(this->token, this->tokenAnonymous, TOKEN_SIZE); // until user is authenticated he has an anonymous token
     this->userId = FROM_ANONYMOUS;
     this->onLogInResult = onLogInResult;
@@ -228,6 +232,8 @@ bool netInit(
     this->onConversationSetUpInviteReceived = onConversationSetUpInviteReceived;
     this->conversationSetUpStartMillis = 0;
     this->mutex = SDL_CreateMutex();
+    this->onFileExchangeInviteReceived = onFileExchangeInviteReceived;
+    this->nextFileChunkSupplier = nextFileChunkSupplier;
 
     assert(!SDLNet_Init());
 
@@ -718,6 +724,14 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 
     SYNCHRONIZED(this->settingUpConversation = false;)
     return crypto;
+}
+
+bool netBeginFileExchange(unsigned toId) {
+    return false; // TODO
+}
+
+bool netReplyToFileExchangeInvite(unsigned fromId, bool accept) {
+    return false; // TODO
 }
 
 void netClean(void) {
