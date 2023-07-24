@@ -523,7 +523,7 @@ static void sendMessage(void** params) { // TODO: block controls and show inf pr
     SDL_memcpy(body, encryptedText, encryptedSize);
     SDL_free(encryptedText);
 
-    netSend(NET_FLAG_PROCEED, body, encryptedSize, this->toUserId); // TODO: test all
+    netSend(NET_FLAG_PROCEED, body, encryptedSize, this->toUserId);
 
     SDL_free(params[0]);
     SDL_free(params[1]);
