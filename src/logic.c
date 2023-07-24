@@ -532,6 +532,8 @@ static void sendMessage(void** params) { // TODO: block controls and show inf pr
 
 void logicOnSendClicked(const char* text, unsigned size) {
     assert(this);
+    if (!size) return;
+
     void** params = SDL_malloc(2 * sizeof(void*));
 
     params[0] = SDL_malloc(size * sizeof(char));
