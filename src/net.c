@@ -117,7 +117,7 @@ THIS(
     byte* serverKeyStub;
     bool settingUpConversation;
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived;
-    unsigned long conversationSetUpStartMillis;
+    unsigned long inviteProcessingStartMillis;
     SDL_mutex* mutex;
     NetOnFileExchangeInviteReceived onFileExchangeInviteReceived;
     NetNextFileChunkSupplier nextFileChunkSupplier;
@@ -233,7 +233,7 @@ bool netInit(
     this->serverKeyStub = SDL_calloc(CRYPTO_KEY_SIZE, sizeof(byte));
     this->settingUpConversation = false;
     this->onConversationSetUpInviteReceived = onConversationSetUpInviteReceived;
-    this->conversationSetUpStartMillis = 0;
+    this->inviteProcessingStartMillis = 0;
     this->mutex = SDL_CreateMutex();
     this->onFileExchangeInviteReceived = onFileExchangeInviteReceived;
     this->nextFileChunkSupplier = nextFileChunkSupplier;
@@ -369,19 +369,30 @@ static void processMessagesFromServer(const Message* message) {
 }
 
 static void processConversationSetUpMessage(const Message* message) {
-    if (message->flag != FLAG_EXCHANGE_KEYS) assert(false);
     assert(!(this->settingUpConversation));
 
     SYNCHRONIZED_BEGIN
     this->settingUpConversation = true;
-    this->conversationSetUpStartMillis = (*(this->currentTimeMillisGetter))();
+    this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
     SYNCHRONIZED_END
 
     (*(this->onConversationSetUpInviteReceived))(message->from);
 }
 
+static void processFileExchangeInvite(const Message* message) {
+    assert(!(this->exchangingFile));
+
+    SYNCHRONIZED_BEGIN
+    this->exchangingFile = true;
+    this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
+    SYNCHRONIZED_END
+
+    (*(this->onFileExchangeInviteReceived))(message->from, message->size);
+}
+
 static void processMessage(const Message* message) {
     if (this->settingUpConversation) return;
+    if (this->exchangingFile && (message->flag == FLAG_FILE_ASK || message->flag == FLAG_FILE)) return;
 
     bool fromServer = message->from == FROM_SERVER;
     if (fromServer) processMessagesFromServer(message);
@@ -392,10 +403,14 @@ static void processMessage(const Message* message) {
         case STATE_AUTHENTICATED:
             if (fromServer) break;
 
-            if (message->flag != NET_FLAG_PROCEED)
+            if (message->flag == FLAG_EXCHANGE_KEYS)
                 processConversationSetUpMessage(message);
-            else
+            else if (message->flag == FLAG_FILE_ASK)
+                processFileExchangeInvite(message);
+            else if (message->flag == NET_FLAG_PROCEED)
                 (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
+            else
+                assert(false);
             break;
     }
 }
@@ -636,7 +651,8 @@ Crypto* nullable netCreateConversation(unsigned id) {
     return crypto;
 }
 
-static inline bool timeoutExceeded(void) { return (*(this->currentTimeMillisGetter))() - this->conversationSetUpStartMillis > TIMEOUT; }
+static inline bool inviteProcessingTimeoutExceeded(void)
+{ return (*(this->currentTimeMillisGetter))() - this->inviteProcessingStartMillis > TIMEOUT; }
 
 Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     assert(this);
@@ -645,7 +661,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
-    if (timeoutExceeded()) {
+    if (inviteProcessingTimeoutExceeded()) {
         SYNCHRONIZED(this->settingUpConversation = false;)
         return NULL;
     }
@@ -781,7 +797,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
 bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accept) {
     assert(this->exchangingFile);
 
-    if (timeoutExceeded()) {
+    if (inviteProcessingTimeoutExceeded()) {
         SYNCHRONIZED(this->exchangingFile = false;)
         return false;
     }
