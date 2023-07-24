@@ -766,7 +766,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     }
 
     SYNCHRONIZED(this->exchangingFile = false;)
-    return true; // TODO
+    return true;
 }
 
 bool netReplyToFileExchangeInvite(unsigned fromId, bool accept) {
