@@ -256,11 +256,15 @@ static void onConversationSetUpInviteReceived(unsigned fromId) {
 }
 
 static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
-    netReplyToFileExchangeInvite(fromId, false); // TODO
+    netReplyToFileExchangeInvite(fromId, fileSize, false); // TODO
 }
 
 static unsigned nextFileChunkSupplier(unsigned index, byte* buffer) {
     return 0; // TODO
+}
+
+static void nextFileChunkReceiver(unsigned index, unsigned fileSize, unsigned receivedBytesCount, const byte* buffer) {
+    // TODO
 }
 
 static void processCredentials(void** data) {
@@ -288,7 +292,8 @@ static void processCredentials(void** data) {
         &onUsersFetched,
         &onConversationSetUpInviteReceived,
         &onFileExchangeInviteReceived,
-        &nextFileChunkSupplier
+        &nextFileChunkSupplier,
+        &nextFileChunkReceiver
     );
 
     if (!this->netInitialized) {

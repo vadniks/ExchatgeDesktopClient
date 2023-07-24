@@ -121,6 +121,7 @@ THIS(
     SDL_mutex* mutex;
     NetOnFileExchangeInviteReceived onFileExchangeInviteReceived;
     NetNextFileChunkSupplier nextFileChunkSupplier;
+    NetNextFileChunkReceiver netNextFileChunkReceiver;
     bool exchangingFile;
 )
 #pragma clang diagnostic pop
@@ -203,7 +204,8 @@ bool netInit(
     NetOnUsersFetched onUsersFetched,
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived,
     NetOnFileExchangeInviteReceived onFileExchangeInviteReceived,
-    NetNextFileChunkSupplier nextFileChunkSupplier
+    NetNextFileChunkSupplier nextFileChunkSupplier,
+    NetNextFileChunkReceiver netNextFileChunkReceiver
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
@@ -235,6 +237,7 @@ bool netInit(
     this->mutex = SDL_CreateMutex();
     this->onFileExchangeInviteReceived = onFileExchangeInviteReceived;
     this->nextFileChunkSupplier = nextFileChunkSupplier;
+    this->netNextFileChunkReceiver = netNextFileChunkReceiver;
     this->exchangingFile = false;
 
     assert(!SDLNet_Init());
@@ -729,8 +732,11 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 }
 
 bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
-    byte body[NET_MESSAGE_BODY_SIZE];
+    assert(!this->exchangingFile);
     SYNCHRONIZED(this->exchangingFile = true;)
+
+    byte body[NET_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
     if (!netSend(FLAG_FILE_ASK, body, fileSize, toId)) {
         SYNCHRONIZED(this->exchangingFile = false;)
@@ -753,12 +759,11 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     }
     SDL_free(message);
 
-    byte chunk[NET_MESSAGE_BODY_SIZE];
     unsigned index = 0, bytesWritten, totalWritten = 0;
-    while ((bytesWritten = (*(this->nextFileChunkSupplier))(index++, chunk))) {
+    while ((bytesWritten = (*(this->nextFileChunkSupplier))(index++, body))) {
         totalWritten += bytesWritten;
 
-        if (!netSend(FLAG_FILE, chunk, bytesWritten, toId)) {
+        if (!netSend(FLAG_FILE, body, bytesWritten, toId)) {
             SYNCHRONIZED(this->exchangingFile = false;)
             return false;
         }
@@ -771,11 +776,46 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     return true;
 }
 
-bool netReplyToFileExchangeInvite(unsigned fromId, bool accept) {
+bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accept) {
+    assert(this->exchangingFile);
 
+    if ((*(this->currentTimeMillisGetter))() - this->conversationSetUpStartMillis >= TIMEOUT) {
+        SYNCHRONIZED(this->exchangingFile = false;)
+        return false;
+    }
 
+    byte body[NET_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
-    return false; // TODO
+    if (!netSend(FLAG_FILE_ASK, body, accept ? fileSize : 1, fromId)) {
+        SYNCHRONIZED(this->exchangingFile = false;)
+        return false;
+    }
+
+    if (!accept) {
+        SYNCHRONIZED(this->exchangingFile = false;)
+        return false;
+    }
+
+    Message* message = NULL;
+    unsigned index = 0, totalReceived = 0;
+
+    while ((message = receive())
+        && message->flag == FLAG_FILE
+        && message->size > 0)
+    {
+        assert(message->size <= NET_MESSAGE_BODY_SIZE);
+
+        (*(this->netNextFileChunkReceiver))(index++, fileSize, message->size, message->body);
+        totalReceived += message->size;
+
+        SDL_free(message);
+        message = NULL;
+    }
+    SDL_free(message);
+
+    SYNCHRONIZED(this->exchangingFile = false;)
+    return totalReceived == fileSize;
 }
 
 void netClean(void) {
