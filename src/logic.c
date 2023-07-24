@@ -392,8 +392,8 @@ static void createOrLoadConversation(unsigned id, bool create) {
     lifecycleAsync((LifecycleAsyncActionFunction) (create ? &startConversation : &continueConversation), parameters, 0); // TODO: update users list after start/continue is performed
 }
 
-static void deleteConversation(unsigned* id) {
-    assert(this && this->databaseInitialized);
+static void deleteConversation(unsigned* id) { // TODO: remove all messages belonging to this conversation as well
+    assert(this && this->databaseInitialized); // TODO: test the following situation: A sends invite to B, and while invite is still pending acceptation, C sends an invite to A or B
 
     if (databaseConversationExists(*id)) databaseRemoveConversation(*id);
     else renderShowConversationDoesntExist();
