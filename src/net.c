@@ -730,19 +730,19 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 
 bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     byte body[NET_MESSAGE_BODY_SIZE];
-    Message* message = NULL;
     SYNCHRONIZED(this->exchangingFile = true;)
 
     if (!netSend(FLAG_FILE_ASK, body, fileSize, toId)) {
         SYNCHRONIZED(this->exchangingFile = false;)
-        return NULL;
+        return false;
     }
 
     if (!waitForReceiveWithTimeout()) {
         SYNCHRONIZED(this->exchangingFile = false;)
-        return NULL;
+        return false;
     }
 
+    Message* message = NULL;
     if (!(message = receive())
         || message->flag != FLAG_FILE_ASK
         || message->size != fileSize)
@@ -772,6 +772,9 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
 }
 
 bool netReplyToFileExchangeInvite(unsigned fromId, bool accept) {
+
+
+
     return false; // TODO
 }
 
