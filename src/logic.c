@@ -259,8 +259,8 @@ static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
     netReplyToFileExchangeInvite(fromId, false); // TODO
 }
 
-static bool nextFileChunkSupplier(unsigned index, byte* buffer) {
-    return false; // TODO
+static unsigned nextFileChunkSupplier(unsigned index, byte* buffer) {
+    return 0; // TODO
 }
 
 static void processCredentials(void** data) {

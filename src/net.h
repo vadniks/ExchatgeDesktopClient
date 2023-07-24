@@ -29,7 +29,7 @@ typedef void (*NetCallback)(void);
 typedef unsigned long (*NetCurrentTimeMillisGetter)(void);
 typedef void (*NetOnConversationSetUpInviteReceived)(unsigned/*fromId*/); // must call replyToPendingConversationSetUpInvite() after this
 typedef void (*NetOnFileExchangeInviteReceived)(unsigned fromId, unsigned fileSize); // must then call replyToFileExchangeInvite
-typedef bool (*NetNextFileChunkSupplier)(unsigned index, byte* buffer); // returns true if no more chunks available (current chunk included), if this is first time this callback is called, the false return is treated as occurrence of error and the operation gets aborted; copies the another chunk's bytes into the buffer; the buffer is deallocated automatically
+typedef unsigned (*NetNextFileChunkSupplier)(unsigned index, byte* buffer); // returns (0 <= count <= MESSAGE_BODY_SIZE) of written bytes or 0 if no more chunks available (current chunk included), if this is first time this callback is called, the return of 0 is treated as occurrence of error and the operation gets aborted; copies the another chunk's bytes into the buffer; the buffer is deallocated automatically; if the count of written bytes is less than MESSAGE_BODY_SIZE then no more invocations of this callback performed
 
 struct NetUserInfo_t;
 typedef struct NetUserInfo_t NetUserInfo;
