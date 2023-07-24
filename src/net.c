@@ -18,9 +18,14 @@
 
 #include <sdl_net/SDL_net.h>
 #include <assert.h>
+#include <endian.h>
 #include "net.h"
 
 staticAssert(sizeof(char) == 1 && sizeof(int) == 4 && sizeof(long) == 8 && sizeof(void*) == 8);
+
+#if BYTE_ORDER != LITTLE_ENDIAN
+#   error "Target is not little endian"
+#endif
 
 #define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->mutex));
 #define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->mutex));
