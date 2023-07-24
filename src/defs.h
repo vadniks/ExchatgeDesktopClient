@@ -18,16 +18,16 @@
 
 #pragma once
 
+#ifdef __cplusplus
+#   error "Only the C - only hardcore!"
+#endif
+
 #if !defined(__STDC__)
 #   error "How's that?"
 #endif
 
 #if __STDC_VERSION__ < 201112L // C11
 #   error "New C features are used"
-#endif
-
-#ifdef __cplusplus
-#   error "Only the C - only hardcore!"
 #endif
 
 #define THIS(x) \
