@@ -22,7 +22,7 @@
 #   error "How's that?"
 #endif
 
-#if __STDC_VERSION__ < 201112L
+#if __STDC_VERSION__ < 201112L // C11
 #   error "New C features are used"
 #endif
 
