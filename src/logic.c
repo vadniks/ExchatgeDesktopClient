@@ -19,7 +19,6 @@
 #include <sdl/SDL.h>
 #include <assert.h>
 #include <time.h>
-#include <sdl/SDL_rwops.h>
 #include "render/render.h"
 #include "crypto.h"
 #include "net.h"
