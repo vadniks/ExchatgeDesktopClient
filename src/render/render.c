@@ -78,6 +78,7 @@ STATIC_CONST_STRING CONVERSATION_DOESNT_EXIST = "Conversation doesn't exist";
 STATIC_CONST_STRING CONVERSATION_ALREADY_EXISTS = "Conversation already exists";
 STATIC_CONST_STRING FILEX_EXCHANGE_REQUESTED_BY_USER = "File exchange requested by user ";
 STATIC_CONST_STRING CHOOSE = "Choose";
+STATIC_CONST_STRING FILE_TEXT = "File";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -129,6 +130,7 @@ THIS(
     bool allowInput;
     RenderFileChooseResultHandler fileChooseResultHandler;
     RenderFilesListGetter filesListGetter;
+    RenderOnFileChooserRequested onFileChooserRequested;
 )
 #pragma clang diagnostic pop
 
@@ -181,7 +183,8 @@ void renderInit(
     RenderOnSendClicked onSendClicked,
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
     RenderFileChooseResultHandler fileChooseResultHandler,
-    RenderFilesListGetter filesListGetter
+    RenderFilesListGetter filesListGetter,
+    RenderOnFileChooserRequested onFileChooserRequested
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -231,6 +234,7 @@ void renderInit(
     this->allowInput = true;
     this->fileChooseResultHandler = fileChooseResultHandler;
     this->filesListGetter = filesListGetter;
+    this->onFileChooserRequested = onFileChooserRequested;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -238,7 +242,7 @@ void renderInit(
         SDL_WINDOWPOS_CENTERED,
         (int) this->width,
         (int) this->height,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_SHOWN | /*SDL_WINDOW_ALLOW_HIGHDPI |*/ SDL_WINDOW_RESIZABLE
     );
     assert(this->window);
 
@@ -833,7 +837,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
 
     nk_layout_row_begin(this->context, NK_DYNAMIC, (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f, 2);
 
-    nk_layout_row_push(this->context, 0.85f);
+    nk_layout_row_push(this->context, 0.8f);
     nk_edit_string(
         this->context,
         NK_EDIT_BOX | NK_EDIT_MULTILINE | NK_EDIT_EDITOR,
@@ -843,8 +847,11 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         nk_filter_default
     );
 
-    nk_layout_row_push(this->context, 0.15f);
+    nk_layout_row_push(this->context, 0.1f);
     if (nk_button_label(this->context, SEND)) onSendClicked();
+
+    nk_layout_row_push(this->context, 0.1f);
+    if (nk_button_label(this->context, FILE_TEXT)) (*(this->onFileChooserRequested))();
 
     nk_layout_row_end(this->context);
 }

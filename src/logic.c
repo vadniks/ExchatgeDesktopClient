@@ -280,8 +280,9 @@ void logicFileChooseResultHandler(const char* nullable filePath) {
     // TODO
 }
 
-static void requestFileExchange(void) {
-    // TODO
+void logicOnFileChooserRequested(void) { // TODO: add checksum
+    assert(this);
+    renderShowFileChooser();
 }
 
 static void filePathDeallocator(char* path) { SDL_free(path); }

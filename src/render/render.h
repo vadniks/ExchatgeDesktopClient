@@ -38,6 +38,7 @@ typedef void (*RenderOnSendClicked)(const char* text, unsigned size); // receive
 typedef void (*RenderOnUpdateUsersListClicked)(void);
 typedef void (*RenderFileChooseResultHandler)(const char* nullable filePath); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null if no file was chosen or error occurred
 typedef List* (*RenderFilesListGetter)(void); // returns List*<char*> - list of strings (absolute paths) which as well as the list itself are deallocated by the caller of this callback
+typedef void (*RenderOnFileChooserRequested)(void);
 
 // TODO: or maybe just send the first file in the this program executable file's dir? - It's just too much work to do only for getting the needed file's path
 
@@ -65,7 +66,8 @@ void renderInit(
     RenderOnSendClicked onSendClicked,
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
     RenderFileChooseResultHandler fileChooseResultHandler,
-    RenderFilesListGetter filesListGetter
+    RenderFilesListGetter filesListGetter,
+    RenderOnFileChooserRequested onFileChooserRequested
 );
 
 void renderSetMaxMessageSize(unsigned size);
