@@ -318,7 +318,7 @@ List* logicFilesListGetter(void) { // returns List*<char*>
 
 char* logicExecutableDirAbsolutePath(void) { // returns executablePath.substring(0, __last_slash_index__ - 1)
     assert(this);
-    char* path = SDL_malloc(this->executablePathSize);
+    char* path = SDL_realloc(NULL, this->executablePathSize);
 
     unsigned i = 0, foundAt = 0;
     for (char chr = this->executablePath[i]; chr; chr = this->executablePath[++i]) {
@@ -327,13 +327,10 @@ char* logicExecutableDirAbsolutePath(void) { // returns executablePath.substring
     }
 
     assert(path && foundAt > 0 && foundAt < this->executablePathSize);
+    path = SDL_realloc(path, foundAt + 1);
+    path[foundAt] = 0;
 
-    char* trimmedPath = SDL_malloc(foundAt + 1);
-    SDL_memcpy(trimmedPath, path, foundAt);
-    trimmedPath[foundAt] = 0;
-
-    SDL_free(path);
-    return trimmedPath;
+    return path;
 }
 
 static void processCredentials(void** data) {
