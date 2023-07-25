@@ -298,13 +298,13 @@ List* logicFilesListGetter(void) { // returns List*<char*>
     struct dirent* dirent;
     List* filesPaths = listInit((ListDeallocator) &filePathDeallocator);
 
-    if ((dir = opendir("."))) {
-        while ((dirent = readdir(dir)) != NULL) {
-            if (dirent->d_type == DT_REG)
-                listAddBack(filesPaths, dirent->d_name);
-        }
-        closedir(dir);
+    if (!(dir = opendir("."))) return filesPaths;
+
+    while ((dirent = readdir(dir)) != NULL) {
+        if (dirent->d_type == DT_REG)
+            listAddBack(filesPaths, dirent->d_name);
     }
+    closedir(dir);
 
     return filesPaths;
 }
