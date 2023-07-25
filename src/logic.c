@@ -287,13 +287,13 @@ void logicOnFileChooserRequested(void) { // TODO: add checksum
 
 static void filePathDeallocator(char* path) { SDL_free(path); }
 
-static bool isDirectory(const char* path) {
+__attribute_deprecated_msg__("isn't needed") static bool isDirectory(const char* path) {
     struct stat xStat;
     return stat(path, &xStat) != 0 ? false : S_ISDIR(xStat.st_mode);
 }
 
 List* logicFilesListGetter(void) { // returns List*<char*>
-    assert(this && isDirectory(this->executablePath));
+    assert(this);
 
     DIR* dir;
     struct dirent* dirent;
@@ -301,9 +301,15 @@ List* logicFilesListGetter(void) { // returns List*<char*>
 
     if (!(dir = opendir("."))) return filesPaths;
 
+    char* buffer = NULL;
+    const unsigned bufferSize = 0xff;
+
     while ((dirent = readdir(dir)) != NULL) {
-        if (dirent->d_type == DT_REG)
-            listAddBack(filesPaths, dirent->d_name);
+        if (dirent->d_type == DT_REG) {
+            buffer = SDL_malloc(bufferSize);
+            SDL_strlcpy(buffer, dirent->d_name, bufferSize);
+            listAddBack(filesPaths, buffer);
+        }
     }
     closedir(dir);
 
