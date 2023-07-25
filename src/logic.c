@@ -281,7 +281,8 @@ void logicFileChooseResultHandler(const char* nullable fileName) {
         renderShowConversation(NULL);
         return;
     }
-    // TODO
+
+    SDL_Log("file's chosen: %s", fileName); // TODO: test only
 }
 
 void logicOnFileChooserRequested(void) { // TODO: add checksum
