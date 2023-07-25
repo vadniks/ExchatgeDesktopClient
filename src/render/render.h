@@ -37,7 +37,7 @@ typedef char* (*RenderMillisToDateTimeConverter)(unsigned long); // returns null
 typedef void (*RenderOnSendClicked)(const char* text, unsigned size); // receives an auto deallocated text of the message the user wanna send, text length is equal to size which is in range (0, this->maxMessageSize]
 typedef void (*RenderOnUpdateUsersListClicked)(void);
 typedef void (*RenderFileChooseResultHandler)(const char* nullable filePath); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null if no file was chosen or error occurred
-typedef List* (*RenderFilesListGetter)(const char* currentPath); // returns List*<TODO> of files
+typedef List* (*RenderFilesListGetter)(void); // returns List*<char*> - list of strings (absolute paths) which as well as the list itself are deallocated by the caller of this callback
 
 // TODO: or maybe just send the first file in the this program executable file's dir? - It's just too much work to do only for getting the needed file's path
 
@@ -64,7 +64,8 @@ void renderInit(
     RenderMillisToDateTimeConverter millisToDateTimeConverter,
     RenderOnSendClicked onSendClicked,
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
-    RenderFileChooseResultHandler fileChooseResultHandler
+    RenderFileChooseResultHandler fileChooseResultHandler,
+    RenderFilesListGetter filesListGetter
 );
 
 void renderSetMaxMessageSize(unsigned size);

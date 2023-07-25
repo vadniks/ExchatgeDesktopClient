@@ -19,6 +19,8 @@
 #include <sdl/SDL.h>
 #include <assert.h>
 #include <time.h>
+#include <sys/stat.h>
+#include <dirent.h>
 #include "render/render.h"
 #include "crypto.h"
 #include "net.h"
@@ -41,6 +43,8 @@ THIS(
     atomic bool netInitialized;
     List* usersList; // <User*>
     List* messagesList; // <ConversationMessage*>
+    char* executablePath;
+    unsigned executablePathSize;
     bool adminMode;
     atomic unsigned state;
     char* currentUserName;
@@ -51,6 +55,11 @@ THIS(
 
 static void parseArguments(unsigned argc, const char** argv) {
     assert(argc <= 1 || argc == 2 && argv[1]); // 'cause argv[0] is path to the executable everytime
+
+    this->executablePathSize = SDL_strlen(argv[0]);
+    assert(this->executablePathSize > 0 && this->executablePathSize <= 0xff);
+    this->executablePath = SDL_malloc(this->executablePathSize);
+    SDL_memcpy(this->executablePath, argv[0], this->executablePathSize);
 
     if (argc <= 1) {
         this->adminMode = false;
@@ -273,6 +282,31 @@ void logicFileChooseResultHandler(const char* nullable filePath) {
 
 static void requestFileExchange(void) {
     // TODO
+}
+
+static void filePathDeallocator(char* path) { SDL_free(path); }
+
+static bool isDirectory(const char* path) {
+    struct stat xStat;
+    return stat(path, &xStat) != 0 ? false : S_ISDIR(xStat.st_mode);
+}
+
+List* logicFilesListGetter(void) { // returns List*<char*>
+    assert(this && isDirectory(this->executablePath));
+
+    DIR* dir;
+    struct dirent* dirent;
+    List* filesPaths = listInit((ListDeallocator) &filePathDeallocator);
+
+    if ((dir = opendir("."))) {
+        while ((dirent = readdir(dir)) != NULL) {
+            if (dirent->d_type == DT_REG)
+                listAddBack(filesPaths, dirent->d_name);
+        }
+        closedir(dir);
+    }
+
+    return filesPaths;
 }
 
 static void processCredentials(void** data) {
@@ -598,6 +632,8 @@ void logicClean(void) {
 
     listDestroy(this->usersList);
     listDestroy(this->messagesList);
+
+    SDL_free(this->executablePath);
 
     if (this->netInitialized) netClean();
     SDL_free(this);

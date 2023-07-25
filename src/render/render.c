@@ -77,6 +77,7 @@ STATIC_CONST_STRING UNABLE_TO_CREATE_CONVERSATION = "Unable to create the conver
 STATIC_CONST_STRING CONVERSATION_DOESNT_EXIST = "Conversation doesn't exist";
 STATIC_CONST_STRING CONVERSATION_ALREADY_EXISTS = "Conversation already exists";
 STATIC_CONST_STRING FILEX_EXCHANGE_REQUESTED_BY_USER = "File exchange requested by user ";
+STATIC_CONST_STRING CHOOSE = "Choose";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -127,6 +128,7 @@ THIS(
     char* currentUserName; // the name of the user who is currently logged in this client
     bool allowInput;
     RenderFileChooseResultHandler fileChooseResultHandler;
+    RenderFilesListGetter filesListGetter;
 )
 #pragma clang diagnostic pop
 
@@ -178,7 +180,8 @@ void renderInit(
     RenderMillisToDateTimeConverter millisToDateTimeConverter,
     RenderOnSendClicked onSendClicked,
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
-    RenderFileChooseResultHandler fileChooseResultHandler
+    RenderFileChooseResultHandler fileChooseResultHandler,
+    RenderFilesListGetter filesListGetter
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -227,6 +230,7 @@ void renderInit(
     this->currentUserName = SDL_calloc(this->usernameSize, sizeof(char));
     this->allowInput = true;
     this->fileChooseResultHandler = fileChooseResultHandler;
+    this->filesListGetter = filesListGetter;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -846,7 +850,24 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
 }
 
 static void drawFileChooser(void) {
-    // TODO
+    nk_layout_row_dynamic(
+        this->context,
+        (float) decreaseHeightIfNeeded((unsigned) currentHeight()) * 0.15f,
+        2
+    );
+
+    List* filesPaths = (*(this->filesListGetter))();
+    const char* path = NULL;
+
+    for (unsigned i = 0; i < listSize(filesPaths); i++) {
+        path = listGet(filesPaths, i);
+        nk_label(this->context, path, NK_TEXT_ALIGN_LEFT);
+
+        if (nk_button_label(this->context, CHOOSE))
+            (*(this->fileChooseResultHandler))(path);
+    }
+
+    listDestroy(filesPaths);
 }
 
 static void drawErrorIfNeeded(void) {
