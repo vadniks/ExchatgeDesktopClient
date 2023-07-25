@@ -291,11 +291,6 @@ void logicOnFileChooserRequested(void) { // TODO: add checksum
 
 static void filePathDeallocator(char* path) { SDL_free(path); }
 
-__attribute_deprecated_msg__("isn't needed") static bool isDirectory(const char* path) {
-    struct stat xStat;
-    return stat(path, &xStat) != 0 ? false : S_ISDIR(xStat.st_mode);
-}
-
 List* logicFilesListGetter(void) { // returns List*<char*>
     assert(this);
 
@@ -320,6 +315,11 @@ List* logicFilesListGetter(void) { // returns List*<char*>
     return filesPaths;
 }
 
+static bool isDirectory(const char* path) {
+    struct stat xStat;
+    return stat(path, &xStat) != 0 ? false : S_ISDIR(xStat.st_mode);
+}
+
 char* logicExecutableDirAbsolutePath(void) { // returns executablePath.substring(0, __last_slash_index__ - 1)
     assert(this);
     char* path = SDL_realloc(NULL, this->executablePathSize);
@@ -334,6 +334,7 @@ char* logicExecutableDirAbsolutePath(void) { // returns executablePath.substring
     path = SDL_realloc(path, foundAt + 1);
     path[foundAt] = 0;
 
+    assert(isDirectory(path));
     return path;
 }
 
