@@ -276,8 +276,11 @@ static void nextFileChunkReceiver(unsigned index, unsigned fileSize, unsigned re
     // TODO
 }
 
-void logicFileChooseResultHandler(const char* nullable filePath) {
-    // TODO
+void logicFileChooseResultHandler(const char* nullable fileName) {
+    if (!fileName) {
+        renderShowConversation(NULL);
+        return;
+    }
 }
 
 void logicOnFileChooserRequested(void) { // TODO: add checksum

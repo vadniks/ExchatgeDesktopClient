@@ -389,11 +389,12 @@ void renderShowUsersList(const char* currentUserName) {
     SYNCHRONIZED_END
 }
 
-void renderShowConversation(const char* conversationName) {
+void renderShowConversation(const char* nullable conversationName) {
     assert(this);
     SYNCHRONIZED_BEGIN
 
-    SDL_memcpy(this->conversationName, conversationName, this->conversationNameSize);
+    if (conversationName)
+        SDL_memcpy(this->conversationName, conversationName, this->conversationNameSize);
     this->state = STATE_CONVERSATION;
 
     SYNCHRONIZED_END
@@ -873,7 +874,7 @@ static void drawFileChooser(void) {
     nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3);
 
     nk_layout_row_push(this->context, 0.2f);
-    if (nk_button_label(this->context, BACK)); // TODO
+    if (nk_button_label(this->context, BACK)) (*(this->fileChooseResultHandler))(NULL);
 
     nk_layout_row_push(this->context, 0.4f);
     nk_label(this->context, FILE_SELECTION, NK_TEXT_ALIGN_RIGHT);
