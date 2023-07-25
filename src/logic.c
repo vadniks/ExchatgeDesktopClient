@@ -316,6 +316,26 @@ List* logicFilesListGetter(void) { // returns List*<char*>
     return filesPaths;
 }
 
+char* logicExecutableDirAbsolutePath(void) { // returns executablePath.substring(0, __last_slash_index__ - 1)
+    assert(this);
+    char* path = SDL_malloc(this->executablePathSize);
+
+    unsigned i = 0, foundAt = 0;
+    for (char chr = this->executablePath[i]; chr; chr = this->executablePath[++i]) {
+        path[i] = chr;
+        if (chr == '/') foundAt = i;
+    }
+
+    assert(path && foundAt > 0 && foundAt < this->executablePathSize);
+
+    char* trimmedPath = SDL_malloc(foundAt + 1);
+    SDL_memcpy(trimmedPath, path, foundAt);
+    trimmedPath[foundAt] = 0;
+
+    SDL_free(path);
+    return trimmedPath;
+}
+
 static void processCredentials(void** data) {
     const char* username = data[0];
     const char* password = data[1];

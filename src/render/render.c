@@ -79,6 +79,7 @@ STATIC_CONST_STRING CONVERSATION_ALREADY_EXISTS = "Conversation already exists";
 STATIC_CONST_STRING FILEX_EXCHANGE_REQUESTED_BY_USER = "File exchange requested by user ";
 STATIC_CONST_STRING CHOOSE = "Choose";
 STATIC_CONST_STRING FILE_TEXT = "File";
+STATIC_CONST_STRING FILE_SELECTION = "File selection";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -131,6 +132,8 @@ THIS(
     RenderFileChooseResultHandler fileChooseResultHandler;
     RenderFilesListGetter filesListGetter;
     RenderOnFileChooserRequested onFileChooserRequested;
+    unsigned executableDirAbsolutePathSize;
+    char* executableDirAbsolutePath;
 )
 #pragma clang diagnostic pop
 
@@ -235,6 +238,7 @@ void renderInit(
     this->fileChooseResultHandler = fileChooseResultHandler;
     this->filesListGetter = filesListGetter;
     this->onFileChooserRequested = onFileChooserRequested;
+    this->executableDirAbsolutePath = NULL;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -306,6 +310,13 @@ void renderSetUsersList(const List* usersList) {
 void renderSetMessagesList(const List* messagesList) {
     assert(this);
     this->conversationMessagesList = messagesList;
+}
+
+void renderSetExecutableDirAbsolutePath(char* path) {
+    assert(this);
+    this->executableDirAbsolutePathSize = SDL_strlen(path);
+    assert(this->executableDirAbsolutePathSize <= 0xff);
+    this->executableDirAbsolutePath = path;
 }
 
 void renderInputBegan(void) {
@@ -850,28 +861,47 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     nk_layout_row_push(this->context, 0.1f);
     if (nk_button_label(this->context, SEND)) onSendClicked();
 
-    nk_layout_row_push(this->context, 0.1f);
+    nk_layout_row_push(this->context, 0.09f);
     if (nk_button_label(this->context, FILE_TEXT)) (*(this->onFileChooserRequested))();
 
     nk_layout_row_end(this->context);
 }
 
 static void drawFileChooser(void) {
-    nk_layout_row_dynamic(
-        this->context,
-        (float) decreaseHeightIfNeeded((unsigned) currentHeight()) * 0.15f,
-        2
-    );
+    const float rowHeight = (float) decreaseHeightIfNeeded((unsigned) currentHeight()) * 0.075f;
+
+    nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3);
+
+    nk_layout_row_push(this->context, 0.2f);
+    if (nk_button_label(this->context, BACK)); // TODO
+
+    nk_layout_row_push(this->context, 0.4f);
+    nk_label(this->context, FILE_SELECTION, NK_TEXT_ALIGN_RIGHT);
+
+    nk_layout_row_push(this->context, 0.4f);
+    nk_spacer(this->context);
+
+    nk_layout_row_end(this->context);
+
+    nk_layout_row_dynamic(this->context, rowHeight, 1);
+    nk_label(this->context, this->executableDirAbsolutePath, NK_TEXT_ALIGN_CENTERED);
 
     List* filesPaths = (*(this->filesListGetter))();
     const char* path = NULL;
 
+    const float pathRatio = 0.9f, buttonRatio = 0.1f;
     for (unsigned i = 0; i < listSize(filesPaths); i++) {
         path = listGet(filesPaths, i);
+        nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 2);
+
+        nk_layout_row_push(this->context, pathRatio);
         nk_label(this->context, path, NK_TEXT_ALIGN_LEFT);
 
+        nk_layout_row_push(this->context, buttonRatio);
         if (nk_button_label(this->context, CHOOSE))
             (*(this->fileChooseResultHandler))(path);
+
+        nk_layout_row_end(this->context);
     }
 
     listDestroy(filesPaths);
@@ -960,6 +990,8 @@ void renderDraw(void) {
 
 void renderClean(void) {
     if (!this) return;
+
+    SDL_free(this->executableDirAbsolutePath);
 
     if (this->currentSystemMessage) destroySystemMessage(this->currentSystemMessage); // if window was closed before pause has been ended
     queueDestroy(this->systemMessagesQueue);

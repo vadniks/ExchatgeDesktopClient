@@ -141,6 +141,7 @@ bool lifecycleInit(unsigned argc, const char** argv) {
     renderSetAdminMode(logicIsAdminMode());
     renderSetUsersList(logicUsersList());
     renderSetMessagesList(logicMessagesList());
+    renderSetExecutableDirAbsolutePath(logicExecutableDirAbsolutePath());
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(
         UI_UPDATE_PERIOD,
