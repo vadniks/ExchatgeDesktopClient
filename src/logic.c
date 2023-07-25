@@ -281,6 +281,7 @@ void logicFileChooseResultHandler(const char* nullable fileName) {
         renderShowConversation(NULL);
         return;
     }
+    // TODO
 }
 
 void logicOnFileChooserRequested(void) { // TODO: add checksum
