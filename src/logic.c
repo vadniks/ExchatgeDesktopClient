@@ -101,13 +101,19 @@ static int findUserComparator(const unsigned* xId, const User* const* user)
 { return *xId < (*user)->id ? -1 : (*xId > (*user)->id ? 1 : 0); }
 
 static const User* nullable findUser(unsigned id)
-{ return listBinarySearch(this->usersList, &id, (ListComparator) &findUserComparator); }
+{ return listBinarySearch(this->usersList, &id, (ListComparator) &findUserComparator); } // TODO: add mutex to Crypto objects
 
 static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* encryptedMessage, unsigned encryptedSize) {
     assert(this && this->databaseInitialized);
+    renderShowInfiniteProgressBar();
+    renderSetControlsBlocking(true);
 
     const User* user = findUser(fromId);
-    if (!user) return;
+    if (!user) {
+        renderHideInfiniteProgressBar();
+        renderSetControlsBlocking(false);
+        return;
+    }
 
     const unsigned size = encryptedSize - cryptoEncryptedSize(0);
     assert(size > 0 && size <= logicUnencryptedMessageBodySize());
@@ -126,6 +132,9 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     if (fromId == this->toUserId)
         listAddFront(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
     SDL_free(message);
+
+    renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
 }
 
 static void onLogInResult(bool successful) {
@@ -502,7 +511,7 @@ unsigned long logicCurrentTimeMillis(void) {
     return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
 }
 
-static void sendMessage(void** params) { // TODO: block controls and show inf progress bar while sending/receiving a message
+static void sendMessage(void** params) {
     assert(this && params && this->databaseInitialized);
 
     unsigned size = *((unsigned*) params[1]), encryptedSize = cryptoEncryptedSize(size);
