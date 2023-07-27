@@ -113,6 +113,7 @@ THIS(
     unsigned userInfosSize;
     byte* serverKeyStub;
     bool settingUpConversation;
+    unsigned conversationSetUpInitiatorId;
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived;
     unsigned long conversationSetUpStartMillis;
     SDL_mutex* mutex;
@@ -222,6 +223,7 @@ bool netInit(
     this->userInfosSize = 0;
     this->serverKeyStub = SDL_calloc(CRYPTO_KEY_SIZE, sizeof(byte));
     this->settingUpConversation = false;
+    this->conversationSetUpInitiatorId = 0;
     this->onConversationSetUpInviteReceived = onConversationSetUpInviteReceived;
     this->conversationSetUpStartMillis = 0;
     this->mutex = SDL_CreateMutex();
@@ -356,11 +358,11 @@ static void processMessagesFromServer(const Message* message) {
 
 static void processConversationSetUpMessage(const Message* message) {
     assert(message->flag == FLAG_EXCHANGE_KEYS);
-    if (message->size != 1) return;
 
     SYNCHRONIZED_BEGIN
-    assert(!(this->settingUpConversation));
+    if (this->settingUpConversation && message->size == 1) return;
     this->settingUpConversation = true;
+    this->conversationSetUpInitiatorId = message->from;
     this->conversationSetUpStartMillis = (*(this->currentTimeMillisGetter))();
     SYNCHRONIZED_END
 
@@ -657,7 +659,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         return NULL;
     }
 
-    if (!accept) {
+    if (!accept || this->conversationSetUpInitiatorId != fromId) {
         SYNCHRONIZED(this->settingUpConversation = false;)
         netSend(FLAG_EXCHANGE_KEYS, body, 1, fromId);
         return NULL;

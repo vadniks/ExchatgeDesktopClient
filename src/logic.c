@@ -240,7 +240,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
         databaseRemoveMessages(xFromId);
 
     const User* user = findUser(xFromId);
-    assert(user);
+    if (!user) return; // if local users list hasn't been synchronized yet
 
     Crypto* crypto = netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
     if (crypto)
