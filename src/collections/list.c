@@ -51,7 +51,7 @@ void listAddBack(List* list, const void* value) {
     assert(list->size < MAX_SIZE);
 
     list->values = SDL_realloc(list->values, ++(list->size) * VOID_PTR_SIZE);
-    list->values[list->size - 1] = value;
+    list->values[list->size - 1] = (void*) value;
 
     SYNCHRONIZED_END
 }
@@ -62,7 +62,7 @@ void listAddFront(List* list, const void* value) {
     assert(list->size < MAX_SIZE);
 
     void** temp = SDL_malloc(++(list->size) * VOID_PTR_SIZE);
-    temp[0] = value;
+    temp[0] = (void*) value;
     for (unsigned i = 1; i < list->size; temp[i] = (list->values)[i - 1], i++);
 
     SDL_free(list->values);
