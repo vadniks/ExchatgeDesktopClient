@@ -131,17 +131,13 @@ bool lifecycleInit(unsigned argc, const char** argv) {
         &logicOnReturnFromConversationPageRequested,
         &logicMillisToDateTime,
         &logicOnSendClicked,
-        &logicOnUpdateUsersListClicked,
-        &logicFileChooseResultHandler,
-        &logicFilesListGetter,
-        &logicOnFileChooserRequested
+        &logicOnUpdateUsersListClicked
     );
     logicInit(argc, argv);
     renderSetMaxMessageSize(logicUnencryptedMessageBodySize());
     renderSetAdminMode(logicIsAdminMode());
     renderSetUsersList(logicUsersList());
     renderSetMessagesList(logicMessagesList());
-    renderSetExecutableDirAbsolutePath(logicExecutableDirAbsolutePath());
 
     this->threadsSynchronizerTimerId = SDL_AddTimer(
         UI_UPDATE_PERIOD,

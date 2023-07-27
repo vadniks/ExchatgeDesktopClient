@@ -27,10 +27,6 @@ bool logicIsAdminMode(void);
 void logicNetListen(void); // causes net module to listen for connection updates
 const List* logicUsersList(void); // returns permanent users list in which actual user objects will be inserted/updated/removed later by the net module
 const List* logicMessagesList(void); // same as usersList but for conversation messages between users
-void logicFileChooseResultHandler(const char* nullable filePath);
-void logicOnFileChooserRequested(void);
-List* logicFilesListGetter(void); // returns List*<char*> - list and strings in that list must be deallocated by the caller; strings represent absolute paths to files in the directory in which the program's executable is located
-char* logicExecutableDirAbsolutePath(void); // result must be deallocated
 void logicOnCredentialsReceived(const char* username, const char* password, bool logIn);
 void logicCredentialsRandomFiller(char* credentials, unsigned size);
 void logicOnLoginRegisterPageQueriedByUser(bool logIn);

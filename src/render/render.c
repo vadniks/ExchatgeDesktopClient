@@ -38,8 +38,7 @@ typedef enum : unsigned {
     STATE_LOG_IN = 1,
     STATE_REGISTER = 2,
     STATE_USERS_LIST = 3,
-    STATE_CONVERSATION = 4,
-    STATE_FILE_CHOOSER = 5
+    STATE_CONVERSATION = 4
 } States;
 
 STATIC_CONST_STRING TITLE = "Exchatge";
@@ -76,10 +75,6 @@ STATIC_CONST_STRING UNABLE_TO_DECRYPT_DATABASE = "Unable to decrypt the database
 STATIC_CONST_STRING UNABLE_TO_CREATE_CONVERSATION = "Unable to create the conversation";
 STATIC_CONST_STRING CONVERSATION_DOESNT_EXIST = "Conversation doesn't exist";
 STATIC_CONST_STRING CONVERSATION_ALREADY_EXISTS = "Conversation already exists";
-STATIC_CONST_STRING FILEX_EXCHANGE_REQUESTED_BY_USER = "File exchange requested by user ";
-STATIC_CONST_STRING CHOOSE = "Choose";
-STATIC_CONST_STRING FILE_TEXT = "File";
-STATIC_CONST_STRING FILE_SELECTION = "File selection";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -129,11 +124,6 @@ THIS(
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked;
     char* currentUserName; // the name of the user who is currently logged in this client
     bool allowInput;
-    RenderFileChooseResultHandler fileChooseResultHandler;
-    RenderFilesListGetter filesListGetter;
-    RenderOnFileChooserRequested onFileChooserRequested;
-    unsigned executableDirAbsolutePathSize;
-    char* executableDirAbsolutePath;
 )
 #pragma clang diagnostic pop
 
@@ -184,10 +174,7 @@ void renderInit(
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested,
     RenderMillisToDateTimeConverter millisToDateTimeConverter,
     RenderOnSendClicked onSendClicked,
-    RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
-    RenderFileChooseResultHandler fileChooseResultHandler,
-    RenderFilesListGetter filesListGetter,
-    RenderOnFileChooserRequested onFileChooserRequested
+    RenderOnUpdateUsersListClicked onUpdateUsersListClicked
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -235,10 +222,6 @@ void renderInit(
     this->onUpdateUsersListClicked = onUpdateUsersListClicked;
     this->currentUserName = SDL_calloc(this->usernameSize, sizeof(char));
     this->allowInput = true;
-    this->fileChooseResultHandler = fileChooseResultHandler;
-    this->filesListGetter = filesListGetter;
-    this->onFileChooserRequested = onFileChooserRequested;
-    this->executableDirAbsolutePath = NULL;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -246,7 +229,7 @@ void renderInit(
         SDL_WINDOWPOS_CENTERED,
         (int) this->width,
         (int) this->height,
-        SDL_WINDOW_SHOWN | /*SDL_WINDOW_ALLOW_HIGHDPI |*/ SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE // | SDL_WINDOW_ALLOW_HIGHDPI // TODO
     );
     assert(this->window);
 
@@ -310,13 +293,6 @@ void renderSetUsersList(const List* usersList) {
 void renderSetMessagesList(const List* messagesList) {
     assert(this);
     this->conversationMessagesList = messagesList;
-}
-
-void renderSetExecutableDirAbsolutePath(char* path) {
-    assert(this);
-    this->executableDirAbsolutePathSize = SDL_strlen(path);
-    assert(this->executableDirAbsolutePathSize <= 0xff);
-    this->executableDirAbsolutePath = path;
 }
 
 void renderInputBegan(void) {
@@ -389,33 +365,24 @@ void renderShowUsersList(const char* currentUserName) {
     SYNCHRONIZED_END
 }
 
-void renderShowConversation(const char* nullable conversationName) {
+void renderShowConversation(const char* conversationName) {
     assert(this);
     SYNCHRONIZED_BEGIN
 
-    if (conversationName)
-        SDL_memcpy(this->conversationName, conversationName, this->conversationNameSize);
+    SDL_memcpy(this->conversationName, conversationName, this->conversationNameSize);
     this->state = STATE_CONVERSATION;
 
     SYNCHRONIZED_END
 }
 
-void renderShowFileChooser(void) {
-    assert(this);
-    SYNCHRONIZED(this->state = STATE_FILE_CHOOSER;)
-}
-
-bool renderShowInviteOrRequestDialog(unsigned fileSize, const char* fromUserName) {
+bool renderShowInviteDialog(const char* fromUserName) {
     assert(this);
 
     const unsigned messageSize = SDL_strlen(YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER),
         xMessageSize = messageSize + 1 + this->usernameSize + 1;
 
     char xMessage[xMessageSize];
-    SDL_memcpy(xMessage,
-        !fileSize ? YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER : FILEX_EXCHANGE_REQUESTED_BY_USER,
-        messageSize);
-
+    SDL_memcpy(xMessage, YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER, messageSize);
     xMessage[messageSize] = ' ';
     SDL_memcpy(xMessage + messageSize + 1, fromUserName, this->usernameSize);
     xMessage[xMessageSize - 1] = 0;
@@ -849,7 +816,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
 
     nk_layout_row_begin(this->context, NK_DYNAMIC, (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f, 2);
 
-    nk_layout_row_push(this->context, 0.8f);
+    nk_layout_row_push(this->context, 0.85f);
     nk_edit_string(
         this->context,
         NK_EDIT_BOX | NK_EDIT_MULTILINE | NK_EDIT_EDITOR,
@@ -859,53 +826,10 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         nk_filter_default
     );
 
-    nk_layout_row_push(this->context, 0.1f);
+    nk_layout_row_push(this->context, 0.15f);
     if (nk_button_label(this->context, SEND)) onSendClicked();
 
-    nk_layout_row_push(this->context, 0.09f);
-    if (nk_button_label(this->context, FILE_TEXT)) (*(this->onFileChooserRequested))();
-
     nk_layout_row_end(this->context);
-}
-
-static void drawFileChooser(void) {
-    const float rowHeight = (float) decreaseHeightIfNeeded((unsigned) currentHeight()) * 0.075f;
-
-    nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3);
-
-    nk_layout_row_push(this->context, 0.2f);
-    if (nk_button_label(this->context, BACK)) (*(this->fileChooseResultHandler))(NULL);
-
-    nk_layout_row_push(this->context, 0.4f);
-    nk_label(this->context, FILE_SELECTION, NK_TEXT_ALIGN_RIGHT);
-
-    nk_layout_row_push(this->context, 0.4f);
-    nk_spacer(this->context);
-
-    nk_layout_row_end(this->context);
-
-    nk_layout_row_dynamic(this->context, rowHeight, 1);
-    nk_label(this->context, this->executableDirAbsolutePath, NK_TEXT_ALIGN_CENTERED);
-
-    List* filesPaths = (*(this->filesListGetter))();
-    const char* path = NULL;
-
-    const float pathRatio = 0.9f, buttonRatio = 0.1f;
-    for (unsigned i = 0; i < listSize(filesPaths); i++) {
-        path = listGet(filesPaths, i);
-        nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 2);
-
-        nk_layout_row_push(this->context, pathRatio);
-        nk_label(this->context, path, NK_TEXT_ALIGN_LEFT);
-
-        nk_layout_row_push(this->context, buttonRatio);
-        if (nk_button_label(this->context, CHOOSE))
-            (*(this->fileChooseResultHandler))(path);
-
-        nk_layout_row_end(this->context);
-    }
-
-    listDestroy(filesPaths);
 }
 
 static void drawErrorIfNeeded(void) {
@@ -955,9 +879,6 @@ static void drawPage(void) {
         case STATE_CONVERSATION:
             drawConversation();
             break;
-        case STATE_FILE_CHOOSER:
-            drawFileChooser();
-            break;
         default: assert(false);
     }
 
@@ -991,8 +912,6 @@ void renderDraw(void) {
 
 void renderClean(void) {
     if (!this) return;
-
-    SDL_free(this->executableDirAbsolutePath);
 
     if (this->currentSystemMessage) destroySystemMessage(this->currentSystemMessage); // if window was closed before pause has been ended
     queueDestroy(this->systemMessagesQueue);
