@@ -273,6 +273,7 @@ static void processCredentials(void** data) {
     bool logIn = *((bool*) data[2]);
 
     assert(this);
+    if (!logIn) goto netInit;
     if (!this->databaseInitialized && !databaseInit((byte*) password, NET_UNHASHED_PASSWORD_SIZE, NET_USERNAME_SIZE, NET_MESSAGE_BODY_SIZE)) { // password that's used to sign in also used to encrypt messages & other stuff in the database
         databaseClean();
         renderShowUnableToDecryptDatabaseError();
@@ -282,6 +283,7 @@ static void processCredentials(void** data) {
     } else
         this->databaseInitialized = true;
 
+    netInit:
     this->netInitialized = netInit(
         &onMessageReceived,
         &onLogInResult,

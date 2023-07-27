@@ -356,9 +356,9 @@ static void processMessagesFromServer(const Message* message) {
 
 static void processConversationSetUpMessage(const Message* message) {
     if (message->flag != FLAG_EXCHANGE_KEYS) assert(false);
-    assert(!(this->settingUpConversation));
 
     SYNCHRONIZED_BEGIN
+    assert(!(this->settingUpConversation));
     this->settingUpConversation = true;
     this->conversationSetUpStartMillis = (*(this->currentTimeMillisGetter))();
     SYNCHRONIZED_END
@@ -367,17 +367,22 @@ static void processConversationSetUpMessage(const Message* message) {
 }
 
 static void processMessage(const Message* message) {
-    if (this->settingUpConversation) return;
+    SYNCHRONIZED_BEGIN
+    if (this->settingUpConversation) {
+        SYNCHRONIZED_END
+        return;
+    }
+    SYNCHRONIZED_END
 
-    bool fromServer = message->from == FROM_SERVER;
-    if (fromServer) processMessagesFromServer(message);
+    if (message->from == FROM_SERVER) {
+        processMessagesFromServer(message);
+        return;
+    }
 
     switch (this->state) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
             break;
         case STATE_AUTHENTICATED:
-            if (fromServer) break;
-
             if (message->flag != NET_FLAG_PROCEED)
                 processConversationSetUpMessage(message);
             else
@@ -542,7 +547,15 @@ static bool waitForReceiveWithTimeout(void) {
 
 Crypto* nullable netCreateConversation(unsigned id) {
     assert(this);
-    SYNCHRONIZED(this->settingUpConversation = true;)
+
+    SYNCHRONIZED_BEGIN
+    if (this->settingUpConversation) {
+        this->settingUpConversation = false;
+        SYNCHRONIZED_END
+        return NULL;
+    }
+    this->settingUpConversation = true;
+    SYNCHRONIZED_END
 
     byte body[NET_MESSAGE_BODY_SIZE];
 
@@ -627,7 +640,7 @@ static inline bool inviteProcessingTimeoutExceeded(void)
 
 Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     assert(this);
-    assert(this->settingUpConversation);
+    SYNCHRONIZED(assert(this->settingUpConversation);)
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
@@ -644,13 +657,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     }
 
     Crypto* crypto = cryptoInit();
-
     const byte* akaServerPublicKey = cryptoGenerateKeyPairAsServer(crypto);
-    if (!akaServerPublicKey) {
-        SYNCHRONIZED(this->settingUpConversation = false;)
-        cryptoDestroy(crypto);
-        return NULL;
-    }
 
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
