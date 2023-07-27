@@ -273,7 +273,7 @@ void logicOnFileChooserRequested(void) {
     // TODO
 }
 
-void logicFileChooseResultHandler(const char* nullable fileName) {
+void logicFileChooseResultHandler(const char* nullable fileName, unsigned size) {
     USED(fileName); // TODO
 }
 

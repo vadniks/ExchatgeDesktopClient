@@ -76,6 +76,11 @@ STATIC_CONST_STRING UNABLE_TO_DECRYPT_DATABASE = "Unable to decrypt the database
 STATIC_CONST_STRING UNABLE_TO_CREATE_CONVERSATION = "Unable to create the conversation";
 STATIC_CONST_STRING CONVERSATION_DOESNT_EXIST = "Conversation doesn't exist";
 STATIC_CONST_STRING CONVERSATION_ALREADY_EXISTS = "Conversation already exists";
+STATIC_CONST_STRING FILEX_EXCHANGE_REQUESTED_BY_USER = "File exchange requested by user ";
+STATIC_CONST_STRING CHOOSE = "Choose";
+STATIC_CONST_STRING FILE_TEXT = "File";
+STATIC_CONST_STRING FILE_SELECTION = "File selection";
+STATIC_CONST_STRING CANNOT_OPEN_FILE = "Cannot open the file";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -471,6 +476,7 @@ void renderShowUnableToDecryptDatabaseError(void) { postSystemMessage(UNABLE_TO_
 void renderShowUnableToCreateConversation(void) { postSystemMessage(UNABLE_TO_CREATE_CONVERSATION, true); }
 void renderShowConversationDoesntExist(void) { postSystemMessage(CONVERSATION_DOESNT_EXIST, true); }
 void renderShowConversationAlreadyExists(void) { postSystemMessage(CONVERSATION_ALREADY_EXISTS, true); }
+void renderShowCannotOpenFileError(void) { postSystemMessage(CANNOT_OPEN_FILE, true); }
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);
@@ -840,14 +846,36 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         nk_filter_default
     );
 
-    nk_layout_row_push(this->context, 0.15f);
+    nk_layout_row_push(this->context, 0.0749f);
     if (nk_button_label(this->context, SEND)) onSendClicked();
+
+    nk_layout_row_push(this->context, 0.0749f);
+    if (nk_button_label(this->context, FILE_TEXT)) (*(this->onFileChooserRequested))();
 
     nk_layout_row_end(this->context);
 }
 
 static void drawFileChooser(void) {
-    // TODO
+    const float height = currentHeight();
+
+    nk_layout_row_dynamic(this->context, height / 3, 1);
+    nk_spacer(this->context);
+
+    nk_layout_row_dynamic(this->context, (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f, 4);
+    nk_spacer(this->context);
+
+    nk_edit_string(
+        this->context,
+        NK_EDIT_SIMPLE,
+        this->enteredFilePath,
+        (int*) &(this->enteredFilePathSize),
+        (int) this->maxFilePathSize,
+        nk_filter_default
+    );
+
+    if (nk_button_label(this->context, CHOOSE)) (*(this->fileChooseResultHandler))(this->enteredFilePath, this->enteredFilePathSize);
+    nk_spacer(this->context);
+
 }
 
 static void drawErrorIfNeeded(void) {

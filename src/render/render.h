@@ -37,7 +37,7 @@ typedef char* (*RenderMillisToDateTimeConverter)(unsigned long); // returns null
 typedef void (*RenderOnSendClicked)(const char* text, unsigned size); // receives an auto deallocated text of the message the user wanna send, text length is equal to size which is in range (0, this->maxMessageSize]
 typedef void (*RenderOnUpdateUsersListClicked)(void);
 typedef void (*RenderOnFileChooserRequested)(void);
-typedef void (*RenderFileChooseResultHandler)(const char* nullable fileName); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null if no file was chosen or error occurred
+typedef void (*RenderFileChooseResultHandler)(const char* nullable fileName, unsigned size); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null if no file was chosen or error occurred
 
 typedef enum {
     RENDER_DELETE_CONVERSATION = -1,
@@ -97,6 +97,7 @@ void renderShowUnableToDecryptDatabaseError(void);
 void renderShowUnableToCreateConversation(void);
 void renderShowConversationDoesntExist(void);
 void renderShowConversationAlreadyExists(void);
+void renderShowCannotOpenFileError(void);
 
 void renderShowInfiniteProgressBar(void); // showed only on pages that support it (log in/register, not splash as it's a special case)
 void renderHideInfiniteProgressBar(void);
