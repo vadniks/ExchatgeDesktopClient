@@ -653,7 +653,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 
     if (!accept) {
         SYNCHRONIZED(this->settingUpConversation = false;)
-        netSend(FLAG_EXCHANGE_KEYS, body, 1, fromId);
+        netSend(FLAG_EXCHANGE_KEYS, body, 2, fromId);
         return NULL;
     }
 

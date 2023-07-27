@@ -406,7 +406,7 @@ static void createOrLoadConversation(unsigned id, bool create) {
 }
 
 static void deleteConversation(unsigned* id) {
-    assert(this && this->databaseInitialized); // TODO: test the following situation: A sends invite to B, and while invite is still pending acceptation, C sends an invite to A or B
+    assert(this && this->databaseInitialized);
 
     if (databaseConversationExists(*id)) {
         databaseRemoveConversation(*id);
