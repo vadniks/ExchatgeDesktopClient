@@ -236,7 +236,8 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     listClear(this->messagesList);
 
     if (databaseConversationExists(xFromId))
-        databaseRemoveConversation(xFromId); // existence of a conversation when receiving an invite means that user, from whom this invite came, has deleted conversation with the current user, so to make users messaging again, remove the outdated conversation on the current user's side
+        databaseRemoveConversation(xFromId), // existence of a conversation when receiving an invite means that user, from whom this invite came, has deleted conversation with the current user, so to make users messaging again, remove the outdated conversation on the current user's side
+        databaseRemoveMessages(xFromId);
 
     const User* user = findUser(xFromId);
     assert(user);
@@ -401,11 +402,14 @@ static void createOrLoadConversation(unsigned id, bool create) {
     lifecycleAsync((LifecycleAsyncActionFunction) (create ? &startConversation : &continueConversation), parameters, 0); // TODO: update users list after start/continue is performed
 }
 
-static void deleteConversation(unsigned* id) { // TODO: remove all messages belonging to this conversation as well
+static void deleteConversation(unsigned* id) {
     assert(this && this->databaseInitialized); // TODO: test the following situation: A sends invite to B, and while invite is still pending acceptation, C sends an invite to A or B
 
-    if (databaseConversationExists(*id)) databaseRemoveConversation(*id);
-    else renderShowConversationDoesntExist();
+    if (databaseConversationExists(*id)) {
+        databaseRemoveConversation(*id);
+        databaseRemoveMessages(*id);
+    } else
+        renderShowConversationDoesntExist();
 
     SDL_free(id);
 

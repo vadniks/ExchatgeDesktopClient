@@ -605,6 +605,32 @@ List* nullable databaseGetMessages(unsigned conversation) {
     }
 }
 
+static void removeMessagesBinder(const unsigned* conversation, sqlite3_stmt* statement)
+{ assert(!sqlite3_bind_int(statement, 1, (int) *conversation)); }
+
+void databaseRemoveMessages(unsigned conversation) {
+    assert(this);
+    SYNCHRONIZED_BEGIN
+
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "delete from %s where %s = ?",
+        MESSAGES_TABLE, CONVERSATION_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    executeSingle(
+        sql, sqlSize,
+        (StatementProcessor) &removeMessagesBinder, &conversation,
+        NULL, NULL
+    );
+
+    SYNCHRONIZED_END
+}
+
 void databaseClean(void) {
     assert(this);
     SYNCHRONIZED_BEGIN
