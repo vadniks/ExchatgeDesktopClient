@@ -246,8 +246,10 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     if (crypto)
         this->toUserId = xFromId, // not only in python there's indentation based scoping, here's an emulation though
         this->state = STATE_EXCHANGING_MESSAGES,
+
         databaseAddConversation(xFromId, crypto),
         cryptoDestroy(crypto),
+
         tryLoadPreviousMessages(xFromId),
         renderShowConversation(user->name);
     else
