@@ -38,6 +38,7 @@ typedef void (*RenderOnSendClicked)(const char* text, unsigned size); // receive
 typedef void (*RenderOnUpdateUsersListClicked)(void);
 typedef void (*RenderOnFileChooserRequested)(void);
 typedef void (*RenderFileChooseResultHandler)(const char* nullable fileName, unsigned size); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null if no file was chosen or error occurred
+typedef void (*RenderOnReturnFromFileChooserRequested)(void);
 
 typedef enum {
     RENDER_DELETE_CONVERSATION = -1,
@@ -64,7 +65,8 @@ void renderInit(
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
     unsigned maxFilePathSize,
     RenderOnFileChooserRequested onFileChooserRequested,
-    RenderFileChooseResultHandler fileChooseResultHandler
+    RenderFileChooseResultHandler fileChooseResultHandler,
+    RenderOnReturnFromFileChooserRequested onReturnFromFileChooserRequested
 );
 
 void renderSetMaxMessageSize(unsigned size);

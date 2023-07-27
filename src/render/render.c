@@ -135,6 +135,7 @@ THIS(
     unsigned enteredFilePathSize;
     RenderOnFileChooserRequested onFileChooserRequested;
     RenderFileChooseResultHandler fileChooseResultHandler;
+    RenderOnReturnFromFileChooserRequested onReturnFromFileChooserRequested;
 )
 #pragma clang diagnostic pop
 
@@ -188,7 +189,8 @@ void renderInit(
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
     unsigned maxFilePathSize,
     RenderOnFileChooserRequested onFileChooserRequested,
-    RenderFileChooseResultHandler fileChooseResultHandler
+    RenderFileChooseResultHandler fileChooseResultHandler,
+    RenderOnReturnFromFileChooserRequested onReturnFromFileChooserRequested
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -241,6 +243,7 @@ void renderInit(
     this->enteredFilePathSize = 0;
     this->onFileChooserRequested = onFileChooserRequested;
     this->fileChooseResultHandler = fileChooseResultHandler;
+    this->onReturnFromFileChooserRequested = onReturnFromFileChooserRequested;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -858,8 +861,18 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
 static void drawFileChooser(void) {
     const float height = currentHeight();
 
-    nk_layout_row_dynamic(this->context, height / 3, 1);
+    nk_layout_row_begin(this->context, NK_DYNAMIC, height * 2 / 5, 3);
+
+    nk_layout_row_push(this->context, 0.2f);
+    if (nk_button_label(this->context, BACK)) (*(this->onReturnFromFileChooserRequested))();
+
+    nk_layout_row_push(this->context, 0.4f);
+    nk_label(this->context, FILE_SELECTION, NK_TEXT_ALIGN_LEFT);
+
+    nk_layout_row_push(this->context, 0.4f);
     nk_spacer(this->context);
+
+    nk_layout_row_end(this->context);
 
     nk_layout_row_dynamic(this->context, (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f, 4);
     nk_spacer(this->context);
@@ -875,7 +888,6 @@ static void drawFileChooser(void) {
 
     if (nk_button_label(this->context, CHOOSE)) (*(this->fileChooseResultHandler))(this->enteredFilePath, this->enteredFilePathSize);
     nk_spacer(this->context);
-
 }
 
 static void drawErrorIfNeeded(void) {

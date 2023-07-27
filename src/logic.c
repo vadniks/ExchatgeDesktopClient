@@ -277,6 +277,10 @@ void logicFileChooseResultHandler(const char* nullable fileName, unsigned size) 
     USED(fileName); // TODO
 }
 
+void logicOnReturnFromFileChooserRequested(void) {
+    // TODO
+}
+
 static void processCredentials(void** data) {
     const char* username = data[0];
     const char* password = data[1];
