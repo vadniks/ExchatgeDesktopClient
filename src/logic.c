@@ -150,6 +150,7 @@ static void onLogInResult(bool successful) {
 static void onErrorReceived(__attribute_maybe_unused__ int flag) {
     assert(this);
     renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
     renderShowSystemError();
 }
 
@@ -166,6 +167,7 @@ static void onDisconnected(void) {
     this->state = STATE_UNAUTHENTICATED;
 
     renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
     renderShowLogIn();
     renderShowDisconnectedError();
 }
@@ -450,6 +452,7 @@ void logicOnServerShutdownRequested(void) {
     if (!this->netInitialized) return;
 
     renderShowInfiniteProgressBar();
+    renderSetControlsBlocking(true);
     lifecycleAsync((LifecycleAsyncActionFunction) &netShutdownServer, NULL, 0);
 }
 
