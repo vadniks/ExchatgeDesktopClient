@@ -126,7 +126,7 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     cryptoDestroy(crypto);
 
     DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, (byte*) message, size);
-    databaseAddMessage(dbMessage);
+    assert(databaseAddMessage(dbMessage));
     databaseMessageDestroy(dbMessage);
 
     if (fromId == this->toUserId)
@@ -247,7 +247,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
         this->toUserId = xFromId, // not only in python there's indentation based scoping, here's an emulation though
         this->state = STATE_EXCHANGING_MESSAGES,
 
-        databaseAddConversation(xFromId, crypto),
+        assert(databaseAddConversation(xFromId, crypto)),
         cryptoDestroy(crypto),
 
         tryLoadPreviousMessages(xFromId),
@@ -351,8 +351,9 @@ static void startConversation(void** parameters) {
     else {
         Crypto* crypto = NULL;
         if ((crypto = netCreateConversation(*id)))
-            databaseAddConversation(*id, crypto),
+            assert(databaseAddConversation(*id, crypto)),
             cryptoDestroy(crypto),
+
             tryLoadPreviousMessages(*id),
             renderShowConversation(user->name);
         else
@@ -525,7 +526,7 @@ static void sendMessage(void** params) {
 
     const byte* text = params[0];
     DatabaseMessage* dbMessage = databaseMessageCreate(logicCurrentTimeMillis(), this->toUserId, netCurrentUserId(), text, size);
-    databaseAddMessage(dbMessage);
+    assert(databaseAddMessage(dbMessage));
     databaseMessageDestroy(dbMessage);
 
     Crypto* crypto = databaseGetConversation(this->toUserId);
