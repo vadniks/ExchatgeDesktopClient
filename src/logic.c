@@ -270,7 +270,8 @@ static void onConversationSetUpInviteReceived(unsigned fromId) {
 }
 
 void logicOnFileChooserRequested(void) {
-    // TODO
+    assert(this);
+    renderShowFileChooser();
 }
 
 void logicFileChooseResultHandler(const char* nullable fileName, unsigned size) {

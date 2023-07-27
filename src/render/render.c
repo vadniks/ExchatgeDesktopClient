@@ -397,6 +397,11 @@ void renderShowConversation(const char* conversationName) {
     SYNCHRONIZED_END
 }
 
+void renderShowFileChooser(void) {
+    assert(this);
+    SYNCHRONIZED(this->state = STATE_FILE_CHOOSER;)
+}
+
 bool renderShowInviteDialog(const char* fromUserName) {
     assert(this);
 
@@ -435,6 +440,7 @@ void renderSetControlsBlocking(bool blocking) {
 }
 
 static void postSystemMessage(const char* text, bool error) { // expects a null-terminated string with length in range (0, SYSTEM_MESSAGE_SIZE_MAX]
+    assert(this);
     SystemMessage* message = SDL_malloc(sizeof *message);
     message->error = error;
 
@@ -849,10 +855,10 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         nk_filter_default
     );
 
-    nk_layout_row_push(this->context, 0.0749f);
+    nk_layout_row_push(this->context, 0.07f);
     if (nk_button_label(this->context, SEND)) onSendClicked();
 
-    nk_layout_row_push(this->context, 0.0749f);
+    nk_layout_row_push(this->context, 0.08f);
     if (nk_button_label(this->context, FILE_TEXT)) (*(this->onFileChooserRequested))();
 
     nk_layout_row_end(this->context);
