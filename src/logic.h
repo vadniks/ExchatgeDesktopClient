@@ -22,11 +22,15 @@
 #include "defs.h"
 #include "collections/list.h"
 
+extern const unsigned LOGIC_MAX_FILE_PATH_SIZE;
+
 void logicInit(unsigned argc, const char** argv);
 bool logicIsAdminMode(void);
 void logicNetListen(void); // causes net module to listen for connection updates
 const List* logicUsersList(void); // returns permanent users list in which actual user objects will be inserted/updated/removed later by the net module
 const List* logicMessagesList(void); // same as usersList but for conversation messages between users
+void logicOnFileChooserRequested(void);
+void logicFileChooseResultHandler(const char* nullable fileName);
 void logicOnCredentialsReceived(const char* username, const char* password, bool logIn);
 void logicCredentialsRandomFiller(char* credentials, unsigned size);
 void logicOnLoginRegisterPageQueriedByUser(bool logIn);

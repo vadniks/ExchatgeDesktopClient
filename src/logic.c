@@ -28,6 +28,8 @@
 #include "database/database.h"
 #include "logic.h"
 
+const unsigned LOGIC_MAX_FILE_PATH_SIZE = 0xff;
+
 typedef enum : unsigned {
     STATE_UNAUTHENTICATED = 0,
     STATE_AWAITING_AUTHENTICATION = 1,
@@ -265,6 +267,14 @@ static void onConversationSetUpInviteReceived(unsigned fromId) {
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);
     lifecycleAsync((LifecycleAsyncActionFunction) &replyToConversationSetUpInvite, xFromId, 0);
+}
+
+void logicOnFileChooserRequested(void) {
+    // TODO
+}
+
+void logicFileChooseResultHandler(const char* nullable fileName) {
+    USED(fileName); // TODO
 }
 
 static void processCredentials(void** data) {

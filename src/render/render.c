@@ -38,7 +38,8 @@ typedef enum : unsigned {
     STATE_LOG_IN = 1,
     STATE_REGISTER = 2,
     STATE_USERS_LIST = 3,
-    STATE_CONVERSATION = 4
+    STATE_CONVERSATION = 4,
+    STATE_FILE_CHOOSER = 5
 } States;
 
 STATIC_CONST_STRING TITLE = "Exchatge";
@@ -124,6 +125,11 @@ THIS(
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked;
     char* currentUserName; // the name of the user who is currently logged in this client
     bool allowInput;
+    unsigned maxFilePathSize;
+    char* enteredFilePath;
+    unsigned enteredFilePathSize;
+    RenderOnFileChooserRequested onFileChooserRequested;
+    RenderFileChooseResultHandler fileChooseResultHandler;
 )
 #pragma clang diagnostic pop
 
@@ -174,7 +180,10 @@ void renderInit(
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested,
     RenderMillisToDateTimeConverter millisToDateTimeConverter,
     RenderOnSendClicked onSendClicked,
-    RenderOnUpdateUsersListClicked onUpdateUsersListClicked
+    RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
+    unsigned maxFilePathSize,
+    RenderOnFileChooserRequested onFileChooserRequested,
+    RenderFileChooseResultHandler fileChooseResultHandler
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -222,6 +231,11 @@ void renderInit(
     this->onUpdateUsersListClicked = onUpdateUsersListClicked;
     this->currentUserName = SDL_calloc(this->usernameSize, sizeof(char));
     this->allowInput = true;
+    this->maxFilePathSize = maxFilePathSize;
+    this->enteredFilePath = SDL_calloc(maxFilePathSize, 1);
+    this->enteredFilePathSize = 0;
+    this->onFileChooserRequested = onFileChooserRequested;
+    this->fileChooseResultHandler = fileChooseResultHandler;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -832,6 +846,10 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     nk_layout_row_end(this->context);
 }
 
+static void drawFileChooser(void) {
+    // TODO
+}
+
 static void drawErrorIfNeeded(void) {
     this->systemMessageTicks++;
 
@@ -879,6 +897,9 @@ static void drawPage(void) {
         case STATE_CONVERSATION:
             drawConversation();
             break;
+        case STATE_FILE_CHOOSER:
+            drawFileChooser();
+            break;
         default: assert(false);
     }
 
@@ -912,6 +933,8 @@ void renderDraw(void) {
 
 void renderClean(void) {
     if (!this) return;
+
+    SDL_free(this->enteredFilePath);
 
     if (this->currentSystemMessage) destroySystemMessage(this->currentSystemMessage); // if window was closed before pause has been ended
     queueDestroy(this->systemMessagesQueue);

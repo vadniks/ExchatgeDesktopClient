@@ -36,6 +36,8 @@ typedef void (*RenderOnReturnFromConversationPageRequested)(void);
 typedef char* (*RenderMillisToDateTimeConverter)(unsigned long); // returns null-terminated formatted string with date & time that must be deallocated by the caller
 typedef void (*RenderOnSendClicked)(const char* text, unsigned size); // receives an auto deallocated text of the message the user wanna send, text length is equal to size which is in range (0, this->maxMessageSize]
 typedef void (*RenderOnUpdateUsersListClicked)(void);
+typedef void (*RenderOnFileChooserRequested)(void);
+typedef void (*RenderFileChooseResultHandler)(const char* nullable fileName); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null if no file was chosen or error occurred
 
 typedef enum {
     RENDER_DELETE_CONVERSATION = -1,
@@ -59,7 +61,10 @@ void renderInit(
     RenderOnReturnFromConversationPageRequested onReturnFromConversationPageRequested,
     RenderMillisToDateTimeConverter millisToDateTimeConverter,
     RenderOnSendClicked onSendClicked,
-    RenderOnUpdateUsersListClicked onUpdateUsersListClicked
+    RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
+    unsigned maxFilePathSize,
+    RenderOnFileChooserRequested onFileChooserRequested,
+    RenderFileChooseResultHandler fileChooseResultHandler
 );
 
 void renderSetMaxMessageSize(unsigned size);
@@ -97,4 +102,5 @@ void renderShowInfiniteProgressBar(void); // showed only on pages that support i
 void renderHideInfiniteProgressBar(void);
 
 void renderDraw(void);
+
 void renderClean(void);
