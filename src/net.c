@@ -88,6 +88,9 @@ const unsigned NET_UNHASHED_PASSWORD_SIZE = 16;
 STATIC_CONST_UNSIGNED FROM_ANONYMOUS = 0xffffffff;
 STATIC_CONST_UNSIGNED FROM_SERVER = 0x7fffffff;
 
+STATIC_CONST_UNSIGNED INVITE_ASK = 1;
+STATIC_CONST_UNSIGNED INVITE_DENY = 2;
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
@@ -355,7 +358,7 @@ static void processMessagesFromServer(const Message* message) {
 }
 
 static void processConversationSetUpMessage(const Message* message) {
-    assert(message->flag == FLAG_EXCHANGE_KEYS && message->size == 1);
+    assert(message->flag == FLAG_EXCHANGE_KEYS && message->size == INVITE_ASK);
     if (this->settingUpConversation) return;
 
     SYNCHRONIZED_BEGIN
@@ -376,7 +379,7 @@ static void processMessage(const Message* message) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
             break;
         case STATE_AUTHENTICATED:
-            if (message->flag == FLAG_EXCHANGE_KEYS && message->size == 1)
+            if (message->flag == FLAG_EXCHANGE_KEYS && message->size == INVITE_ASK)
                 processConversationSetUpMessage(message);
             else if (message->flag == FLAG_PROCEED)
                 (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
@@ -559,7 +562,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
     byte body[NET_MESSAGE_BODY_SIZE];
 
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
-    if (!netSend(FLAG_EXCHANGE_KEYS, body, 1, id)) {
+    if (!netSend(FLAG_EXCHANGE_KEYS, body, INVITE_ASK, id)) {
         SYNCHRONIZED(this->settingUpConversation = false;)
         return NULL;
     }
@@ -653,7 +656,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 
     if (!accept) {
         SYNCHRONIZED(this->settingUpConversation = false;)
-        netSend(FLAG_EXCHANGE_KEYS, body, 2, fromId);
+        netSend(FLAG_EXCHANGE_KEYS, body, INVITE_DENY, fromId);
         return NULL;
     }
 
