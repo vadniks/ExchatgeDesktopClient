@@ -355,7 +355,8 @@ static void processMessagesFromServer(const Message* message) {
 }
 
 static void processConversationSetUpMessage(const Message* message) {
-    if (message->flag != FLAG_EXCHANGE_KEYS) assert(false);
+    assert(message->flag == FLAG_EXCHANGE_KEYS);
+    if (message->size != 1) return;
 
     SYNCHRONIZED_BEGIN
     assert(!(this->settingUpConversation));
@@ -545,15 +546,19 @@ static bool waitForReceiveWithTimeout(void) {
     return false;
 }
 
+static bool waitForTimeoutOrQuitSettingUpConversation(void) {
+    if (!waitForReceiveWithTimeout()) {
+        SYNCHRONIZED(this->settingUpConversation = false;)
+        return false;
+    } else
+        return true;
+}
+
 Crypto* nullable netCreateConversation(unsigned id) {
     assert(this);
 
     SYNCHRONIZED_BEGIN
-    if (this->settingUpConversation) {
-        this->settingUpConversation = false;
-        SYNCHRONIZED_END
-        return NULL;
-    }
+    assert(!this->settingUpConversation);
     this->settingUpConversation = true;
     SYNCHRONIZED_END
 
@@ -567,10 +572,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
 
     Message* message;
 
-    if (!waitForReceiveWithTimeout()) {
-        SYNCHRONIZED(this->settingUpConversation = false;)
-        return NULL;
-    }
+    if (!waitForTimeoutOrQuitSettingUpConversation()) return NULL;
 
     if (!(message = receive())
         || message->flag != FLAG_EXCHANGE_KEYS
@@ -600,6 +602,8 @@ Crypto* nullable netCreateConversation(unsigned id) {
         cryptoDestroy(crypto);
         return NULL;
     }
+
+    if (!waitForTimeoutOrQuitSettingUpConversation()) return NULL;
 
     if (!(message = receive())
         || message->flag != FLAG_EXCHANGE_HEADERS
@@ -667,8 +671,9 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         return NULL;
     }
 
-    Message* message = NULL;
+    if (!waitForTimeoutOrQuitSettingUpConversation()) return NULL;
 
+    Message* message = NULL;
     if (!(message = receive())
         || message->flag != FLAG_EXCHANGE_KEYS_DONE
         || message->size != CRYPTO_KEY_SIZE)
@@ -703,6 +708,8 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         cryptoDestroy(crypto);
         return NULL;
     }
+
+    if (!waitForTimeoutOrQuitSettingUpConversation()) return NULL;
 
     if (!(message = receive())
         || message->flag != FLAG_EXCHANGE_HEADERS_DONE
