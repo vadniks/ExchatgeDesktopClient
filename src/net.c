@@ -112,8 +112,7 @@ THIS(
     NetUserInfo** userInfos;
     unsigned userInfosSize;
     byte* serverKeyStub;
-    bool settingUpConversation;
-    unsigned conversationSetUpInitiatorId;
+    atomic bool settingUpConversation;
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived;
     unsigned long conversationSetUpStartMillis;
     SDL_mutex* mutex;
@@ -223,7 +222,6 @@ bool netInit(
     this->userInfosSize = 0;
     this->serverKeyStub = SDL_calloc(CRYPTO_KEY_SIZE, sizeof(byte));
     this->settingUpConversation = false;
-    this->conversationSetUpInitiatorId = 0;
     this->onConversationSetUpInviteReceived = onConversationSetUpInviteReceived;
     this->conversationSetUpStartMillis = 0;
     this->mutex = SDL_CreateMutex();
@@ -357,12 +355,11 @@ static void processMessagesFromServer(const Message* message) {
 }
 
 static void processConversationSetUpMessage(const Message* message) {
-    assert(message->flag == FLAG_EXCHANGE_KEYS);
+    assert(message->flag == FLAG_EXCHANGE_KEYS && message->size == 1);
+    if (this->settingUpConversation) return;
 
     SYNCHRONIZED_BEGIN
-    if (this->settingUpConversation && message->size == 1) return;
     this->settingUpConversation = true;
-    this->conversationSetUpInitiatorId = message->from;
     this->conversationSetUpStartMillis = (*(this->currentTimeMillisGetter))();
     SYNCHRONIZED_END
 
@@ -370,13 +367,6 @@ static void processConversationSetUpMessage(const Message* message) {
 }
 
 static void processMessage(const Message* message) {
-    SYNCHRONIZED_BEGIN
-    if (this->settingUpConversation) {
-        SYNCHRONIZED_END
-        return;
-    }
-    SYNCHRONIZED_END
-
     if (message->from == FROM_SERVER) {
         processMessagesFromServer(message);
         return;
@@ -386,10 +376,12 @@ static void processMessage(const Message* message) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
             break;
         case STATE_AUTHENTICATED:
-            if (message->flag != NET_FLAG_PROCEED)
+            if (message->flag == FLAG_EXCHANGE_KEYS && message->size == 1)
                 processConversationSetUpMessage(message);
-            else
+            else if (message->flag == FLAG_PROCEED)
                 (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
+            else
+                (void) 0;
             break;
     }
 }
@@ -416,7 +408,7 @@ static Message* nullable receive(void) {
 
 void netListen(void) {
     assert(this);
-    if (!checkSocket()) return;
+    if (!checkSocket() || this->settingUpConversation) return;
 
     Message* message = NULL;
 
@@ -659,7 +651,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         return NULL;
     }
 
-    if (!accept || this->conversationSetUpInitiatorId != fromId) {
+    if (!accept) {
         SYNCHRONIZED(this->settingUpConversation = false;)
         netSend(FLAG_EXCHANGE_KEYS, body, 1, fromId);
         return NULL;

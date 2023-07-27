@@ -109,17 +109,13 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     renderSetControlsBlocking(true);
 
     const User* user = findUser(fromId);
-    if (!user) {
-        renderHideInfiniteProgressBar();
-        renderSetControlsBlocking(false);
-        return;
-    }
+    if (!user) goto releaseLocks;
 
     const unsigned size = encryptedSize - cryptoEncryptedSize(0);
     assert(size > 0 && size <= logicUnencryptedMessageBodySize());
 
     Crypto* crypto = databaseGetConversation(fromId);
-    if (!crypto) return;
+    if (!crypto) goto releaseLocks;
 
     byte* message = cryptoDecrypt(crypto, encryptedMessage, encryptedSize, false);
     assert(message);
@@ -133,6 +129,7 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
         listAddFront(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
     SDL_free(message);
 
+    releaseLocks:
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
 }
@@ -240,7 +237,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
         databaseRemoveMessages(xFromId);
 
     const User* user = findUser(xFromId);
-    if (!user) return; // if local users list hasn't been synchronized yet
+    if (!user) goto releaseLocks; // if local users list hasn't been synchronized yet
 
     Crypto* crypto = netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
     if (crypto)
@@ -255,6 +252,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     else
         renderShowUnableToCreateConversation();
 
+    releaseLocks:
     renderSetControlsBlocking(false);
     renderHideInfiniteProgressBar();
 }
