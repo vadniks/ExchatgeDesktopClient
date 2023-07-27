@@ -603,7 +603,10 @@ Crypto* nullable netCreateConversation(unsigned id) {
         return NULL;
     }
 
-    if (!waitForTimeoutOrQuitSettingUpConversation()) return NULL;
+    if (!waitForTimeoutOrQuitSettingUpConversation()) {
+        cryptoDestroy(crypto);
+        return NULL;
+    }
 
     if (!(message = receive())
         || message->flag != FLAG_EXCHANGE_HEADERS
@@ -671,7 +674,10 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         return NULL;
     }
 
-    if (!waitForTimeoutOrQuitSettingUpConversation()) return NULL;
+    if (!waitForTimeoutOrQuitSettingUpConversation()) {
+        cryptoDestroy(crypto);
+        return NULL;
+    }
 
     Message* message = NULL;
     if (!(message = receive())
@@ -709,7 +715,10 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         return NULL;
     }
 
-    if (!waitForTimeoutOrQuitSettingUpConversation()) return NULL;
+    if (!waitForTimeoutOrQuitSettingUpConversation()) {
+        cryptoDestroy(crypto);
+        return NULL;
+    }
 
     if (!(message = receive())
         || message->flag != FLAG_EXCHANGE_HEADERS_DONE
