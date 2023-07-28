@@ -77,6 +77,7 @@ void renderProcessEvent(SDL_Event* event);
 void renderInputEnded(void);
 
 void renderSetWindowTitle(const char* title); // expects a this->usernameSize-sized string, functions creates a formatted string like '<WINDOW_TITLE>, <title>' ('Exchatge, user1')
+void renderAlterConversationMessageBuffer(const char* text, unsigned size); // only available when conversation is shown
 void renderAlterFilePathBuffer(const char* filePath, unsigned size); // only available when file chooser is shown
 
 void renderShowLogIn(void);
@@ -85,6 +86,7 @@ void renderShowUsersList(const char* currentUserName); // the name of the user w
 void renderShowConversation(const char* conversationName); // expects the name (which is copied) (with length == this->conversationNameSize) of the user with whom the current user will have a conversation or the name of that conversation
 void renderShowFileChooser(void);
 
+bool renderIsConversationShown(void);
 bool renderIsFileChooserShown(void);
 
 bool renderShowInviteDialog(const char* fromUserName); // blocks the caller thread, returns true if user accepted the invitation, expects a this->username-sized string - the name of the user who has sent the invitation

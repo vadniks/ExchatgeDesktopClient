@@ -358,6 +358,17 @@ void renderSetWindowTitle(const char* title) {
     SYNCHRONIZED(SDL_SetWindowTitle(this->window, xTitle);)
 }
 
+void renderAlterConversationMessageBuffer(const char* text, unsigned size) {
+    assert(this && size <= this->maxMessageSize);
+    SYNCHRONIZED_BEGIN
+
+    assert(this->state == STATE_CONVERSATION);
+    SDL_memset(this->conversationMessage, 0, this->maxMessageSize);
+    SDL_memcpy(this->conversationMessage, text, (this->enteredConversationMessageSize = size));
+
+    SYNCHRONIZED_END
+}
+
 void renderAlterFilePathBuffer(const char* filePath, unsigned size) {
     assert(this && size <= this->maxFilePathSize);
     SYNCHRONIZED_BEGIN
@@ -411,6 +422,7 @@ void renderShowFileChooser(void) {
     SYNCHRONIZED(this->state = STATE_FILE_CHOOSER;)
 }
 
+bool renderIsConversationShown(void) { return this->state == STATE_CONVERSATION; }
 bool renderIsFileChooserShown(void) { return this->state == STATE_FILE_CHOOSER; }
 
 bool renderShowInviteDialog(const char* fromUserName) {
