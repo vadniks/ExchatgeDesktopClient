@@ -297,7 +297,7 @@ void renderInit(
 }
 
 void renderSetMaxMessageSizeAndInitConversationMessageBuffer(unsigned size) {
-    assert(this && !this->conversationMessage);
+    assert(this && !this->conversationMessage && size);
     this->maxMessageSize = size;
     this->conversationMessage = SDL_calloc(size + 1, sizeof(char));
 }
@@ -378,7 +378,7 @@ void renderShowRegister(void) {
 }
 
 void renderShowUsersList(const char* currentUserName) {
-    assert(this);
+    assert(this && this->usersList);
     SYNCHRONIZED_BEGIN
 
     SDL_memcpy(this->currentUserName, currentUserName, this->usernameSize);
@@ -388,7 +388,7 @@ void renderShowUsersList(const char* currentUserName) {
 }
 
 void renderShowConversation(const char* conversationName) {
-    assert(this && this->conversationMessage && this->maxMessageSize);
+    assert(this && this->conversationMessage && this->maxMessageSize && this->conversationMessagesList);
     SYNCHRONIZED_BEGIN
 
     SDL_memcpy(this->conversationName, conversationName, this->conversationNameSize);
