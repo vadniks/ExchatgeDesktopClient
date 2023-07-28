@@ -24,8 +24,8 @@
 #include "../conversationMessage.h"
 #include "render.h"
 
-#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->uiQueriesMutex)); {
-#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->uiQueriesMutex)); }
+#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->uiQueriesMutex));
+#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->uiQueriesMutex));
 #define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
 
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
@@ -595,6 +595,7 @@ static void drawLogInForm(int width, float height, bool logIn) {
     nk_layout_row_static(this->context, height * 0.25f, width / 2, 2);
 
     nk_label(this->context, USERNAME, NK_TEXT_ALIGN_LEFT);
+    SYNCHRONIZED_BEGIN
     nk_edit_string(
         this->context,
         NK_EDIT_FIELD,
@@ -613,6 +614,7 @@ static void drawLogInForm(int width, float height, bool logIn) {
         (int) this->passwordSize,
         &nk_filter_default
     );
+    SYNCHRONIZED_END
 
     nk_layout_row_static(this->context, height * 0.25f, width / 2, 2);
     if (nk_button_label(this->context, PROCEED)) onProceedClickedAfterLogInRegister(logIn);
@@ -752,6 +754,7 @@ static void drawUsersList(void) {
     char groupName[2] = {1, 0};
     if (!nk_group_begin(this->context, groupName, 0)) return;
 
+    SYNCHRONIZED_BEGIN
     const unsigned size = listSize(this->usersList);
     for (unsigned i = 0; i < size; i++) {
         const User* user = (User*) listGet(this->usersList, i);
@@ -761,6 +764,7 @@ static void drawUsersList(void) {
 
         drawUserRow(user->id, idString, user->name, user->conversationExists, user->online);
     }
+    SYNCHRONIZED_END
 
     nk_group_end(this->context);
 }
@@ -784,7 +788,7 @@ static void drawConversationMessage( // TODO: wrap each message in group, so the
     nk_layout_row_begin(this->context, NK_DYNAMIC, messageHeight < charHeight ? charHeight : messageHeight, 4);
 
     char text[this->maxMessageSize + 1];
-    SDL_memcpy(text, message->text, this->maxMessageSize);
+    SDL_memcpy(text, message->text, message->size);
     text[this->maxMessageSize] = 0;
 
     nk_layout_row_push(this->context, timestampRatio);
@@ -854,6 +858,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         fromRatio = aboveInitialWidth ? 0.05f : 0.1f,
         textRatio = aboveInitialWidth ? 0.435f : 0.35f;
 
+    SYNCHRONIZED_BEGIN
     const unsigned size = listSize(this->conversationMessagesList);
     for (unsigned i = 0; i < size; i++) {
         const ConversationMessage* message = listGet(this->conversationMessagesList, i);
@@ -868,12 +873,14 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
             timestampColor
         );
     }
+    SYNCHRONIZED_END
 
     nk_group_end(this->context);
 
     nk_layout_row_begin(this->context, NK_DYNAMIC, (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f, 2);
 
     nk_layout_row_push(this->context, 0.85f);
+    SYNCHRONIZED_BEGIN
     nk_edit_string(
         this->context,
         NK_EDIT_SIMPLE | NK_EDIT_MULTILINE, // if use NK_EDIT_CLIPBOARD and user actually pastes smth then smth strange happens which causes memory corruption and therefore assert(!SDL_GetNumAllocations()) in main.c fails
@@ -882,6 +889,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         (int) this->maxMessageSize,
         nk_filter_default
     );
+    SYNCHRONIZED_END
 
     nk_layout_row_push(this->context, aboveInitialWidth ? 0.069f : 0.067f);
     if (nk_button_label(this->context, SEND)) onSendClicked();
@@ -912,6 +920,7 @@ static void drawFileChooser(void) {
 
     nk_layout_row_dynamic(this->context, rowHeight, 3);
     nk_spacer(this->context);
+    SYNCHRONIZED_BEGIN
     nk_edit_string(
         this->context,
         NK_EDIT_SIMPLE,
@@ -920,6 +929,7 @@ static void drawFileChooser(void) {
         (int) this->maxFilePathSize,
         nk_filter_default
     );
+    SYNCHRONIZED_END
     nk_spacer(this->context);
 
     nk_spacer(this->context);
