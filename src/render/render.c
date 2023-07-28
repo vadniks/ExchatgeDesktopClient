@@ -761,7 +761,7 @@ static void drawUsersList(void) {
     nk_group_end(this->context);
 }
 
-static void drawConversationMessage(
+static void drawConversationMessage( // TODO: wrap each message in group, so the messages that aren't currently in drawable are will be skipped and won't be drawn
     float charHeight,
     const ConversationMessage* message,
     float timestampRatio,
