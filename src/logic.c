@@ -275,10 +275,16 @@ void logicOnFileChooserRequested(void) {
 }
 
 void logicFileChooseResultHandler(const char* nullable fileName, unsigned size) {
-    USED(fileName); // TODO
-}
+    assert(this);
+    assert(fileName || !fileName && !size);
 
-void logicOnReturnFromFileChooserRequested(void) {
+    const User* user = findUser(this->toUserId);
+    assert(user);
+
+    if (fileName && size) SDL_Log("%.*s", size, fileName);
+    else if (fileName) SDL_Log("empty fileName");
+    else renderShowConversation(user->name);
+
     // TODO
 }
 

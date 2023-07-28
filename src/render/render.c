@@ -135,7 +135,6 @@ THIS(
     unsigned enteredFilePathSize;
     RenderOnFileChooserRequested onFileChooserRequested;
     RenderFileChooseResultHandler fileChooseResultHandler;
-    RenderOnReturnFromFileChooserRequested onReturnFromFileChooserRequested;
 )
 #pragma clang diagnostic pop
 
@@ -189,8 +188,7 @@ void renderInit(
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
     unsigned maxFilePathSize,
     RenderOnFileChooserRequested onFileChooserRequested,
-    RenderFileChooseResultHandler fileChooseResultHandler,
-    RenderOnReturnFromFileChooserRequested onReturnFromFileChooserRequested
+    RenderFileChooseResultHandler fileChooseResultHandler
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -243,7 +241,6 @@ void renderInit(
     this->enteredFilePathSize = 0;
     this->onFileChooserRequested = onFileChooserRequested;
     this->fileChooseResultHandler = fileChooseResultHandler;
-    this->onReturnFromFileChooserRequested = onReturnFromFileChooserRequested;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -870,7 +867,7 @@ static void drawFileChooser(void) {
 
     { nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3);
         nk_layout_row_push(this->context, 0.2f);
-        if (nk_button_label(this->context, BACK)) (*(this->onReturnFromFileChooserRequested))();
+        if (nk_button_label(this->context, BACK)) (*(this->fileChooseResultHandler))(NULL, 0);
 
         nk_layout_row_push(this->context, aboveInitialWidth ? 0.33f : 0.38f);
         nk_label(this->context, FILE_SELECTION, NK_TEXT_ALIGN_RIGHT);

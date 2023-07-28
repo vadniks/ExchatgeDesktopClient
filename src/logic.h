@@ -31,7 +31,6 @@ const List* logicUsersList(void); // returns permanent users list in which actua
 const List* logicMessagesList(void); // same as usersList but for conversation messages between users
 void logicOnFileChooserRequested(void);
 void logicFileChooseResultHandler(const char* nullable fileName, unsigned size);
-void logicOnReturnFromFileChooserRequested(void);
 void logicOnCredentialsReceived(const char* username, const char* password, bool logIn);
 void logicCredentialsRandomFiller(char* credentials, unsigned size);
 void logicOnLoginRegisterPageQueriedByUser(bool logIn);
