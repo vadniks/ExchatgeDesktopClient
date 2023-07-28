@@ -79,6 +79,8 @@ void renderProcessEvent(SDL_Event* event);
 void renderInputEnded(void);
 
 void renderSetWindowTitle(const char* title); // expects a this->usernameSize-sized string, functions creates a formatted string like '<WINDOW_TITLE>, <title>' ('Exchatge, user1')
+void renderAlterConversationMessageBuffer(const char* text, unsigned size); // only available when conversation is shown
+void renderAlterFilePathBuffer(const char* filePath, unsigned size); // only available when file chooser is shown
 
 void renderShowLogIn(void);
 void renderShowRegister(void);

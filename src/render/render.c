@@ -360,6 +360,30 @@ void renderSetWindowTitle(const char* title) {
     SYNCHRONIZED(SDL_SetWindowTitle(this->window, xTitle);)
 }
 
+void renderAlterConversationMessageBuffer(const char* text, unsigned size) {
+    assert(this && size <= this->maxMessageSize);
+    SYNCHRONIZED_BEGIN
+
+    assert(this->state == STATE_CONVERSATION);
+    SDL_memset(this->conversationMessage, 0, this->maxMessageSize);
+    SDL_memcpy(this->conversationMessage, text, size);
+    this->enteredConversationMessageSize = size;
+
+    SYNCHRONIZED_END
+}
+
+void renderAlterFilePathBuffer(const char* filePath, unsigned size) {
+    assert(this && size <= this->maxFilePathSize);
+    SYNCHRONIZED_BEGIN
+
+    assert(this->state == STATE_FILE_CHOOSER);
+    SDL_memset(this->enteredFilePath, 0, this->maxFilePathSize);
+    SDL_memcpy(this->enteredFilePath, filePath, size);
+    this->enteredFilePathSize = size;
+
+    SYNCHRONIZED_END
+}
+
 void renderShowLogIn(void) {
     assert(this);
     SYNCHRONIZED_BEGIN
@@ -852,7 +876,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     nk_layout_row_push(this->context, 0.85f);
     nk_edit_string(
         this->context,
-        NK_EDIT_BOX | NK_EDIT_MULTILINE | NK_EDIT_EDITOR,
+        NK_EDIT_SIMPLE | NK_EDIT_MULTILINE,
         this->conversationMessage,
         (int*) &(this->enteredConversationMessageSize),
         (int) this->maxMessageSize,
