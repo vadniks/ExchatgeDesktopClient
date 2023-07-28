@@ -295,7 +295,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     // TODO
 }
 
-static void clipboardPaste(void) {} // if directly modify the buffer, the nk_edit_* points to as buffer for editing a string, memory corruption occurs, so until I find the safe way to edit those buffers, no paste option will be implemented
+static void clipboardPaste(void) {}
 static void clipboardCopy(void) {}
 
 void logicProcessEvent(SDL_Event* event) {
