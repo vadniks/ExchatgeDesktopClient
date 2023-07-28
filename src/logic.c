@@ -312,8 +312,8 @@ static void clipboardPaste(void) {
     if (size) {
         const unsigned totalSize = size <= maxSize ? size : maxSize;
         renderIsConversationShown()
-        ? renderAlterConversationMessageBuffer(buffer, totalSize)
-        : renderAlterFilePathBuffer(buffer, totalSize);
+            ? renderAlterConversationMessageBuffer(buffer, totalSize)
+            : renderAlterFilePathBuffer(buffer, totalSize);
     }
     SDL_free(buffer);
 }
