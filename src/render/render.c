@@ -855,32 +855,35 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         nk_filter_default
     );
 
-    nk_layout_row_push(this->context, 0.07f);
+    nk_layout_row_push(this->context, aboveInitialWidth ? 0.069f : 0.067f);
     if (nk_button_label(this->context, SEND)) onSendClicked();
 
-    nk_layout_row_push(this->context, 0.08f);
+    nk_layout_row_push(this->context, aboveInitialWidth ? 0.079f : 0.077f);
     if (nk_button_label(this->context, FILE_TEXT)) (*(this->onFileChooserRequested))();
 
     nk_layout_row_end(this->context);
 }
 
 static void drawFileChooser(void) {
-    const float height = currentHeight();
+    const float height = currentHeight(), rowHeight = (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f;
+    const bool aboveInitialWidth = this->width >= WINDOW_WIDTH * 2;
 
-    { nk_layout_row_begin(this->context, NK_DYNAMIC, height * 2 / 5, 3);
+    { nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3);
         nk_layout_row_push(this->context, 0.2f);
         if (nk_button_label(this->context, BACK)) (*(this->onReturnFromFileChooserRequested))();
 
-        nk_layout_row_push(this->context, 0.4f);
-        nk_label(this->context, FILE_SELECTION, NK_TEXT_ALIGN_LEFT);
+        nk_layout_row_push(this->context, aboveInitialWidth ? 0.33f : 0.38f);
+        nk_label(this->context, FILE_SELECTION, NK_TEXT_ALIGN_RIGHT);
 
-        nk_layout_row_push(this->context, 0.4f);
+        nk_layout_row_push(this->context, aboveInitialWidth ? 0.47f : 0.42f);
         nk_spacer(this->context);
     nk_layout_row_end(this->context); }
 
-    nk_layout_row_dynamic(this->context, (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f, 4);
+    nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
     nk_spacer(this->context);
 
+    nk_layout_row_dynamic(this->context, rowHeight, 3);
+    nk_spacer(this->context);
     nk_edit_string(
         this->context,
         NK_EDIT_SIMPLE,
@@ -889,7 +892,9 @@ static void drawFileChooser(void) {
         (int) this->maxFilePathSize,
         nk_filter_default
     );
+    nk_spacer(this->context);
 
+    nk_spacer(this->context);
     if (nk_button_label(this->context, CHOOSE)) (*(this->fileChooseResultHandler))(this->enteredFilePath, this->enteredFilePathSize);
     nk_spacer(this->context);
 }

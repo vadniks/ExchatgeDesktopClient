@@ -285,7 +285,7 @@ void logicOnReturnFromFileChooserRequested(void) {
 static void processCredentials(void** data) {
     const char* username = data[0];
     const char* password = data[1];
-    bool logIn = *((bool*) data[2]);
+    const bool logIn = *((bool*) data[2]);
 
     assert(this);
     if (!logIn) goto netInit;
