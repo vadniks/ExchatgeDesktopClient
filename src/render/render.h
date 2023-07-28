@@ -68,7 +68,7 @@ void renderInit(
 );
 
 // these must be called before first call to renderDraw() to initialize things, begin1
-void renderSetMaxMessageSize(unsigned size);
+void renderSetMaxMessageSizeAndInitConversationMessageBuffer(unsigned size);
 void renderSetAdminMode(bool mode);
 void renderSetUsersList(const List* usersList); // <User*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
 void renderSetMessagesList(const List* messagesList); // <ConversationMessage*> must be deallocated by the caller after this module gets shut down

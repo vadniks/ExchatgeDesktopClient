@@ -137,7 +137,7 @@ bool lifecycleInit(unsigned argc, const char** argv) {
         &logicFileChooseResultHandler
     );
     logicInit(argc, argv);
-    renderSetMaxMessageSize(logicUnencryptedMessageBodySize());
+    renderSetMaxMessageSizeAndInitConversationMessageBuffer(logicUnencryptedMessageBodySize());
     renderSetAdminMode(logicIsAdminMode());
     renderSetUsersList(logicUsersList());
     renderSetMessagesList(logicMessagesList());

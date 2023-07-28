@@ -112,11 +112,11 @@ THIS(
     const List* usersList; // <User*> allocated elsewhere
     RenderUserForConversationChosenCallback onUserForConversationChosen;
     const List* conversationMessagesList; // <ConversationMessage*> allocated elsewhere, conversation messages
-    unsigned maxMessageSize; // conversation message size // TODO: rename to conversationMessageSize
     char* conversationName; // conversation name or the name of the recipient
     unsigned conversationNameSize;
     bool adminMode;
     RenderOnServerShutdownRequested onServerShutdownRequested;
+    unsigned maxMessageSize; // conversation message size // TODO: rename to conversationMessageSize
     char* conversationMessage; // conversation message buffer for current user
     unsigned enteredConversationMessageSize;
     bool loading;
@@ -296,10 +296,10 @@ void renderInit(
     this->colorf = (struct nk_colorf) { 0.10f, 0.18f, 0.24f, 1.00f };
 }
 
-void renderSetMaxMessageSize(unsigned size) {
+void renderSetMaxMessageSizeAndInitConversationMessageBuffer(unsigned size) {
     assert(this && !this->conversationMessage);
     this->maxMessageSize = size;
-    this->conversationMessage = SDL_calloc(size, sizeof(char));
+    this->conversationMessage = SDL_calloc(size + 1, sizeof(char));
 }
 
 void renderSetAdminMode(bool mode) {
