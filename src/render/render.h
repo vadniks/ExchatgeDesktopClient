@@ -67,18 +67,18 @@ void renderInit(
     RenderFileChooseResultHandler fileChooseResultHandler
 );
 
+// these must be called before first call to renderDraw() to initialize things, begin1
 void renderSetMaxMessageSize(unsigned size);
 void renderSetAdminMode(bool mode);
 void renderSetUsersList(const List* usersList); // <User*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
 void renderSetMessagesList(const List* messagesList); // <ConversationMessage*> must be deallocated by the caller after this module gets shut down
+// end1
 
 void renderInputBegan(void);
 void renderProcessEvent(SDL_Event* event);
 void renderInputEnded(void);
 
 void renderSetWindowTitle(const char* title); // expects a this->usernameSize-sized string, functions creates a formatted string like '<WINDOW_TITLE>, <title>' ('Exchatge, user1')
-void renderAlterConversationMessageBuffer(const char* text, unsigned size); // only available when conversation is shown
-void renderAlterFilePathBuffer(const char* filePath, unsigned size); // only available when file chooser is shown
 
 void renderShowLogIn(void);
 void renderShowRegister(void);

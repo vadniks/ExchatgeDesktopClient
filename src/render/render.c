@@ -223,7 +223,8 @@ void renderInit(
 
     this->adminMode = false;
     this->onServerShutdownRequested = onServerShutdownRequested;
-    this->conversationMessage = SDL_calloc(this->maxMessageSize, sizeof(char));
+    this->maxMessageSize = 0;
+    this->conversationMessage = NULL;
     this->enteredConversationMessageSize = 0;
     this->loading = false;
     this->infiniteProgressBarAnim = '|';
@@ -296,8 +297,9 @@ void renderInit(
 }
 
 void renderSetMaxMessageSize(unsigned size) {
-    assert(this);
+    assert(this && !this->conversationMessage);
     this->maxMessageSize = size;
+    this->conversationMessage = SDL_calloc(size, sizeof(char));
 }
 
 void renderSetAdminMode(bool mode) {
@@ -358,28 +360,6 @@ void renderSetWindowTitle(const char* title) {
     SYNCHRONIZED(SDL_SetWindowTitle(this->window, xTitle);)
 }
 
-void renderAlterConversationMessageBuffer(const char* text, unsigned size) {
-    assert(this && size <= this->maxMessageSize);
-    SYNCHRONIZED_BEGIN
-
-    assert(this->state == STATE_CONVERSATION);
-    SDL_memset(this->conversationMessage, 0, this->maxMessageSize);
-    SDL_memcpy(this->conversationMessage, text, (this->enteredConversationMessageSize = size));
-
-    SYNCHRONIZED_END
-}
-
-void renderAlterFilePathBuffer(const char* filePath, unsigned size) {
-    assert(this && size <= this->maxFilePathSize);
-    SYNCHRONIZED_BEGIN
-
-    assert(this->state == STATE_FILE_CHOOSER);
-    SDL_memset(this->enteredFilePath, 0, this->maxFilePathSize);
-    SDL_memcpy(this->enteredFilePath, filePath, (this->enteredFilePathSize = size));
-
-    SYNCHRONIZED_END
-}
-
 void renderShowLogIn(void) {
     assert(this);
     SYNCHRONIZED_BEGIN
@@ -408,7 +388,7 @@ void renderShowUsersList(const char* currentUserName) {
 }
 
 void renderShowConversation(const char* conversationName) {
-    assert(this);
+    assert(this && this->conversationMessage && this->maxMessageSize);
     SYNCHRONIZED_BEGIN
 
     SDL_memcpy(this->conversationName, conversationName, this->conversationNameSize);

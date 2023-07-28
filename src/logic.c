@@ -295,29 +295,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     // TODO
 }
 
-static void clipboardPaste(void) {
-    if (!SDL_HasClipboardText()) return;
-    if (!renderIsConversationShown() && !renderIsFileChooserShown()) return;
-
-    const unsigned maxSize = renderIsConversationShown() ? NET_MESSAGE_BODY_SIZE : LOGIC_MAX_FILE_PATH_SIZE;
-    char* text = SDL_GetClipboardText(), * buffer = NULL;
-    unsigned size;
-
-    for (size = 0; text[size] && size <= maxSize; size++)
-        buffer = SDL_realloc(buffer, size + 1),
-        buffer[size] = text[size];
-
-    SDL_free(text);
-
-    if (size) {
-        const unsigned totalSize = size <= maxSize ? size : maxSize;
-        renderIsConversationShown()
-            ? renderAlterConversationMessageBuffer(buffer, totalSize)
-            : renderAlterFilePathBuffer(buffer, totalSize);
-    }
-    SDL_free(buffer);
-}
-
+static void clipboardPaste(void) {} // if directly modify the buffer, the nk_edit_* points to as buffer for editing a string, memory corruption occurs, so until I find the safe way to edit those buffers, no paste option will be implemented
 static void clipboardCopy(void) {}
 
 void logicProcessEvent(SDL_Event* event) {
