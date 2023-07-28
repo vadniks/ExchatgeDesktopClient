@@ -876,7 +876,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     nk_layout_row_push(this->context, 0.85f);
     nk_edit_string(
         this->context,
-        NK_EDIT_SIMPLE | NK_EDIT_MULTILINE,
+        NK_EDIT_SIMPLE | NK_EDIT_MULTILINE, // if use NK_EDIT_CLIPBOARD and user actually pastes smth then smth strange happens which causes memory corruption and therefore assert(!SDL_GetNumAllocations()) in main.c fails
         this->conversationMessage,
         (int*) &(this->enteredConversationMessageSize),
         (int) this->maxMessageSize,
