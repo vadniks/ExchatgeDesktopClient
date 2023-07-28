@@ -39,6 +39,7 @@
 #define boolToStr(x) (x ? "true" : "false")
 #define printBinaryArray(x, y) puts(#x); for (unsigned i = 0; i < (y); printf("%x ", ((const unsigned char*) x)[i++])); puts("");
 #define USED(x) ((void) x)
+#define STUB USED(0)
 
 #define staticAssert(x) _Static_assert(x, "")
 

@@ -37,7 +37,7 @@ typedef char* (*RenderMillisToDateTimeConverter)(unsigned long); // returns null
 typedef void (*RenderOnSendClicked)(const char* text, unsigned size); // receives an auto deallocated text of the message the user wanna send, text length is equal to size which is in range (0, this->maxMessageSize]
 typedef void (*RenderOnUpdateUsersListClicked)(void);
 typedef void (*RenderOnFileChooserRequested)(void);
-typedef void (*RenderFileChooseResultHandler)(const char* nullable fileName, unsigned size); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null and zero size if no file was chosen (return requested) or error occurred
+typedef void (*RenderFileChooseResultHandler)(const char* nullable filePath, unsigned size); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null and zero size if no file was chosen (return requested) or error occurred
 
 typedef enum {
     RENDER_DELETE_CONVERSATION = -1,
@@ -77,12 +77,15 @@ void renderProcessEvent(SDL_Event* event);
 void renderInputEnded(void);
 
 void renderSetWindowTitle(const char* title); // expects a this->usernameSize-sized string, functions creates a formatted string like '<WINDOW_TITLE>, <title>' ('Exchatge, user1')
+void renderAlterFilePathBuffer(const char* filePath, unsigned size); // only available when file chooser is shown
 
 void renderShowLogIn(void);
 void renderShowRegister(void);
 void renderShowUsersList(const char* currentUserName); // the name of the user who is currently logged in via this client, this->usernameSize-sized, copied
 void renderShowConversation(const char* conversationName); // expects the name (which is copied) (with length == this->conversationNameSize) of the user with whom the current user will have a conversation or the name of that conversation
 void renderShowFileChooser(void);
+
+bool renderIsFileChooserShown(void);
 
 bool renderShowInviteDialog(const char* fromUserName); // blocks the caller thread, returns true if user accepted the invitation, expects a this->username-sized string - the name of the user who has sent the invitation
 void renderSetControlsBlocking(bool blocking); // true to block controls, false to unblock, use with show*Dialog
@@ -99,6 +102,7 @@ void renderShowUnableToCreateConversation(void);
 void renderShowConversationDoesntExist(void);
 void renderShowConversationAlreadyExists(void);
 void renderShowCannotOpenFileError(void);
+void renderShowEmptyFilePathError(void);
 
 void renderShowInfiniteProgressBar(void); // showed only on pages that support it (log in/register, not splash as it's a special case)
 void renderHideInfiniteProgressBar(void);

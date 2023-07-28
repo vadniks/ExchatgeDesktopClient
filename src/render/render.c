@@ -81,6 +81,7 @@ STATIC_CONST_STRING CHOOSE = "Choose";
 STATIC_CONST_STRING FILE_TEXT = "File";
 STATIC_CONST_STRING FILE_SELECTION = "File selection";
 STATIC_CONST_STRING CANNOT_OPEN_FILE = "Cannot open the file";
+STATIC_CONST_STRING EMPTY_FILE_PATH = "Empty file path";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -357,6 +358,17 @@ void renderSetWindowTitle(const char* title) {
     SYNCHRONIZED(SDL_SetWindowTitle(this->window, xTitle);)
 }
 
+void renderAlterFilePathBuffer(const char* filePath, unsigned size) {
+    assert(this && size <= this->maxFilePathSize);
+    SYNCHRONIZED_BEGIN
+
+    assert(this->state == STATE_FILE_CHOOSER);
+    SDL_memset(this->enteredFilePath, 0, this->maxFilePathSize);
+    SDL_memcpy(this->enteredFilePath, filePath, (this->enteredFilePathSize = size));
+
+    SYNCHRONIZED_END
+}
+
 void renderShowLogIn(void) {
     assert(this);
     SYNCHRONIZED_BEGIN
@@ -398,6 +410,8 @@ void renderShowFileChooser(void) {
     assert(this);
     SYNCHRONIZED(this->state = STATE_FILE_CHOOSER;)
 }
+
+bool renderIsFileChooserShown(void) { return this->state == STATE_FILE_CHOOSER; }
 
 bool renderShowInviteDialog(const char* fromUserName) {
     assert(this);
@@ -483,6 +497,7 @@ void renderShowUnableToCreateConversation(void) { postSystemMessage(UNABLE_TO_CR
 void renderShowConversationDoesntExist(void) { postSystemMessage(CONVERSATION_DOESNT_EXIST, true); }
 void renderShowConversationAlreadyExists(void) { postSystemMessage(CONVERSATION_ALREADY_EXISTS, true); }
 void renderShowCannotOpenFileError(void) { postSystemMessage(CANNOT_OPEN_FILE, true); }
+void renderShowEmptyFilePathError(void) { postSystemMessage(EMPTY_FILE_PATH, true); }
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);

@@ -19,6 +19,7 @@
 #include <sdl/SDL.h>
 #include <assert.h>
 #include <time.h>
+#include <unistd.h>
 #include "render/render.h"
 #include "crypto.h"
 #include "net.h"
@@ -274,18 +275,57 @@ void logicOnFileChooserRequested(void) {
     renderShowFileChooser();
 }
 
-void logicFileChooseResultHandler(const char* nullable fileName, unsigned size) {
+static bool checkFile(const char* filePath) { return !access(filePath, F_OK | R_OK); }
+
+void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) {
     assert(this);
-    assert(fileName || !fileName && !size);
+    assert(filePath || !filePath && !size);
 
     const User* user = findUser(this->toUserId);
     assert(user);
 
-    if (fileName && size) SDL_Log("%.*s", size, fileName);
-    else if (fileName) SDL_Log("empty fileName");
-    else renderShowConversation(user->name);
+    if (!filePath) {
+        renderShowConversation(user->name);
+        return;
+    }
+
+    if (size) SDL_Log("%.*s", size, filePath);
+    else SDL_Log("empty filePath");
 
     // TODO
+}
+
+static void clipboardPaste(void) {
+    if (!SDL_HasClipboardText() || !renderIsFileChooserShown()) return;
+
+    char* text = SDL_GetClipboardText(), * buffer = NULL;
+    unsigned size;
+
+    for (size = 0; text[size] && size <= LOGIC_MAX_FILE_PATH_SIZE; size++)
+        buffer = SDL_realloc(buffer, size + 1),
+        buffer[size] = text[size];
+
+    SDL_free(text);
+
+    if (size) renderAlterFilePathBuffer(buffer, size <= LOGIC_MAX_FILE_PATH_SIZE ? size : LOGIC_MAX_FILE_PATH_SIZE);
+    SDL_free(buffer);
+}
+
+static void clipboardCopy(void) {}
+
+void logicProcessEvent(SDL_Event* event) {
+    static bool ctrlPressed;
+    if (event->key.keysym.sym == SDLK_LCTRL)
+        ctrlPressed = event->type == SDL_KEYDOWN;
+
+    const SDL_KeyCode keyCode = event->key.keysym.sym;
+
+    if (ctrlPressed && event->type == SDL_KEYUP)
+         keyCode == SDLK_v
+            ? clipboardPaste()
+            : keyCode == SDLK_c
+                ? clipboardCopy()
+                : STUB;
 }
 
 static void processCredentials(void** data) {
