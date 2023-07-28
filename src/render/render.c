@@ -777,7 +777,7 @@ static void drawConversationMessage( // TODO: wrap each message in group, so the
     const float messageHeight = (
         (float) message->size / (
             ((float) this->width * 0.375f) /
-            ((float) FONT_SIZE * 2 / 3)
+            ((float) FONT_SIZE)
         )
     ) * (float) FONT_SIZE;
 
