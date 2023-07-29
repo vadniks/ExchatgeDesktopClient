@@ -345,7 +345,16 @@ static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
 }
 
 static unsigned nextFileChunkSupplier(unsigned index, byte* buffer) {
-    return 0; // TODO
+    assert(this->rwops);
+    const unsigned targetSize = logicUnencryptedMessageBodySize();
+
+    const unsigned actualSize = SDL_RWread(this->rwops, buffer, 1, targetSize);
+    if (actualSize) return actualSize;
+
+    assert(index);
+    SDL_RWclose(this->rwops);
+    this->rwops = NULL;
+    return 0;
 }
 
 static void nextFileChunkReceiver(unsigned index, unsigned fileSize, unsigned receivedBytesCount, const byte* buffer) {
