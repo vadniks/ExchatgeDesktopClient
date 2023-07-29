@@ -281,8 +281,6 @@ void logicOnFileChooserRequested(void) {
     renderShowFileChooser();
 }
 
-static inline bool checkFile(const char* filePath) { return !access(filePath, F_OK | R_OK); }
-
 static void beginFileExchange(unsigned* fileSize) {
     assert(this);
 
@@ -328,7 +326,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     assert(!this->rwops);
     this->rwops = SDL_RWFromFile(filePath, "rb");
 
-    if (!checkFile(filePath) || !this->rwops) {
+    if (!this->rwops) {
         renderHideInfiniteProgressBar();
         renderSetControlsBlocking(false);
 
@@ -388,9 +386,18 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
 
     assert(!this->rwops);
     this->rwops = SDL_RWFromFile(filePath, "wb");
-    assert(this->rwops);
 
-    if (!netReplyToFileExchangeInvite(fromId, fileSize, true)) {// blocks the thread again
+    if (!this->rwops) {
+        assert(!netReplyToFileExchangeInvite(fromId, fileSize, false));
+
+        renderHideInfiniteProgressBar();
+        renderSetControlsBlocking(false);
+
+        renderShowUnableToTransmitFileError();
+        return;
+    }
+
+    if (!netReplyToFileExchangeInvite(fromId, fileSize, true)) { // blocks the thread again
         renderShowUnableToTransmitFileError();
         SDL_RWclose(this->rwops);
         this->rwops = NULL;

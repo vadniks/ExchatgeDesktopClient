@@ -400,8 +400,7 @@ static void processFileExchangeRequestMessage(const Message* message) {
     this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
     SYNCHRONIZED_END
 
-    unsigned fileSize = 0;
-    SDL_memcpy(&fileSize, message->body, sizeof(int));
+    const unsigned fileSize = *((unsigned*) message->body);
     assert(fileSize);
 
     (*(this->onFileExchangeInviteReceived))(message->from, fileSize);
@@ -419,7 +418,7 @@ static void processMessage(const Message* message) {
         case STATE_AUTHENTICATED:
             if (message->flag == FLAG_EXCHANGE_KEYS && message->size == INVITE_ASK)
                 processConversationSetUpMessage(message);
-            if (message->flag == FLAG_FILE_ASK)
+            if (message->flag == FLAG_FILE_ASK && message->size == INVITE_ASK)
                 processFileExchangeRequestMessage(message);
             else if (message->flag == FLAG_PROCEED)
                 (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
