@@ -803,7 +803,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     Message* message = NULL;
     if (!(message = receive())
         || message->flag != FLAG_FILE_ASK
-        || message->size != fileSize)
+        || *((unsigned*) message->body) != fileSize)
     {
         SYNCHRONIZED(this->exchangingFile = false;)
         SDL_free(message);
@@ -838,8 +838,9 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    if (accept) *((unsigned*) body) = fileSize;
 
-    if (!netSend(FLAG_FILE_ASK, body, accept ? fileSize : INVITE_DENY, fromId)) {
+    if (!netSend(FLAG_FILE_ASK, body, INVITE_ASK, fromId)) {
         SYNCHRONIZED(this->exchangingFile = false;)
         return false;
     }
