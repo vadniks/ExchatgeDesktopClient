@@ -787,15 +787,17 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
-    SDL_memcpy(body, &fileSize, sizeof(int));
+    *((unsigned*) body) = fileSize;
 
     if (!netSend(FLAG_FILE_ASK, body, INVITE_ASK, toId)) {
         SYNCHRONIZED(this->exchangingFile = false;)
+        SDL_Log("1 a");
         return false;
     }
 
     if (!waitForReceiveWithTimeout()) {
         SYNCHRONIZED(this->exchangingFile = false;)
+        SDL_Log("1 b");
         return false;
     }
 
@@ -806,6 +808,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     {
         SYNCHRONIZED(this->exchangingFile = false;)
         SDL_free(message);
+        SDL_Log("1 c %u %u", *((unsigned*) message->body), fileSize); // TODO: fails here, prints "1 c 183 2231" == "1 c b7 8b7" - wrong size 'cause one byte is lost smwhr
         return false;
     }
     SDL_free(message);
@@ -816,11 +819,13 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
 
         if (!netSend(FLAG_FILE, body, bytesWritten, toId)) {
             SYNCHRONIZED(this->exchangingFile = false;)
+            SDL_Log("1 d %u %u", index, totalWritten);
             return false;
         }
 
         if (bytesWritten < NET_MESSAGE_BODY_SIZE) break;
     }
+    SDL_Log("1 e");
 
     assert(totalWritten == fileSize);
     SYNCHRONIZED(this->exchangingFile = false;)
@@ -832,6 +837,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
 
     if (inviteProcessingTimeoutExceeded()) {
         SYNCHRONIZED(this->exchangingFile = false;)
+        SDL_Log("2 a");
         return false;
     }
 
@@ -841,11 +847,13 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
 
     if (!netSend(FLAG_FILE_ASK, body, INVITE_ASK, fromId)) {
         SYNCHRONIZED(this->exchangingFile = false;)
+        SDL_Log("2 b");
         return false;
     }
 
     if (!accept) {
         SYNCHRONIZED(this->exchangingFile = false;)
+        SDL_Log("2 c");
         return false;
     }
 
@@ -861,6 +869,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
 
         (*(this->netNextFileChunkReceiver))(fromId, index++, fileSize, message->size, message->body);
         totalReceived += message->size;
+        SDL_Log("2 d %u %u", index, totalReceived);
 
         SDL_free(message);
         message = NULL;
@@ -868,6 +877,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     SDL_free(message);
 
     SYNCHRONIZED(this->exchangingFile = false;)
+    SDL_Log("2 e %u %u", fileSize, totalReceived);
     return totalReceived == fileSize;
 }
 
