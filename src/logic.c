@@ -433,9 +433,20 @@ static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) {
     return 0;
 }
 
-static void nextFileChunkReceiver(unsigned index, unsigned fileSize, unsigned receivedBytesCount, const byte* buffer) {
+static void nextFileChunkReceiver(unsigned fromId, unsigned index, unsigned fileSize, unsigned receivedBytesCount, const byte* encryptedBuffer) {
     assert(this && this->rwops);
-    assert(SDL_RWwrite(this->rwops, buffer, 1, receivedBytesCount) == receivedBytesCount);
+
+    const unsigned decryptedSize = receivedBytesCount - cryptoEncryptedSize(0);
+    assert(decryptedSize && decryptedSize <= logicUnencryptedMessageBodySize());
+
+    Crypto* crypto = databaseGetConversation(fromId);
+    assert(crypto);
+
+    byte* decrypted = cryptoDecrypt(crypto, encryptedBuffer, receivedBytesCount, false);
+    assert(SDL_RWwrite(this->rwops, decrypted, 1, decryptedSize) == receivedBytesCount);
+    SDL_free(decrypted);
+
+    cryptoDestroy(crypto);
 
     static unsigned totalWritten; // the static keyword makes tha value bytes of this variable be stored in a static storage - initialized once and then used as any other variable outside the function
     if (!index) totalWritten = 0;

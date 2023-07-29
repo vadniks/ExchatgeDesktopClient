@@ -859,7 +859,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     {
         assert(message->size <= NET_MESSAGE_BODY_SIZE);
 
-        (*(this->netNextFileChunkReceiver))(index++, fileSize, message->size, message->body);
+        (*(this->netNextFileChunkReceiver))(fromId, index++, fileSize, message->size, message->body);
         totalReceived += message->size;
 
         SDL_free(message);
