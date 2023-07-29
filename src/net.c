@@ -388,7 +388,7 @@ static void processConversationSetUpMessage(const Message* message) {
 }
 
 static void processFileExchangeRequestMessage(const Message* message) {
-    assert(message->flag == FLAG_FILE_ASK);
+    assert(message->flag == FLAG_FILE_ASK && message->size == INVITE_ASK);
 
     SYNCHRONIZED_BEGIN
     if (this->settingUpConversation || this->exchangingFile) {
@@ -400,7 +400,11 @@ static void processFileExchangeRequestMessage(const Message* message) {
     this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
     SYNCHRONIZED_END
 
-    (*(this->onFileExchangeInviteReceived))(message->from, message->size);
+    unsigned fileSize = 0;
+    SDL_memcpy(&fileSize, message->body, sizeof(int));
+    assert(!fileSize);
+
+    (*(this->onFileExchangeInviteReceived))(message->from, fileSize);
 }
 
 static void processMessage(const Message* message) {
@@ -784,8 +788,9 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    SDL_memcpy(body, &fileSize, sizeof(int));
 
-    if (!netSend(FLAG_FILE_ASK, body, fileSize, toId)) {
+    if (!netSend(FLAG_FILE_ASK, body, INVITE_ASK, toId)) {
         SYNCHRONIZED(this->exchangingFile = false;)
         return false;
     }
