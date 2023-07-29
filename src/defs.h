@@ -30,6 +30,10 @@
 #   error "New C features are used"
 #endif
 
+#ifdef __STDC_NO_ATOMICS__
+#   error "Atomic keyword is used"
+#endif
+
 #define THIS(x) \
     typedef struct { x } This; \
     static This* this = NULL;
@@ -44,7 +48,6 @@
 #define staticAssert(x) _Static_assert(x, "")
 
 #define atomic _Atomic
-#define generic _Generic
 
 #if !defined(__GNUC__) // && !defined(__clang__) as clang defines __GNUC__ too
 #   error "Project uses gcc extensions"

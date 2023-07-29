@@ -47,7 +47,7 @@ THIS(
     bool adminMode;
     atomic unsigned state;
     char* currentUserName;
-    unsigned toUserId; // the id of the user, the current user (logged in via this client) wanna speak to
+    atomic unsigned toUserId; // the id of the user, the current user (logged in via this client) wanna speak to
     atomic bool databaseInitialized;
 )
 #pragma clang diagnostic pop
@@ -177,6 +177,7 @@ static void onDisconnected(void) {
 
 static void onUsersFetched(NetUserInfo** infos, unsigned size) {
     assert(this && this->databaseInitialized);
+    listClear(this->usersList);
 
     NetUserInfo* info;
     for (unsigned i = 0, id; i < size; i++) {

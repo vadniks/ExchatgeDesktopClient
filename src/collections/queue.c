@@ -51,15 +51,15 @@ void queuePush(Queue* queue, const void* value) {
     assert(queue->size < 0xfffffffe);
 
     queue->values = SDL_realloc(queue->values, ++(queue->size) * VOID_PTR_SIZE);
-    queue->values[queue->size - 1] = value;
+    queue->values[queue->size - 1] = (void*) value;
 
     SYNCHRONIZED_END
 }
 
 void* queuePop(Queue* queue) {
-    assert(queue && !queue->destroyed);
+    assert(queue && !queue->destroyed && queue->size > 0);
     SYNCHRONIZED_BEGIN
-    assert(queue->values && queue->size > 0);
+    assert(queue->values);
 
     void* value = queue->values[0];
 

@@ -110,7 +110,7 @@ THIS(
     NetNotifierCallback onRegisterResult;
     NetCallback onDisconnected;
     NetCurrentTimeMillisGetter currentTimeMillisGetter;
-    int lastSentFlag;
+    atomic int lastSentFlag;
     NetOnUsersFetched onUsersFetched;
     NetUserInfo** userInfos;
     unsigned userInfosSize;
@@ -311,7 +311,7 @@ static byte* packMessage(const Message* msg) {
 }
 
 static void processErrors(const Message* message) {
-    switch (this->lastSentFlag) {
+    switch ((int) this->lastSentFlag) {
         case FLAG_LOG_IN:
             SYNCHRONIZED(this->state = STATE_FINISHED_WITH_ERROR;)
             (*(this->onLogInResult))(false);

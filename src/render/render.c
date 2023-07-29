@@ -109,15 +109,15 @@ THIS(
     char* enteredCredentialsBuffer;
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser;
     SDL_mutex* uiQueriesMutex;
-    const List* usersList; // <User*> allocated elsewhere
+    const List* nullable usersList; // <User*> allocated elsewhere
     RenderUserForConversationChosenCallback onUserForConversationChosen;
-    const List* conversationMessagesList; // <ConversationMessage*> allocated elsewhere, conversation messages
+    const List* nullable conversationMessagesList; // <ConversationMessage*> allocated elsewhere, conversation messages
     char* conversationName; // conversation name or the name of the recipient
     unsigned conversationNameSize;
     bool adminMode;
     RenderOnServerShutdownRequested onServerShutdownRequested;
     unsigned maxMessageSize; // conversation message size // TODO: rename to conversationMessageSize
-    char* conversationMessage; // conversation message buffer for current user
+    char* nullable conversationMessage; // conversation message buffer for current user
     unsigned enteredConversationMessageSize;
     bool loading;
     char infiniteProgressBarAnim;
