@@ -75,6 +75,9 @@ typedef enum : int {
     FLAG_EXCHANGE_HEADERS_DONE = 0x000000d0, // A receives the B's encoder header, creates decoder and encoder, then A sends his encoder header to B
     // B receives A's header and creates decoder stream. After that, both A and B have keys and working encoders/decoders to begin an encrypted conversation
 
+    FLAG_FILE_ASK = 0x000000e0, // firstly current user (A) sends file exchanging invite (flag_file_ask) with size == sizeof(file) to another user (B); if B accepts the invitation, he sends back to A flag_file_ask with size == sizeof(file), if he declines size == 0;
+    FLAG_FILE = 0x000000f0, // secondly if B accepted the invite, A can proceed: A reads file by net_message_body_size-sized chunks, encapsulates those chunks in messages and sends them to B; B then accepts them, reads & writes those chunks to a newly created file
+
     FLAG_SHUTDOWN = 0x7fffffff
 } Flags;
 
@@ -117,8 +120,12 @@ THIS(
     byte* serverKeyStub;
     atomic bool settingUpConversation;
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived;
-    unsigned long conversationSetUpStartMillis;
+    unsigned long inviteProcessingStartMillis;
     SDL_mutex* mutex;
+    NetOnFileExchangeInviteReceived onFileExchangeInviteReceived;
+    NetNextFileChunkSupplier nextFileChunkSupplier;
+    NetNextFileChunkReceiver netNextFileChunkReceiver;
+    atomic bool exchangingFile;
 )
 #pragma clang diagnostic pop
 
@@ -198,7 +205,10 @@ bool netInit(
     NetCallback onDisconnected,
     NetCurrentTimeMillisGetter currentTimeMillisGetter,
     NetOnUsersFetched onUsersFetched,
-    NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived
+    NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived,
+    NetOnFileExchangeInviteReceived onFileExchangeInviteReceived,
+    NetNextFileChunkSupplier nextFileChunkSupplier,
+    NetNextFileChunkReceiver netNextFileChunkReceiver
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
@@ -226,8 +236,12 @@ bool netInit(
     this->serverKeyStub = SDL_calloc(CRYPTO_KEY_SIZE, sizeof(byte));
     this->settingUpConversation = false;
     this->onConversationSetUpInviteReceived = onConversationSetUpInviteReceived;
-    this->conversationSetUpStartMillis = 0;
+    this->inviteProcessingStartMillis = 0;
     this->mutex = SDL_CreateMutex();
+    this->onFileExchangeInviteReceived = onFileExchangeInviteReceived;
+    this->nextFileChunkSupplier = nextFileChunkSupplier;
+    this->netNextFileChunkReceiver = netNextFileChunkReceiver;
+    this->exchangingFile = false;
 
     assert(!SDLNet_Init());
 
@@ -359,14 +373,34 @@ static void processMessagesFromServer(const Message* message) {
 
 static void processConversationSetUpMessage(const Message* message) {
     assert(message->flag == FLAG_EXCHANGE_KEYS && message->size == INVITE_ASK);
-    if (this->settingUpConversation) return;
 
     SYNCHRONIZED_BEGIN
+    if (this->settingUpConversation || this->exchangingFile) {
+        SYNCHRONIZED_END
+        return;
+    }
+
     this->settingUpConversation = true;
-    this->conversationSetUpStartMillis = (*(this->currentTimeMillisGetter))();
+    this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
     SYNCHRONIZED_END
 
     (*(this->onConversationSetUpInviteReceived))(message->from);
+}
+
+static void processFileExchangeRequestMessage(const Message* message) {
+    assert(message->flag == FLAG_FILE_ASK);
+
+    SYNCHRONIZED_BEGIN
+    if (this->settingUpConversation || this->exchangingFile) {
+        SYNCHRONIZED_END
+        return;
+    }
+
+    this->exchangingFile = true;
+    this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
+    SYNCHRONIZED_END
+
+    (*(this->onFileExchangeInviteReceived))(message->from, message->size);
 }
 
 static void processMessage(const Message* message) {
@@ -381,10 +415,12 @@ static void processMessage(const Message* message) {
         case STATE_AUTHENTICATED:
             if (message->flag == FLAG_EXCHANGE_KEYS && message->size == INVITE_ASK)
                 processConversationSetUpMessage(message);
+            if (message->flag == FLAG_FILE_ASK)
+                processFileExchangeRequestMessage(message);
             else if (message->flag == FLAG_PROCEED)
                 (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
             else
-                (void) 0;
+                STUB;
             break;
     }
 }
@@ -411,7 +447,7 @@ static Message* nullable receive(void) {
 
 void netListen(void) {
     assert(this);
-    if (!checkSocket() || this->settingUpConversation) return;
+    if (!checkSocket()) return;
 
     Message* message = NULL;
 
@@ -535,7 +571,7 @@ static void onUsersFetched(const Message* message) {
 }
 
 static bool waitForReceiveWithTimeout(void) {
-    unsigned long startMillis = (*(this->currentTimeMillisGetter))();
+    const unsigned long startMillis = (*(this->currentTimeMillisGetter))();
     while ((*(this->currentTimeMillisGetter))() - startMillis < TIMEOUT) {
         if (checkSocket())
             return true;
@@ -543,19 +579,11 @@ static bool waitForReceiveWithTimeout(void) {
     return false;
 }
 
-static bool waitForTimeoutOrQuitSettingUpConversation(void) {
-    if (!waitForReceiveWithTimeout()) {
-        SYNCHRONIZED(this->settingUpConversation = false;)
-        return false;
-    } else
-        return true;
-}
-
 Crypto* nullable netCreateConversation(unsigned id) {
     assert(this);
 
     SYNCHRONIZED_BEGIN
-    assert(!this->settingUpConversation);
+    assert(!this->settingUpConversation && !this->exchangingFile);
     this->settingUpConversation = true;
     SYNCHRONIZED_END
 
@@ -569,7 +597,10 @@ Crypto* nullable netCreateConversation(unsigned id) {
 
     Message* message;
 
-    if (!waitForTimeoutOrQuitSettingUpConversation()) return NULL;
+    if (!waitForReceiveWithTimeout()) {
+        SYNCHRONIZED(this->settingUpConversation = false;)
+        return NULL;
+    }
 
     if (!(message = receive())
         || message->flag != FLAG_EXCHANGE_KEYS
@@ -600,7 +631,8 @@ Crypto* nullable netCreateConversation(unsigned id) {
         return NULL;
     }
 
-    if (!waitForTimeoutOrQuitSettingUpConversation()) {
+    if (!waitForReceiveWithTimeout()) {
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -640,11 +672,11 @@ Crypto* nullable netCreateConversation(unsigned id) {
 }
 
 static inline bool inviteProcessingTimeoutExceeded(void)
-{ return (*(this->currentTimeMillisGetter))() - this->conversationSetUpStartMillis > TIMEOUT; }
+{ return (*(this->currentTimeMillisGetter))() - this->inviteProcessingStartMillis > TIMEOUT; }
 
 Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     assert(this);
-    SYNCHRONIZED(assert(this->settingUpConversation);)
+    SYNCHRONIZED(assert(this->settingUpConversation && !this->exchangingFile);)
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
@@ -671,7 +703,8 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         return NULL;
     }
 
-    if (!waitForTimeoutOrQuitSettingUpConversation()) {
+    if (!waitForReceiveWithTimeout()) {
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -712,7 +745,8 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         return NULL;
     }
 
-    if (!waitForTimeoutOrQuitSettingUpConversation()) {
+    if (!waitForReceiveWithTimeout()) {
+        SYNCHRONIZED(this->settingUpConversation = false;)
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -738,6 +772,96 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 
     SYNCHRONIZED(this->settingUpConversation = false;)
     return crypto;
+}
+
+bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
+    SYNCHRONIZED_BEGIN
+    assert(!this->settingUpConversation && !this->exchangingFile);
+    this->exchangingFile = true;
+    SYNCHRONIZED_END
+
+    byte body[NET_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+
+    if (!netSend(FLAG_FILE_ASK, body, fileSize, toId)) {
+        SYNCHRONIZED(this->exchangingFile = false;)
+        return false;
+    }
+
+    if (!waitForReceiveWithTimeout()) {
+        SYNCHRONIZED(this->exchangingFile = false;)
+        return false;
+    }
+
+    Message* message = NULL;
+    if (!(message = receive())
+        || message->flag != FLAG_FILE_ASK
+        || message->size != fileSize)
+    {
+        SYNCHRONIZED(this->exchangingFile = false;)
+        SDL_free(message);
+        return false;
+    }
+    SDL_free(message);
+
+    unsigned index = 0, bytesWritten, totalWritten = 0;
+    while ((bytesWritten = (*(this->nextFileChunkSupplier))(index++, body))) {
+        totalWritten += bytesWritten;
+
+        if (!netSend(FLAG_FILE, body, bytesWritten, toId)) {
+            SYNCHRONIZED(this->exchangingFile = false;)
+            return false;
+        }
+
+        if (bytesWritten < NET_MESSAGE_BODY_SIZE) break;
+    }
+
+    assert(totalWritten == fileSize);
+    SYNCHRONIZED(this->exchangingFile = false;)
+    return true;
+}
+
+bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accept) {
+    SYNCHRONIZED(assert(!this->settingUpConversation && this->exchangingFile);)
+
+    if (inviteProcessingTimeoutExceeded()) {
+        SYNCHRONIZED(this->exchangingFile = false;)
+        return false;
+    }
+
+    byte body[NET_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+
+    if (!netSend(FLAG_FILE_ASK, body, accept ? fileSize : INVITE_DENY, fromId)) {
+        SYNCHRONIZED(this->exchangingFile = false;)
+        return false;
+    }
+
+    if (!accept) {
+        SYNCHRONIZED(this->exchangingFile = false;)
+        return false;
+    }
+
+    Message* message = NULL;
+    unsigned index = 0, totalReceived = 0;
+
+    while (waitForReceiveWithTimeout()
+        && (message = receive())
+        && message->flag == FLAG_FILE
+        && message->size > 0)
+    {
+        assert(message->size <= NET_MESSAGE_BODY_SIZE);
+
+        (*(this->netNextFileChunkReceiver))(index++, fileSize, message->size, message->body);
+        totalReceived += message->size;
+
+        SDL_free(message);
+        message = NULL;
+    }
+    SDL_free(message);
+
+    SYNCHRONIZED(this->exchangingFile = false;)
+    return totalReceived == fileSize;
 }
 
 void netClean(void) {

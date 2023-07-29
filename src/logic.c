@@ -276,7 +276,7 @@ void logicOnFileChooserRequested(void) {
     renderShowFileChooser();
 }
 
-static bool checkFile(const char* filePath) { return !access(filePath, F_OK | R_OK); }
+static inline bool checkFile(const char* filePath) { return !access(filePath, F_OK | R_OK); }
 
 void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) {
     assert(this);
@@ -290,9 +290,28 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
         return;
     }
 
-    if (size) SDL_Log("%.*s", size, filePath);
-    else SDL_Log("empty filePath");
+    if (!size) {
+        renderShowEmptyFilePathError();
+        return;
+    }
 
+    if (!checkFile(filePath)) {
+        renderShowCannotOpenFileError();
+        return;
+    }
+
+    // TODO
+}
+
+static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
+    // TODO
+}
+
+static unsigned nextFileChunkSupplier(unsigned index, byte* buffer) {
+    return 0; // TODO
+}
+
+static void nextFileChunkReceiver(unsigned index, unsigned fileSize, unsigned receivedBytesCount, const byte* buffer) {
     // TODO
 }
 
@@ -361,7 +380,10 @@ static void processCredentials(void** data) {
         &onDisconnected,
         &logicCurrentTimeMillis,
         &onUsersFetched,
-        &onConversationSetUpInviteReceived
+        &onConversationSetUpInviteReceived,
+        &onFileExchangeInviteReceived,
+        &nextFileChunkSupplier,
+        &nextFileChunkReceiver
     );
 
     if (!this->netInitialized) {
