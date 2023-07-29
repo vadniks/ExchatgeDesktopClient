@@ -283,6 +283,22 @@ void logicOnFileChooserRequested(void) {
 
 static inline bool checkFile(const char* filePath) { return !access(filePath, F_OK | R_OK); }
 
+static void beginFileExchange(unsigned* fileSize) {
+    assert(this);
+
+    if (!netBeginFileExchange(this->toUserId, *fileSize)) { // blocks the thread until file is fully transmitted or error occurred or receiver declined the exchanging
+        SDL_RWclose(this->rwops);
+        this->rwops = NULL;
+
+        renderShowUnableToTransmitFileError();
+    }
+
+    renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
+
+    SDL_free(fileSize);
+}
+
 void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) {
     assert(this);
     assert(filePath || !filePath && !size);
@@ -332,15 +348,9 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
         return;
     }
 
-    if (!netBeginFileExchange(this->toUserId, fileSize)) { // blocks the thread until file is fully transmitted or error occurred or receiver declined the exchanging
-        SDL_RWclose(this->rwops);
-        this->rwops = NULL;
-
-        renderShowUnableToTransmitFileError();
-    }
-
-    renderHideInfiniteProgressBar();
-    renderSetControlsBlocking(false);
+    unsigned* xFileSize = SDL_malloc(sizeof(int));
+    *xFileSize = fileSize;
+    lifecycleAsync((LifecycleAsyncActionFunction) &beginFileExchange, xFileSize, 0);
 }
 
 static void replyToFileExchangeRequest(unsigned** parameters) {
