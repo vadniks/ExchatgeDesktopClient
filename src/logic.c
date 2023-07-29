@@ -424,7 +424,18 @@ static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) {
 }
 
 static void nextFileChunkReceiver(unsigned index, unsigned fileSize, unsigned receivedBytesCount, const byte* buffer) {
-    // TODO
+    assert(this && this->rwops);
+    assert(SDL_RWwrite(this->rwops, buffer, 1, receivedBytesCount) == receivedBytesCount);
+
+    static unsigned totalWritten;
+    if (!index) totalWritten = 0;
+    totalWritten += receivedBytesCount;
+
+    if (totalWritten < fileSize) return;
+
+    assert(index);
+    SDL_RWclose(this->rwops);
+    this->rwops = NULL;
 }
 
 static void clipboardPaste(void) {
