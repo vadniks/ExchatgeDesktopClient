@@ -344,13 +344,28 @@ static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
     // TODO
 }
 
-static unsigned nextFileChunkSupplier(unsigned index, byte* buffer) {
-    assert(this->rwops);
+static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) {
+    assert(this && this->rwops);
     const unsigned targetSize = logicUnencryptedMessageBodySize();
 
-    const unsigned actualSize = SDL_RWread(this->rwops, buffer, 1, targetSize);
-    if (actualSize) return actualSize;
+    byte unencryptedBuffer[targetSize];
+    const unsigned actualSize = SDL_RWread(this->rwops, unencryptedBuffer, 1, targetSize);
+    if (!actualSize) goto closeFile;
 
+    Crypto* crypto = databaseGetConversation(this->toUserId);
+    assert(crypto);
+
+    const unsigned encryptedSize = cryptoEncryptedSize(actualSize);
+    assert(encryptedSize <= NET_MESSAGE_BODY_SIZE);
+
+    byte* encryptedChunk = cryptoEncrypt(crypto, unencryptedBuffer, actualSize, false);
+    SDL_memcpy(encryptedBuffer, encryptedChunk, encryptedSize);
+    SDL_free(encryptedChunk);
+
+    cryptoDestroy(crypto);
+    return actualSize;
+
+    closeFile:
     assert(index);
     SDL_RWclose(this->rwops);
     this->rwops = NULL;
