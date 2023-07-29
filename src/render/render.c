@@ -76,7 +76,10 @@ STATIC_CONST_STRING UNABLE_TO_DECRYPT_DATABASE = "Unable to decrypt the database
 STATIC_CONST_STRING UNABLE_TO_CREATE_CONVERSATION = "Unable to create the conversation";
 STATIC_CONST_STRING CONVERSATION_DOESNT_EXIST = "Conversation doesn't exist";
 STATIC_CONST_STRING CONVERSATION_ALREADY_EXISTS = "Conversation already exists";
-STATIC_CONST_STRING FILEX_EXCHANGE_REQUESTED_BY_USER = "File exchange requested by user ";
+STATIC_CONST_STRING FILE_EXCHANGE_REQUESTED = "File exchange requested";
+STATIC_CONST_STRING FILE_EXCHANGE_REQUESTED_BY_USER = "File exchange requested by user";
+STATIC_CONST_STRING WITH_SIZE_OF = "with size of";
+STATIC_CONST_STRING BYTES = "bytes";
 STATIC_CONST_STRING CHOOSE = "Choose";
 STATIC_CONST_STRING FILE_TEXT = "File";
 STATIC_CONST_STRING FILE_SELECTION = "File selection";
@@ -459,6 +462,43 @@ bool renderShowInviteDialog(const char* fromUserName) {
     };
 
     int buttonId; // TODO: nk_popup_begin()
+    SDL_ShowMessageBox(&data, &buttonId); // blocks the thread until user pressed any button or closed the dialog window
+    return !buttonId;
+}
+
+bool renderShowFileExchangeRequestDialog(const char* fromUserName, unsigned fileSize) {
+    assert(this);
+
+    const unsigned bufferSize = 0xff;
+    char buffer[bufferSize];
+
+    const unsigned written = SDL_snprintf(
+        buffer, bufferSize,
+        "%s %s %s %u %s",
+        FILE_EXCHANGE_REQUESTED_BY_USER,
+        fromUserName,
+        WITH_SIZE_OF,
+        fileSize,
+        BYTES
+    );
+    assert(written > 0 && written <= bufferSize);
+
+    const SDL_MessageBoxButtonData buttons[2] = {
+        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, ACCEPT },
+        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, DECLINE }
+    };
+
+    SDL_MessageBoxData data = {
+        SDL_MESSAGEBOX_INFORMATION,
+        this->window,
+        FILE_EXCHANGE_REQUESTED,
+        buffer,
+        2,
+        buttons,
+        NULL
+    };
+
+    int buttonId;
     SDL_ShowMessageBox(&data, &buttonId); // blocks the thread until user pressed any button or closed the dialog window
     return !buttonId;
 }

@@ -92,6 +92,8 @@ bool renderIsConversationShown(void);
 bool renderIsFileChooserShown(void);
 
 bool renderShowInviteDialog(const char* fromUserName); // blocks the caller thread, returns true if user accepted the invitation, expects a this->username-sized string - the name of the user who has sent the invitation
+bool renderShowFileExchangeRequestDialog(const char* fromUserName, unsigned fileSize); // almost just like showInviteDialog
+
 void renderSetControlsBlocking(bool blocking); // true to block controls, false to unblock, use with show*Dialog
 
 void renderShowSystemMessage(const char* message, bool error); // shows system text to the user, expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE] (with null-terminator included);

@@ -29,7 +29,7 @@
 #include "database/database.h"
 #include "logic.h"
 
-const unsigned LOGIC_MAX_FILE_PATH_SIZE = 0xff;
+const unsigned LOGIC_MAX_FILE_PATH_SIZE = 0x1ff; // 511, (1 << 9) - 1
 
 typedef enum : unsigned {
     STATE_UNAUTHENTICATED = 0,
@@ -266,10 +266,13 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
 }
 
 static void onConversationSetUpInviteReceived(unsigned fromId) {
-    unsigned* xFromId = SDL_malloc(sizeof(int));
-    *xFromId = fromId;
+    assert(this);
+
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);
+
+    unsigned* xFromId = SDL_malloc(sizeof(int));
+    *xFromId = fromId;
     lifecycleAsync((LifecycleAsyncActionFunction) &replyToConversationSetUpInvite, xFromId, 0);
 }
 
@@ -340,8 +343,56 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     renderSetControlsBlocking(false);
 }
 
+static void replyToFileExchangeRequest(unsigned** parameters) {
+    assert(this);
+
+    const unsigned fromId = *(parameters[0]), fileSize = *(parameters[1]);
+    SDL_free(parameters[0]), SDL_free(parameters[1]), SDL_free(parameters);
+
+    const User* user = findUser(fromId);
+    assert(user);
+
+    const bool accepted = renderShowFileExchangeRequestDialog(user->name, fileSize); // blocks the thread
+    const bool successful = netReplyToFileExchangeInvite(fromId, fileSize, accepted); // blocks the thread again
+    assert(this);
+
+    if (!accepted) {
+        assert(!successful);
+
+        renderHideInfiniteProgressBar();
+        renderSetControlsBlocking(false);
+
+        return;
+    }
+
+    char currentPath[LOGIC_MAX_FILE_PATH_SIZE];
+    assert(getcwd(currentPath, LOGIC_MAX_FILE_PATH_SIZE));
+
+    char filePath[LOGIC_MAX_FILE_PATH_SIZE];
+    const unsigned written = SDL_snprintf(
+        filePath, LOGIC_MAX_FILE_PATH_SIZE,
+        "%s/%lu",
+        currentPath,
+        logicCurrentTimeMillis()
+    );
+    assert(written > 0 && written <= LOGIC_MAX_FILE_PATH_SIZE);
+
+    assert(!this->rwops);
+    this->rwops = SDL_RWFromFile(filePath, "wb");
+    assert(this->rwops);
+}
+
 static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
-    // TODO
+    assert(this);
+
+    renderShowInfiniteProgressBar();
+    renderSetControlsBlocking(true);
+
+    unsigned** parameters = SDL_malloc(2 * sizeof(void*));
+    (parameters[0] = SDL_malloc(sizeof(int))) && (*(parameters[0]) = fromId);
+    (parameters[1] = SDL_malloc(sizeof(int))) && (*(parameters[1]) = fileSize);
+
+    lifecycleAsync((LifecycleAsyncActionFunction) &replyToFileExchangeRequest, parameters, 0);
 }
 
 static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) {
