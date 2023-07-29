@@ -402,7 +402,7 @@ static void processFileExchangeRequestMessage(const Message* message) {
 
     unsigned fileSize = 0;
     SDL_memcpy(&fileSize, message->body, sizeof(int));
-    assert(!fileSize);
+    assert(fileSize);
 
     (*(this->onFileExchangeInviteReceived))(message->from, fileSize);
 }
