@@ -49,6 +49,7 @@ THIS(
     char* currentUserName;
     atomic unsigned toUserId; // the id of the user, the current user (logged in via this client) wanna speak to
     atomic bool databaseInitialized;
+    SDL_RWops* nullable rwops;
 )
 #pragma clang diagnostic pop
 
@@ -75,6 +76,7 @@ void logicInit(unsigned argc, const char** argv) {
     this->state = STATE_UNAUTHENTICATED;
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
     this->databaseInitialized = false;
+    this->rwops = NULL;
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
@@ -282,25 +284,60 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     assert(this);
     assert(filePath || !filePath && !size);
 
+    renderShowInfiniteProgressBar();
+    renderSetControlsBlocking(true);
+
     const User* user = findUser(this->toUserId);
     assert(user);
 
     if (!filePath) {
+        renderHideInfiniteProgressBar();
+        renderSetControlsBlocking(false);
+
         renderShowConversation(user->name);
         return;
     }
 
     if (!size) {
+        renderHideInfiniteProgressBar();
+        renderSetControlsBlocking(false);
+
         renderShowEmptyFilePathError();
         return;
     }
 
-    if (!checkFile(filePath)) {
+    assert(!this->rwops);
+    this->rwops = SDL_RWFromFile(filePath, "rb");
+
+    if (!checkFile(filePath) || !this->rwops) {
+        renderHideInfiniteProgressBar();
+        renderSetControlsBlocking(false);
+
         renderShowCannotOpenFileError();
         return;
     }
 
-    // TODO
+    const unsigned fileSize = SDL_RWsize(this->rwops);
+    if (!fileSize) {
+        SDL_RWclose(this->rwops);
+        this->rwops = NULL;
+
+        renderHideInfiniteProgressBar();
+        renderSetControlsBlocking(false);
+
+        renderShowFileIsEmptyError();
+        return;
+    }
+
+    if (!netBeginFileExchange(this->toUserId, fileSize)) { // blocks the thread until file is fully transmitted or error occurred or receiver declined the exchanging
+        SDL_RWclose(this->rwops);
+        this->rwops = NULL;
+
+        renderShowUnableToTransmitFileError();
+    }
+
+    renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
 }
 
 static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
@@ -678,6 +715,8 @@ unsigned logicUnencryptedMessageBodySize(void) { return NET_MESSAGE_BODY_SIZE - 
 
 void logicClean(void) {
     assert(this);
+
+    assert(!this->rwops);
 
     if (this->databaseInitialized) databaseClean();
 

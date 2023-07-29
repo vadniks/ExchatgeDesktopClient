@@ -775,6 +775,8 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 }
 
 bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
+    assert(fileSize);
+
     SYNCHRONIZED_BEGIN
     assert(!this->settingUpConversation && !this->exchangingFile);
     this->exchangingFile = true;

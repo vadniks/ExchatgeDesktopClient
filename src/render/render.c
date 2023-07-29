@@ -82,6 +82,8 @@ STATIC_CONST_STRING FILE_TEXT = "File";
 STATIC_CONST_STRING FILE_SELECTION = "File selection";
 STATIC_CONST_STRING CANNOT_OPEN_FILE = "Cannot open the file";
 STATIC_CONST_STRING EMPTY_FILE_PATH = "Empty file path";
+STATIC_CONST_STRING FILE_IS_EMPTY = "File is empty";
+STATIC_CONST_STRING UNABLE_TO_TRANSMIT_FILE = "Unable to transmit file";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -514,6 +516,8 @@ void renderShowConversationDoesntExist(void) { postSystemMessage(CONVERSATION_DO
 void renderShowConversationAlreadyExists(void) { postSystemMessage(CONVERSATION_ALREADY_EXISTS, true); }
 void renderShowCannotOpenFileError(void) { postSystemMessage(CANNOT_OPEN_FILE, true); }
 void renderShowEmptyFilePathError(void) { postSystemMessage(EMPTY_FILE_PATH, true); }
+void renderShowFileIsEmptyError(void) { postSystemMessage(FILE_IS_EMPTY, true); }
+void renderShowUnableToTransmitFileError(void) { postSystemMessage(UNABLE_TO_TRANSMIT_FILE, true); }
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);
