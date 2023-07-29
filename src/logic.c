@@ -363,11 +363,10 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
     assert(user);
 
     const bool accepted = renderShowFileExchangeRequestDialog(user->name, fileSize); // blocks the thread
-    const bool successful = netReplyToFileExchangeInvite(fromId, fileSize, accepted); // blocks the thread again
     assert(this);
 
     if (!accepted) {
-        assert(!successful);
+        assert(!netReplyToFileExchangeInvite(fromId, fileSize, false)); // blocks the thread again
 
         renderHideInfiniteProgressBar();
         renderSetControlsBlocking(false);
@@ -390,6 +389,16 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
     assert(!this->rwops);
     this->rwops = SDL_RWFromFile(filePath, "wb");
     assert(this->rwops);
+
+    if (!netReplyToFileExchangeInvite(fromId, fileSize, true)) {// blocks the thread again
+        renderShowUnableToTransmitFileError();
+        SDL_RWclose(this->rwops);
+        this->rwops = NULL;
+    }
+    assert(!this->rwops);
+
+    renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
 }
 
 static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
