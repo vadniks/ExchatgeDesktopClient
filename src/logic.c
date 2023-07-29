@@ -427,7 +427,7 @@ static void nextFileChunkReceiver(unsigned index, unsigned fileSize, unsigned re
     assert(this && this->rwops);
     assert(SDL_RWwrite(this->rwops, buffer, 1, receivedBytesCount) == receivedBytesCount);
 
-    static unsigned totalWritten;
+    static unsigned totalWritten; // the static keyword makes tha value bytes of this variable be stored in a static storage - initialized once and then used as any other variable outside the function
     if (!index) totalWritten = 0;
     totalWritten += receivedBytesCount;
 
