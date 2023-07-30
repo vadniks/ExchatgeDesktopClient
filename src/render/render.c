@@ -948,6 +948,12 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
     nk_layout_row_end(this->context);
 }
 
+static void onFileChosen(void) {
+    (*(this->fileChooseResultHandler))(this->enteredFilePath, this->enteredFilePathSize);
+    SDL_memset(this->enteredFilePath, 0, this->enteredFilePathSize);
+    this->enteredFilePathSize = 0;
+}
+
 static void drawFileChooser(void) {
     const float height = currentHeight(), rowHeight = (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f;
     const bool aboveInitialWidth = this->width >= WINDOW_WIDTH * 2;
@@ -981,7 +987,7 @@ static void drawFileChooser(void) {
     nk_spacer(this->context);
 
     nk_spacer(this->context);
-    if (nk_button_label(this->context, CHOOSE)) (*(this->fileChooseResultHandler))(this->enteredFilePath, this->enteredFilePathSize);
+    if (nk_button_label(this->context, CHOOSE)) onFileChosen();
     nk_spacer(this->context);
 }
 
