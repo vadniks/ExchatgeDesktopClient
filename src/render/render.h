@@ -111,6 +111,7 @@ void renderShowCannotOpenFileError(void);
 void renderShowEmptyFilePathError(void);
 void renderShowFileIsEmptyError(void);
 void renderShowUnableToTransmitFileError(void);
+void renderShowFileIsTooBig(void);
 
 void renderShowInfiniteProgressBar(void); // showed only on pages that support it (log in/register, not splash as it's a special case)
 void renderHideInfiniteProgressBar(void);

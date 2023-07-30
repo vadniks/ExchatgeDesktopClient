@@ -31,6 +31,8 @@
 
 const unsigned LOGIC_MAX_FILE_PATH_SIZE = 0x1ff; // 511, (1 << 9) - 1
 
+STATIC_CONST_UNSIGNED MAX_FILE_SIZE = (1 << 20) * 20; // 1024^2 * 20 = 20971520 bytes = 20 mb
+
 typedef enum : unsigned {
     STATE_UNAUTHENTICATED = 0,
     STATE_AWAITING_AUTHENTICATION = 1,
@@ -334,8 +336,9 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
         return;
     }
 
-    const unsigned fileSize = SDL_RWsize(this->rwops);
-    if (!fileSize) {
+    const long fileSize = SDL_RWsize(this->rwops);
+
+    if (fileSize < 0 || !fileSize) {
         SDL_RWclose(this->rwops);
         this->rwops = NULL;
 
@@ -346,8 +349,19 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
         return;
     }
 
+    if (fileSize <= MAX_FILE_SIZE) {
+        SDL_RWclose(this->rwops);
+        this->rwops = NULL;
+
+        renderHideInfiniteProgressBar();
+        renderSetControlsBlocking(false);
+
+        renderShowFileIsTooBig();
+        return;
+    }
+
     unsigned* xFileSize = SDL_malloc(sizeof(int));
-    *xFileSize = fileSize;
+    *xFileSize = (unsigned) fileSize;
     lifecycleAsync((LifecycleAsyncActionFunction) &beginFileExchange, xFileSize, 0);
 }
 
