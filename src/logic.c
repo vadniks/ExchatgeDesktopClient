@@ -475,7 +475,7 @@ static void nextFileChunkReceiver(unsigned fromId, unsigned index, unsigned file
     byte* decrypted = cryptoDecrypt(crypto, encryptedBuffer, receivedBytesCount, false);
     assert(decrypted);
 
-    assert(SDL_RWwrite(this->rwops, decrypted, 1, decryptedSize) == receivedBytesCount);
+    assert(SDL_RWwrite(this->rwops, decrypted, 1, decryptedSize) == decryptedSize);
     SDL_free(decrypted);
 
     cryptoDestroy(crypto);
