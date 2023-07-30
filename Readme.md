@@ -12,7 +12,6 @@ the server or anyone else is useless. File exchange is supported.
 Project is created for Linux x86_64 desktop platforms (PCs).
 
 ## `TODO`
-* Add file exchanging mechanism,
 * Maybe add unit tests,
 * Optimize UI for high dpi displays.
 
