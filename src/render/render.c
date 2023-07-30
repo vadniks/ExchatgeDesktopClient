@@ -88,6 +88,7 @@ STATIC_CONST_STRING EMPTY_FILE_PATH = "Empty file path";
 STATIC_CONST_STRING FILE_IS_EMPTY = "File is empty";
 STATIC_CONST_STRING UNABLE_TO_TRANSMIT_FILE = "Unable to transmit file";
 STATIC_CONST_STRING FILE_IS_TOO_BIG = "File is too big (> 20 mb)";
+STATIC_CONST_STRING FILE_TRANSMITTED = "File transmitted";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -560,6 +561,7 @@ void renderShowEmptyFilePathError(void) { postSystemMessage(EMPTY_FILE_PATH, tru
 void renderShowFileIsEmptyError(void) { postSystemMessage(FILE_IS_EMPTY, true); }
 void renderShowUnableToTransmitFileError(void) { postSystemMessage(UNABLE_TO_TRANSMIT_FILE, true); }
 void renderShowFileIsTooBig(void) { postSystemMessage(FILE_IS_TOO_BIG, true); }
+void renderShowFileTransmittedSystemMessage(void) { postSystemMessage(FILE_TRANSMITTED, false); }
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);

@@ -52,6 +52,7 @@ THIS(
     atomic unsigned toUserId; // the id of the user, the current user (logged in via this client) wanna speak to
     atomic bool databaseInitialized;
     SDL_RWops* nullable rwops;
+    atomic unsigned fileBytesCounter;
 )
 #pragma clang diagnostic pop
 
@@ -285,18 +286,20 @@ void logicOnFileChooserRequested(void) {
 
 static void beginFileExchange(unsigned* fileSize) {
     assert(this);
+    this->fileBytesCounter = 0;
 
-    if (!netBeginFileExchange(this->toUserId, *fileSize)) { // blocks the thread until file is fully transmitted or error occurred or receiver declined the exchanging
+    if (!netBeginFileExchange(this->toUserId, *fileSize) || this->fileBytesCounter != *fileSize) { // blocks the thread until file is fully transmitted or error occurred or receiver declined the exchanging
         SDL_RWclose(this->rwops);
         this->rwops = NULL;
 
         renderShowUnableToTransmitFileError();
-    }
+    } else
+        renderShowFileTransmittedSystemMessage();
+
+    SDL_free(fileSize);
 
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
-
-    SDL_free(fileSize);
 }
 
 void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) {
@@ -367,6 +370,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
 
 static void replyToFileExchangeRequest(unsigned** parameters) {
     assert(this);
+    this->fileBytesCounter = 0;
 
     const unsigned fromId = *(parameters[0]), fileSize = *(parameters[1]);
     SDL_free(parameters[0]), SDL_free(parameters[1]), SDL_free(parameters);
@@ -411,7 +415,7 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
         return;
     }
 
-    if (!netReplyToFileExchangeInvite(fromId, fileSize, true)) { // blocks the thread again
+    if (!netReplyToFileExchangeInvite(fromId, fileSize, true) || this->fileBytesCounter != fileSize) { // blocks the thread again
         renderShowUnableToTransmitFileError();
         SDL_RWclose(this->rwops);
         this->rwops = NULL;
@@ -420,6 +424,7 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
 
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
+    renderShowFileTransmittedSystemMessage();
 }
 
 static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
@@ -454,6 +459,9 @@ static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) {
     SDL_free(encryptedChunk);
 
     cryptoDestroy(crypto);
+
+    if (!index) assert(!this->fileBytesCounter);
+    this->fileBytesCounter += actualSize;
     return encryptedSize;
 
     closeFile:
@@ -480,11 +488,10 @@ static void nextFileChunkReceiver(unsigned fromId, unsigned index, unsigned file
 
     cryptoDestroy(crypto);
 
-    static unsigned totalWritten; // the static keyword makes tha value bytes of this variable be stored in a static storage - initialized once and then used as any other variable outside the function
-    if (!index) totalWritten = 0;
-    totalWritten += receivedBytesCount;
+    if (!index) assert(!this->fileBytesCounter);
+    this->fileBytesCounter += decryptedSize;
 
-    if (totalWritten < fileSize) return;
+    if (this->fileBytesCounter < fileSize) return;
 
     assert(index);
     SDL_RWclose(this->rwops);

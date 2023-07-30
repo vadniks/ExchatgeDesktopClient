@@ -810,17 +810,14 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     }
     SDL_free(message);
 
-    unsigned index = 0, bytesWritten, totalWritten = 0;
+    unsigned index = 0, bytesWritten;
     while ((bytesWritten = (*(this->nextFileChunkSupplier))(index++, body))) {
-        totalWritten += bytesWritten;
-
         if (!netSend(FLAG_FILE, body, bytesWritten, toId)) {
             SYNCHRONIZED(this->exchangingFile = false;)
             return false;
         }
     }
 
-    assert(totalWritten == fileSize);
     SYNCHRONIZED(this->exchangingFile = false;)
     return true;
 }
@@ -848,7 +845,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     }
 
     Message* message = NULL;
-    unsigned index = 0, totalReceived = 0;
+    unsigned index = 0;
 
     while (waitForReceiveWithTimeout()
         && (message = receive())
@@ -858,7 +855,6 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
         assert(message->size <= NET_MESSAGE_BODY_SIZE);
 
         (*(this->netNextFileChunkReceiver))(fromId, index++, fileSize, message->size, message->body);
-        totalReceived += message->size;
 
         SDL_free(message);
         message = NULL;
@@ -866,7 +862,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     SDL_free(message);
 
     SYNCHRONIZED(this->exchangingFile = false;)
-    return totalReceived == fileSize;
+    return true;
 }
 
 void netClean(void) {
