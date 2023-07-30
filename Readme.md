@@ -7,7 +7,7 @@ in the realtime. Each client-to-server connection is encrypted,
 each client-to-client connection is also encrypted. All messages 
 go through server, but because of presence of the second layer 
 of encryption between clients, any interception of messages by 
-the server or anyone else is useless.
+the server or anyone else is useless. File exchange is supported.
 
 Project is created for Linux x86_64 desktop platforms (PCs).
 
@@ -31,14 +31,7 @@ Client side uses the following libraries:
 * [SQLite3](https://sqlite.org),
 * [GNU C Library (GLIBC)](https://www.gnu.org/software/libc).
 
-## The project is currently in ~~Beta~~ development stage
-
--- A few more features needed to be implemented:
-* File exchange - in process,
-* Fetching of messages other users sent to the current while he/she was offline
-
-The implemented features are in beta stage - they work but maybe a little more 
-time for testing is worth spending for them.
+## The project is currently in Beta stage
 
 [The server](https://github.com/vadniks/ExchatgeServer)
 
