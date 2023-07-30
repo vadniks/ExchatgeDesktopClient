@@ -813,7 +813,6 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     unsigned index = 0, bytesWritten, totalWritten = 0;
     while ((bytesWritten = (*(this->nextFileChunkSupplier))(index++, body))) {
         totalWritten += bytesWritten;
-        SDL_Log("a %u %u", index - 1, bytesWritten); // TODO: test only
 
         if (!netSend(FLAG_FILE, body, bytesWritten, toId)) {
             SYNCHRONIZED(this->exchangingFile = false;)
@@ -821,7 +820,6 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
         }
     }
 
-    SDL_Log("b %u %u", totalWritten, fileSize); // TODO: test only
     assert(totalWritten == fileSize);
     SYNCHRONIZED(this->exchangingFile = false;)
     return true;
