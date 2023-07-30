@@ -320,6 +320,15 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
         return;
     }
 
+    if (!user->online) {
+        renderHideInfiniteProgressBar();
+        renderSetControlsBlocking(false);
+
+        renderShowUserIsOfflineError();
+
+        return;
+    }
+
     if (!size) {
         renderHideInfiniteProgressBar();
         renderSetControlsBlocking(false);
