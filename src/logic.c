@@ -349,7 +349,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
         return;
     }
 
-    if (fileSize <= MAX_FILE_SIZE) {
+    if (fileSize > MAX_FILE_SIZE) {
         SDL_RWclose(this->rwops);
         this->rwops = NULL;
 
