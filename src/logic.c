@@ -454,7 +454,7 @@ static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) {
     SDL_free(encryptedChunk);
 
     cryptoDestroy(crypto);
-    return actualSize;
+    return encryptedSize;
 
     closeFile:
     assert(index);
@@ -473,6 +473,8 @@ static void nextFileChunkReceiver(unsigned fromId, unsigned index, unsigned file
     assert(crypto);
 
     byte* decrypted = cryptoDecrypt(crypto, encryptedBuffer, receivedBytesCount, false);
+    assert(decrypted);
+
     assert(SDL_RWwrite(this->rwops, decrypted, 1, decryptedSize) == receivedBytesCount);
     SDL_free(decrypted);
 
