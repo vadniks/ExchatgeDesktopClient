@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <sdl/SDL.h>
+#include <SDL.h>
 #include <stdbool.h>
 #include "collections/list.h"
 #include "../defs.h"

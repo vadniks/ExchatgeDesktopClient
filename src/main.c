@@ -17,7 +17,7 @@
  */
 
 #include <stdlib.h>
-#include <sdl/SDL_stdinc.h>
+#include <SDL_stdinc.h>
 #include <assert.h>
 #include "lifecycle.h"
 

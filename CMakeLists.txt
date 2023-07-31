@@ -28,14 +28,10 @@ add_compile_options("-Ofast") # -O3
 file(GLOB sources CONFIGURE_DEPENDS "src/*.c" "src/*.h")
 add_executable(${PROJECT_NAME} ${sources})
 
+# SDL2_Net included
 include_directories(libs/sdl/include)
 file(GLOB sdl_binaries CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/libs/sdl/bin/*")
 target_link_libraries(${PROJECT_NAME} ${sdl_binaries})
-
-# changed SDL-related includes ('#include "*.h"' including *_code.h) to '#include <sdl/*.h>' in 'SDL_net.h'
-include_directories(libs/sdl_net/include)
-file(GLOB sdl_net_binaries CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/libs/sdl_net/bin/*")
-target_link_libraries(${PROJECT_NAME} ${sdl_net_binaries})
 
 include_directories(libs/sodium/include)
 file(GLOB sodium_binaries CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/libs/sodium/bin/*")
@@ -67,30 +63,20 @@ endif()
 # libs
 #     nuklear
 #         include
-#             nuklear
-#                 <.h>
-#     sdl
+#             <.h>
+#     sdl # sdl2 and sdl2-net
 #         bin
 #             <.so|.a>
 #         include
-#             sdl
-#                 <.h>
-#     sdl_net
-#         bin
-#             <.so|.a>
-#         include
-#             sdl_net
-#                 <.h>
+#             <.h>
 #     sodium
 #         bin
 #             <.so|.a>
 #         include
-#             sodium
-#                 <.h>
+#             <.h>
 #     sqlite
 #         bin
 #             <.so|.a>
 #         include
-#             sqlite
-#                 <.h>
+#             <.h>
 #

@@ -16,8 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <sdl/SDL.h>
-#include <sodium/sodium.h>
+#include <SDL.h>
+#include <sodium.h>
 #include <assert.h>
 #include "crypto.h"
 

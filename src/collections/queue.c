@@ -16,8 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <sdl/SDL_stdinc.h>
-#include <sdl/SDL_mutex.h>
+#include <SDL_stdinc.h>
+#include <SDL_mutex.h>
 #include <assert.h>
 #include <stdbool.h>
 #include "queue.h"

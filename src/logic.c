@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <sdl/SDL.h>
+#include <SDL.h>
 #include <assert.h>
 #include <time.h>
 #include <unistd.h>

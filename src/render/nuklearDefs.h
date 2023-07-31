@@ -14,5 +14,5 @@
 #define NK_IMPLEMENTATION
 #define NK_SDL_RENDERER_IMPLEMENTATION
 
-#include <nuklear/nuklear.h>
-#include <nuklear/nuklear_sdl_renderer.h>
+#include <nuklear.h>
+#include <nuklear_sdl_renderer.h>

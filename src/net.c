@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <sdl_net/SDL_net.h>
+#include <SDL_net.h>
 #include <assert.h>
 #include <endian.h>
 #include "net.h"

@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <sdl/SDL_stdinc.h>
+#include <SDL_stdinc.h>
 #include <assert.h>
 #include "conversationMessage.h"
 
