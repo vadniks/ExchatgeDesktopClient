@@ -32,7 +32,7 @@ const List* logicMessagesList(void); // same as usersList but for conversation m
 void logicOnFileChooserRequested(void);
 void logicFileChooseResultHandler(const char* nullable filePath, unsigned size);
 void logicProcessEvent(SDL_Event* event);
-void logicOnCredentialsReceived(const char* username, const char* password, bool logIn);
+void logicOnCredentialsReceived(const char* username, unsigned usernameSize, const char* password, unsigned passwordSize, bool logIn);
 void logicCredentialsRandomFiller(char* credentials, unsigned size);
 void logicOnLoginRegisterPageQueriedByUser(bool logIn);
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant);

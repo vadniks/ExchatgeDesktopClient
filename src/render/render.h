@@ -25,7 +25,9 @@
 
 typedef void (*RenderCredentialsReceivedCallback)( // buffer is filled with random bytes after callback returns
     const char* username,
+    unsigned usernameSize,
     const char* password,
+    unsigned passwordSize,
     bool logIn // true if called from log in page, false if called from register page
 );
 

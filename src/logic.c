@@ -595,8 +595,14 @@ static void processCredentials(void** data) {
     SDL_free(data);
 }
 
-void logicOnCredentialsReceived(const char* username, const char* password, bool logIn) {
-    assert(this);
+void logicOnCredentialsReceived(
+    const char* username,
+    unsigned usernameSize,
+    const char* password,
+    unsigned passwordSize,
+    bool logIn
+) {
+    assert(this && usernameSize <= NET_USERNAME_SIZE && passwordSize <= NET_UNHASHED_PASSWORD_SIZE);
     if (this->state != STATE_UNAUTHENTICATED) return;
     assert(!this->netInitialized);
 
@@ -604,12 +610,12 @@ void logicOnCredentialsReceived(const char* username, const char* password, bool
     renderShowInfiniteProgressBar();
 
     void** data = SDL_malloc(3 * sizeof(void*));
-    data[0] = SDL_malloc(NET_USERNAME_SIZE * sizeof(char));
-    data[1] = SDL_malloc(NET_UNHASHED_PASSWORD_SIZE * sizeof(char));
+    data[0] = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
+    data[1] = SDL_calloc(NET_UNHASHED_PASSWORD_SIZE, sizeof(char));
     data[2] = SDL_malloc(sizeof(bool));
 
-    SDL_memcpy(data[0], username, NET_USERNAME_SIZE);
-    SDL_memcpy(data[1], password, NET_UNHASHED_PASSWORD_SIZE);
+    SDL_memcpy(data[0], username, usernameSize);
+    SDL_memcpy(data[1], password, passwordSize);
     *((bool*) data[2]) = logIn;
 
     lifecycleAsync((LifecycleAsyncActionFunction) &processCredentials, data, 0);

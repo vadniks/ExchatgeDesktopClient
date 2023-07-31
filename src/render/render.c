@@ -621,7 +621,9 @@ static void drawSplashPage(void) {
 static void onProceedClickedAfterLogInRegister(bool logIn) {
     (*(this->onCredentialsReceived))(
         this->enteredCredentialsBuffer,
+        this->enteredUsernameSize,
         this->enteredCredentialsBuffer + this->usernameSize,
+        this->enteredPasswordSize,
         logIn
     );
 
@@ -671,7 +673,7 @@ static void drawLogInForm(int width, float height, bool logIn) {
     nk_group_end(this->context);
 }
 
-static unsigned decreaseWidthIfNeeded(unsigned width) { return width <= WINDOW_WIDTH ? width : WINDOW_WIDTH; }
+__attribute_maybe_unused__ static unsigned decreaseWidthIfNeeded(unsigned width) { return width <= WINDOW_WIDTH ? width : WINDOW_WIDTH; }
 static unsigned decreaseHeightIfNeeded(unsigned height) { return height <= WINDOW_HEIGHT ? height : WINDOW_HEIGHT; }
 static float currentHeight(void) { return (float) this->height * 0.925f; }
 
