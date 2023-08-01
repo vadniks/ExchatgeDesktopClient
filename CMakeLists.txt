@@ -74,7 +74,7 @@ endif()
 #             <.so|.a>
 #         include
 #             <.h>
-#     sqlite
+#     sqlite3
 #         bin
 #             <.so|.a>
 #         include
