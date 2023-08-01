@@ -1,0 +1,8 @@
+
+version: '3.8'
+services:
+  server:
+    build: .
+    container_name: exchatge_client_builder
+volumes:
+  db:

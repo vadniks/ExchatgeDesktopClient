@@ -253,7 +253,7 @@ void renderInit(
 
     this->window = SDL_CreateWindow(
         TITLE,
-        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED, // don't work on 2.28.1
         SDL_WINDOWPOS_CENTERED,
         (int) this->width,
         (int) this->height,

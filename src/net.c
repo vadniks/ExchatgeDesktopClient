@@ -248,7 +248,14 @@ bool netInit(
     IPaddress address;
     assert(!SDLNet_ResolveHost(&address, HOST, PORT));
 
+#if SDL_NET_MAJOR_VERSION == 2 && SDL_NET_MINOR_VERSION == 2
+    this->socket = SDLNet_TCP_Open(&address);
+#elif SDL_NET_MAJOR_VERSION == 2 && SDL_NET_MINOR_VERSION == 3
     this->socket = SDLNet_TCP_OpenClient(&address);
+#else
+#   error "untested version"
+#endif
+
     if (!this->socket) {
         netClean();
         return false;
