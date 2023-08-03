@@ -10,7 +10,7 @@ main() {
     mkdir "$extracted"
   fi
 
-  libs=$(ldd "$executable" | awk '{print $3}')
+  libs=$(ldd "$executable" | awk '{print $3}') # objdump -p "$executable" | grep NEEDED
 
   index=0
   while read -r lib; do
