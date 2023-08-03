@@ -2,9 +2,6 @@
 
 # This script is expected to be executed inside a container and it is not intended to be executed on host systems
 
-#cd / \
-#  &&
-
 executable="/ExchatgeDesktopClient/build"
 extracted="/extracted"
 
