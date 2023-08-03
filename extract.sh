@@ -2,7 +2,7 @@
 
 # This script is expected to be executed inside a container and it is not intended to be executed on host systems
 
-executable="/ExchatgeDesktopClient/build"
+executable="/ExchatgeDesktopClient/build/ExchatgeDesktopClient"
 extracted="/extracted"
 
 main() {

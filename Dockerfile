@@ -12,5 +12,5 @@ COPY src /ExchatgeDesktopClient/src
 COPY CMakeLists.txt /ExchatgeDesktopClient/
 COPY res /ExchatgeDesktopClient/res
 RUN mkdir /ExchatgeDesktopClient/build && cd /ExchatgeDesktopClient/build && cmake .. && make all
-RUN chmod +x extract.sh && ./extract.sh
+RUN chmod +x /extract.sh && /extract.sh
 ENTRYPOINT /bin/sleep 60
