@@ -471,7 +471,7 @@ bool renderShowInviteDialog(const char* fromUserName) {
 bool renderShowFileExchangeRequestDialog(const char* fromUserName, unsigned fileSize) {
     assert(this);
 
-    const unsigned bufferSize = 0xff;
+    const unsigned bufferSize = 0xfff;
     char buffer[bufferSize];
 
     const unsigned written = SDL_snprintf(
