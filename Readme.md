@@ -53,8 +53,8 @@ All you have to do is install docker and docker-compose programs, and run
 `docker-compose up --build` within the root directory of this repository. 
 Docker will download necessary files, create & launch a container. While 
 Docker is creating the container, bash scripts download & build project 
-dependencies inside that container. After container was created, you have 
-1 minute to run the script (`export.sh`), which will export all built 
+dependencies inside that container. After container was created, you will 
+have 1 minute to run the script (`export.sh`), which will export all built 
 libraries & the executable itself from the container to your host machine - 
 inside the directory in which the export script was launched there will 
 be created a directory named `exported`, which will contain all the necessary 
