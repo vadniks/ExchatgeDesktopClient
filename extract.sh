@@ -1,9 +1,11 @@
 #!/bin/bash
 
-# This script is expected to be executed inside a container and it is not intended to be executed on host systems
+executable="$(pwd)/build/ExchatgeDesktopClient"
+extracted="$(pwd)/extracted"
 
-executable="/ExchatgeDesktopClient/build/ExchatgeDesktopClient"
-extracted="/extracted"
+if ! [ -r "$(pwd)" ] || ! [ -w "$(pwd)" ]; then exit 1; fi
+if ! [ -x "$executable" ]; then exit 1; fi
+if [ -d "$extracted" ]; then exit 0; fi
 
 main() {
   if ! [ -d "$extracted" ]; then
@@ -14,15 +16,16 @@ main() {
 
   index=0
   while read -r lib; do
-    if [[ $index -ne 0 ]]; then parseLib "$lib"; fi
+    if [[ $index -ne 0 ]]; then processLib "$lib"; fi
     ((index++))
   done <<< "$libs"
 
   cp "$executable" "$extracted"
 }
 
-function parseLib() {
+function processLib() {
   if [ -f "$1" ]; then
+    strip -s "$1" > /dev/null 2>&1
     cp "$1" "$extracted"
   fi
 }

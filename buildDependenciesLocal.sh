@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# This script can be executed both from container and from host
-
 colorGreen='\033[1;32m'
 colorRed='\033[1;31m'
 colorUsual='\033[0m'

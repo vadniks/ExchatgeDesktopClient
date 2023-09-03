@@ -1,9 +1,7 @@
 /.idea
 !.gitignore
 /cmake-build-debug
-/cmake-build-debug-coverage
 /libs
 /build
-/xbuild
-/exported
+/extracted
 /downloads
