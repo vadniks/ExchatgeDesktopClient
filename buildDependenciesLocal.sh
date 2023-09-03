@@ -2,16 +2,25 @@
 
 # This script can be executed both from container and from host
 
+colorGreen='\033[1;32m'
+colorRed='\033[1;31m'
+colorUsual='\033[0m'
+
 curDir=$(pwd)
 downloads="${curDir}/downloads"
 libs="${curDir}/libs"
 
 function err() {
-  >&2 echo "$1"
+  >&2 echo -e "${colorRed}----- $1 ----- ${colorUsual}"
   exit 1
 }
 
+function msg() {
+  echo -e "${colorGreen}----- $1 ----- ${colorUsual}"
+}
+
 function main() {
+  msg "Downloading and building dependencies..."
   if ! [ -r "$curDir" ] || ! [ -w "$curDir" ]; then err "Cannot read or write to current directory"; fi
 
   if [ -d "$downloads" ]; then rm -r "$downloads"; fi
@@ -21,7 +30,7 @@ function main() {
 }
 
 function sdl() {
-  echo "Retrieving & building SDL2..."
+  msg "Processing SDL2..."
 
   lib="${libs}/sdl"
   bin="${lib}/bin"
@@ -39,11 +48,11 @@ function sdl() {
     && cp include/*.h "$include")
   then err "failed to retrieve & build SDL2"; fi
 
-  echo "SDL2 finished"
+  msg "SDL2 finished"
 }
 
 function sdlNet() {
-  echo "Retrieving & building SDL2Net..."
+  msg "Processing SDL2Net..."
 
   lib="${libs}/sdl"
   bin="${lib}/bin"
@@ -58,11 +67,11 @@ function sdlNet() {
     && cp *.h "$include")
   then err "failed to retrieve & build SDL2Net"; fi
 
-  echo "SDL2Net finished"
+  msg "SDL2Net finished"
 }
 
 function sodium() {
-  echo "Retrieving & building Sodium..."
+  msg "Processing Sodium..."
 
   lib="${libs}/sodium"
   bin="${lib}/bin"
@@ -82,11 +91,11 @@ function sodium() {
     && cp -r sodium "$include")
   then err "failed to retrieve & build Sodium"; fi
 
-  echo "Sodium finished"
+  msg "Sodium finished"
 }
 
 function sqlite() {
-  echo "Retrieving & building SQLite3..."
+  msg "Processing SQLite3..."
 
   lib="${libs}/sqlite3"
   bin="${lib}/bin"
@@ -104,11 +113,11 @@ function sqlite() {
     && cp *.so *.so.* *.a "$bin")
   then err "failed to retrieve & build SQLite3"; fi
 
-  echo "SQLite3 finished"
+  msg "SQLite3 finished"
 }
 
 function nuklear() {
-  echo "Retrieving Nuklear..."
+  msg "Processing Nuklear..."
 
   lib="${libs}/nuklear"
   include="${lib}/include"
@@ -124,7 +133,8 @@ function nuklear() {
     && cp ../demo/sdl_renderer/nuklear_sdl_renderer.h "$include")
   then err "failed to retrieve Nuklear"; fi
 
-  echo "Nuklear finished"
+  msg "Nuklear finished"
 }
 
-main && sdl && sdlNet && sodium && sqlite && nuklear
+main && sdl && sdlNet && sodium && sqlite && nuklear \
+  && msg "All dependencies were built and placed in the 'libs' directory"
