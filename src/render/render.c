@@ -17,7 +17,7 @@
  */
 
 #include <assert.h>
-//#include "nuklearDefs.h" - cmake automatically includes precompiled version of this header
+#include "xnuklear.h"
 #include "../defs.h"
 #include "../collections/queue.h"
 #include "../user.h"

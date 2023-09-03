@@ -1,6 +1,7 @@
-/** Proxy for header precompilation */
+/** The actual implementation of the Nuklear library */
 
-#pragma once
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedMacroInspection"
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO
@@ -14,5 +15,12 @@
 #define NK_IMPLEMENTATION
 #define NK_SDL_RENDERER_IMPLEMENTATION
 
+#pragma clang diagnostic pop
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
+
 #include <nuklear.h>
 #include <nuklear_sdl_renderer.h>
+
+#pragma clang diagnostic pop
