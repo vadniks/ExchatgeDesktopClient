@@ -54,6 +54,7 @@ then, to extract the executable & it's libraries, and finally, to run
 the executable itself:
 ```shell
 chmod +x buildDependenciesLocal.sh && ./buildDependenciesLocal.sh
+mkdir build && (cd build; cmake .. && make)
 chmod +x extract.sh && ./extract.sh
 LD_LIBRARY_PATH="$(pwd)/extracted" extracted/ExchatgeDesktopClient
 ```
