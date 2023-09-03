@@ -48,30 +48,14 @@ Client side uses the following libraries:
 
 ## Build
 
-For convenience, build is performed automatically inside a docker container. 
-All you have to do is install docker and docker-compose programs, and run 
-`docker-compose up --build` within the root directory of this repository. 
-Docker will download necessary files, create & launch a container. While 
-Docker is creating the container, bash scripts download & build project 
-dependencies inside that container. After container was created, you will 
-have 1 minute to run the script (`export.sh`), which will export all built 
-libraries & the executable itself from the container to your host machine - 
-inside the directory in which the export script was launched there will 
-be created a directory named `exported`, which will contain all the necessary 
-files. Then, you can run the executable. To do so, run these commands from this 
-repository's root directory:
+For convenience, build is performed automatically via shell scripts. 
+Execute the following commands to download & build dependencies, 
+then, to extract the executable & it's libraries, and finally, to run 
+the executable itself:
 ```shell
-chmod +x export.sh && ./export.sh
-LD_LIBRARY_PATH="$(pwd)/exported" exported/ExchatgeDesktopClient
-```
-After all the necessary file were exported, the container, as well as it's image 
-can be removed via these commands (Ctrl + C the running container first):
-```shell
-docker-compose down
-# and the following ones can be used to do full clean up:
-docker container prune
-docker image prune -a
-docker builder prune
+chmod +x buildDependenciesLocal.sh && ./buildDependenciesLocal.sh
+chmod +x extract.sh && ./extract.sh
+LD_LIBRARY_PATH="$(pwd)/extracted" extracted/ExchatgeDesktopClient
 ```
 
 ## License
