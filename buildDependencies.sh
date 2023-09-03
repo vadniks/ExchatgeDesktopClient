@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# DEPRECATED
+
 # This script is expected to be executed inside a container and it is not intended to be executed on host systems
 
 mkdir /downloads && mkdir /ExchatgeDesktopClient && mkdir /ExchatgeDesktopClient/libs
