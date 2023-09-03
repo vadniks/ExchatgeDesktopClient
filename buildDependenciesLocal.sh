@@ -137,4 +137,5 @@ function nuklear() {
 }
 
 main && sdl && sdlNet && sodium && sqlite && nuklear \
+  && rm -r "$downloads" \
   && msg "All dependencies were built and placed in the 'libs' directory"
