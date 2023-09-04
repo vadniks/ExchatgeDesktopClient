@@ -1,6 +1,6 @@
 
-file(GLOB render_lib_sources CONFIGURE_DEPENDS "*.c" "*.h")
-add_library(${LIB_RENDER_NAME} ${render_lib_sources})
+file(GLOB lib_render_sources CONFIGURE_DEPENDS "*.c" "*.h")
+add_library(${LIB_RENDER_NAME} ${lib_render_sources})
 target_include_directories(${LIB_RENDER_NAME} PUBLIC ..)
 
 include_directories("${CMAKE_SOURCE_DIR}/libs/nuklear/include")
