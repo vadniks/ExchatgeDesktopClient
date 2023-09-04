@@ -71,7 +71,7 @@ void listAddFront(List* list, const void* value) {
     SYNCHRONIZED_END
 }
 
-const void* listGet(const List* list, unsigned index) {
+const void* listGet(List* list, unsigned index) {
     assert(list && !list->destroyed);
     SYNCHRONIZED_BEGIN
     assert(list->values && list->size > 0 && list->size < MAX_SIZE && index < MAX_SIZE);
@@ -86,7 +86,7 @@ unsigned listSize(const List* list) {
     return list->size;
 }
 
-const void* nullable listBinarySearch(const List* list, const void* key, ListComparator comparator) {
+const void* nullable listBinarySearch(List* list, const void* key, ListComparator comparator) {
     assert(list && !list->destroyed);
     SYNCHRONIZED_BEGIN
     assert(list->values && list->size > 0);

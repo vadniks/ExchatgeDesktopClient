@@ -116,9 +116,9 @@ THIS(
     char* enteredCredentialsBuffer;
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser;
     SDL_mutex* uiQueriesMutex;
-    const List* nullable usersList; // <User*> allocated elsewhere
+    List* nullable usersList; // <User*> allocated elsewhere
     RenderUserForConversationChosenCallback onUserForConversationChosen;
-    const List* nullable conversationMessagesList; // <ConversationMessage*> allocated elsewhere, conversation messages
+    List* nullable conversationMessagesList; // <ConversationMessage*> allocated elsewhere, conversation messages
     char* conversationName; // conversation name or the name of the recipient
     unsigned conversationNameSize;
     bool adminMode;
@@ -314,12 +314,12 @@ void renderSetAdminMode(bool mode) {
     this->adminMode = mode;
 }
 
-void renderSetUsersList(const List* usersList) {
+void renderSetUsersList(List* usersList) {
     assert(this);
     this->usersList = usersList;
 }
 
-void renderSetMessagesList(const List* messagesList) {
+void renderSetMessagesList(List* messagesList) {
     assert(this);
     this->conversationMessagesList = messagesList;
 }

@@ -95,12 +95,12 @@ void logicNetListen(void) {
     netListen();
 }
 
-const List* logicUsersList(void) {
+List* logicUsersList(void) {
     assert(this);
     return this->usersList;
 }
 
-const List* logicMessagesList(void) {
+List* logicMessagesList(void) {
     assert(this);
     return this->messagesList;
 }

@@ -27,8 +27,8 @@ extern const unsigned LOGIC_MAX_FILE_PATH_SIZE;
 void logicInit(unsigned argc, const char** argv);
 bool logicIsAdminMode(void);
 void logicNetListen(void); // causes net module to listen for connection updates
-const List* logicUsersList(void); // returns permanent users list in which actual user objects will be inserted/updated/removed later by the net module
-const List* logicMessagesList(void); // same as usersList but for conversation messages between users
+List* logicUsersList(void); // returns permanent users list in which actual user objects will be inserted/updated/removed later by the net module
+List* logicMessagesList(void); // same as usersList but for conversation messages between users
 void logicOnFileChooserRequested(void);
 void logicFileChooseResultHandler(const char* nullable filePath, unsigned size);
 void logicProcessEvent(SDL_Event* event);

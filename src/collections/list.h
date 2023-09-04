@@ -30,8 +30,8 @@ typedef int (*ListComparator)(const void*, const void*);
 List* listInit(ListDeallocator nullable deallocator);
 void listAddBack(List* list, const void* value);
 void listAddFront(List* list, const void* value);
-const void* listGet(const List* list, unsigned index);
-unsigned listSize(const List* list);
-const void* nullable listBinarySearch(const List* list, const void* key, ListComparator comparator);
+const void* listGet(List* list, unsigned index); // list is actually treated as non-const 'cause mutex inside it is being modified
+unsigned listSize(const List* list); // but not here as mutex isn't modified here
+const void* nullable listBinarySearch(List* list, const void* key, ListComparator comparator);
 void listClear(List* list);
 void listDestroy(List* list); // all values that are still remain inside a queue at a time destroy is called are deallocated via supplied deallocator if it's not null
