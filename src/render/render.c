@@ -19,14 +19,11 @@
 #include <assert.h>
 #include "xnuklear.h"
 #include "../defs.h"
+#include "../utils/rwMutex.h"
 #include "../collections/queue.h"
 #include "../user.h"
 #include "../conversationMessage.h"
 #include "render.h"
-
-#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->uiQueriesMutex));
-#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->uiQueriesMutex));
-#define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
 
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
 STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
@@ -115,7 +112,7 @@ THIS(
     unsigned enteredPasswordSize;
     char* enteredCredentialsBuffer;
     RenderLogInRegisterPageQueriedByUserCallback onLoginRegisterPageQueriedByUser;
-    SDL_mutex* uiQueriesMutex;
+    RWMutex* rwMutex;
     List* nullable usersList; // <User*> allocated elsewhere
     RenderUserForConversationChosenCallback onUserForConversationChosen;
     List* nullable conversationMessagesList; // <ConversationMessage*> allocated elsewhere, conversation messages
@@ -216,10 +213,7 @@ void renderInit(
     this->enteredPasswordSize = 0;
     this->enteredCredentialsBuffer = SDL_calloc(this->usernameSize + this->passwordSize, sizeof(char));
     this->onLoginRegisterPageQueriedByUser = onLoginRegisterPageQueriedByUser;
-
-    this->uiQueriesMutex = SDL_CreateMutex();
-    assert(this->uiQueriesMutex);
-
+    this->rwMutex = rwMutexInit();
     this->usersList = NULL;
     this->onUserForConversationChosen = onUserForConversationChosen;
     this->conversationMessagesList = NULL;
@@ -364,73 +358,79 @@ void renderSetWindowTitle(const char* title) {
     SDL_memcpy(xTitle + winTitleSize + separatorSize, title, this->usernameSize);
     xTitle[size - 1] = 0;
 
-    SYNCHRONIZED(SDL_SetWindowTitle(this->window, xTitle);)
+    rwMutexWriteLock(this->rwMutex);
+    SDL_SetWindowTitle(this->window, xTitle);
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 void renderAlterConversationMessageBuffer(const char* text, unsigned size) {
     assert(this && size <= this->maxMessageSize);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
 
     assert(this->state == STATE_CONVERSATION);
     SDL_memset(this->conversationMessage, 0, this->maxMessageSize);
     SDL_memcpy(this->conversationMessage, text, size);
     this->enteredConversationMessageSize = size;
 
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 void renderAlterFilePathBuffer(const char* filePath, unsigned size) {
     assert(this && size <= this->maxFilePathSize);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
 
     assert(this->state == STATE_FILE_CHOOSER);
     SDL_memset(this->enteredFilePath, 0, this->maxFilePathSize);
     SDL_memcpy(this->enteredFilePath, filePath, size);
     this->enteredFilePathSize = size;
 
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 void renderShowLogIn(void) {
     assert(this);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
 
     SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize * sizeof(char));
     this->enteredUsernameSize = 0;
     this->enteredPasswordSize = 0;
     this->state = STATE_LOG_IN;
 
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 void renderShowRegister(void) {
     assert(this);
-    SYNCHRONIZED(this->state = STATE_REGISTER;)
+    rwMutexWriteLock(this->rwMutex);
+    this->state = STATE_REGISTER;
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 void renderShowUsersList(const char* currentUserName) {
     assert(this && this->usersList);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
 
     SDL_memcpy(this->currentUserName, currentUserName, this->usernameSize);
     this->state = STATE_USERS_LIST;
 
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 void renderShowConversation(const char* conversationName) {
     assert(this && this->conversationMessage && this->maxMessageSize && this->conversationMessagesList);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
 
     SDL_memcpy(this->conversationName, conversationName, this->conversationNameSize);
     this->state = STATE_CONVERSATION;
 
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 void renderShowFileChooser(void) {
     assert(this);
-    SYNCHRONIZED(this->state = STATE_FILE_CHOOSER;)
+    rwMutexWriteLock(this->rwMutex);
+    this->state = STATE_FILE_CHOOSER;
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 bool renderIsConversationShown(void) { return this->state == STATE_CONVERSATION; }
@@ -507,7 +507,9 @@ bool renderShowFileExchangeRequestDialog(const char* fromUserName, unsigned file
 
 void renderSetControlsBlocking(bool blocking) {
     assert(this);
-    SYNCHRONIZED(this->allowInput = !blocking;)
+    rwMutexWriteLock(this->rwMutex);
+    this->allowInput = !blocking;
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 static void postSystemMessage(const char* text, bool error) { // expects a null-terminated string with length in range (0, SYSTEM_MESSAGE_SIZE_MAX]
@@ -529,22 +531,7 @@ static void postSystemMessage(const char* text, bool error) { // expects a null-
     }
     assert(foundNullTerminator);
 
-    SYNCHRONIZED(queuePush(this->systemMessagesQueue, message);)
-}
-
-void renderShowSystemMessage(const char* message, bool error) {
-    assert(this);
-    postSystemMessage(message, error);
-}
-
-void renderHideSystemMessage(void) {
-    assert(this);
-    SYNCHRONIZED_BEGIN
-
-    while (queueSize(this->systemMessagesQueue) > 0)
-        destroySystemMessage(queuePop(this->systemMessagesQueue));
-
-    SYNCHRONIZED_END
+    queuePush(this->systemMessagesQueue, message);
 }
 
 void renderShowSystemError(void) { postSystemMessage(ERROR_TEXT, true); }
@@ -565,12 +552,16 @@ void renderShowFileTransmittedSystemMessage(void) { postSystemMessage(FILE_TRANS
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);
-    SYNCHRONIZED(this->loading = true;)
+    rwMutexWriteLock(this->rwMutex);
+    this->loading = true;
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 void renderHideInfiniteProgressBar(void) {
     assert(this);
-    SYNCHRONIZED(this->loading = false;)
+    rwMutexWriteLock(this->rwMutex);
+    this->loading = false;
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 static void drawInfiniteProgressBar(float height) {
@@ -645,7 +636,7 @@ static void drawLogInForm(int width, float height, bool logIn) {
     nk_layout_row_static(this->context, height * 0.25f, width / 2, 2);
 
     nk_label(this->context, USERNAME, NK_TEXT_ALIGN_LEFT);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
     nk_edit_string(
         this->context,
         NK_EDIT_FIELD,
@@ -664,7 +655,7 @@ static void drawLogInForm(int width, float height, bool logIn) {
         (int) this->passwordSize,
         &nk_filter_default
     );
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
 
     nk_layout_row_static(this->context, height * 0.25f, width / 2, 2);
     if (nk_button_label(this->context, PROCEED)) onProceedClickedAfterLogInRegister(logIn);
@@ -804,7 +795,7 @@ static void drawUsersList(void) {
     char groupName[2] = {1, 0};
     if (!nk_group_begin(this->context, groupName, 0)) return;
 
-    SYNCHRONIZED_BEGIN
+    rwMutexReadLock(this->rwMutex);
     const unsigned size = listSize(this->usersList);
     for (unsigned i = 0; i < size; i++) {
         const User* user = (User*) listGet(this->usersList, i);
@@ -814,7 +805,7 @@ static void drawUsersList(void) {
 
         drawUserRow(user->id, idString, user->name, user->conversationExists, user->online);
     }
-    SYNCHRONIZED_END
+    rwMutexReadUnlock(this->rwMutex);
 
     nk_group_end(this->context);
 }
@@ -908,7 +899,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         fromRatio = aboveInitialWidth ? 0.05f : 0.1f,
         textRatio = aboveInitialWidth ? 0.435f : 0.35f;
 
-    SYNCHRONIZED_BEGIN
+    rwMutexReadLock(this->rwMutex);
     const unsigned size = listSize(this->conversationMessagesList);
     for (unsigned i = 0; i < size; i++) {
         const ConversationMessage* message = listGet(this->conversationMessagesList, i);
@@ -923,14 +914,14 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
             timestampColor
         );
     }
-    SYNCHRONIZED_END
+    rwMutexReadUnlock(this->rwMutex);
 
     nk_group_end(this->context);
 
     nk_layout_row_begin(this->context, NK_DYNAMIC, (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f, 2);
 
     nk_layout_row_push(this->context, 0.85f);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
     nk_edit_string(
         this->context,
         NK_EDIT_SIMPLE | NK_EDIT_MULTILINE, // if use NK_EDIT_CLIPBOARD and user actually pastes smth then smth strange happens which causes memory corruption and therefore assert(!SDL_GetNumAllocations()) in main.c fails
@@ -939,7 +930,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         (int) this->maxMessageSize,
         nk_filter_default
     );
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
 
     nk_layout_row_push(this->context, aboveInitialWidth ? 0.069f : 0.067f);
     if (nk_button_label(this->context, SEND)) onSendClicked();
@@ -976,7 +967,7 @@ static void drawFileChooser(void) {
 
     nk_layout_row_dynamic(this->context, rowHeight, 3);
     nk_spacer(this->context);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
     nk_edit_string(
         this->context,
         NK_EDIT_SIMPLE,
@@ -985,7 +976,7 @@ static void drawFileChooser(void) {
         (int) this->maxFilePathSize,
         nk_filter_default
     );
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
     nk_spacer(this->context);
 
     nk_spacer(this->context);
@@ -1086,7 +1077,7 @@ void renderClean(void) {
     SDL_free(this->conversationMessage);
     SDL_free(this->conversationName);
 
-    SDL_DestroyMutex(this->uiQueriesMutex);
+    rwMutexDestroy(this->rwMutex);
     SDL_free(this->enteredCredentialsBuffer);
 
     nk_sdl_shutdown();

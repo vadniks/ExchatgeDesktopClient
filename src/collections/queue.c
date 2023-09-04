@@ -17,13 +17,10 @@
  */
 
 #include <SDL_stdinc.h>
-#include <SDL_mutex.h>
 #include <assert.h>
 #include <stdbool.h>
+#include "../utils/rwMutex.h"
 #include "queue.h"
-
-#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(queue->mutex));
-#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(queue->mutex));
 
 STATIC_CONST_UNSIGNED VOID_PTR_SIZE = sizeof(void*);
 
@@ -31,7 +28,7 @@ struct Queue_t {
     void** values;
     atomic unsigned size;
     QueueDeallocator nullable deallocator;
-    SDL_mutex* mutex;
+    RWMutex* rwMutex;
     atomic bool destroyed;
 };
 
@@ -40,25 +37,25 @@ Queue* queueInit(QueueDeallocator nullable deallocator) {
     queue->values = NULL;
     queue->size = 0;
     queue->deallocator = deallocator;
-    queue->mutex = SDL_CreateMutex();
+    queue->rwMutex = rwMutexInit();
     queue->destroyed = false;
     return queue;
 }
 
 void queuePush(Queue* queue, const void* value) {
     assert(queue && !queue->destroyed);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(queue->rwMutex);
     assert(queue->size < 0xfffffffe);
 
     queue->values = SDL_realloc(queue->values, ++(queue->size) * VOID_PTR_SIZE);
     queue->values[queue->size - 1] = (void*) value;
 
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(queue->rwMutex);
 }
 
 void* queuePop(Queue* queue) {
     assert(queue && !queue->destroyed && queue->size > 0);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(queue->rwMutex);
     assert(queue->values);
 
     void* value = queue->values[0];
@@ -68,7 +65,7 @@ void* queuePop(Queue* queue) {
         SDL_free(queue->values);
         queue->values = NULL;
         queue->size = 0;
-        SYNCHRONIZED_END
+        rwMutexWriteUnlock(queue->rwMutex);
         return value;
     }
 
@@ -80,13 +77,18 @@ void* queuePop(Queue* queue) {
 
     queue->size = newSize;
 
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(queue->rwMutex);
     return value;
 }
 
 unsigned queueSize(const Queue* queue) {
     assert(queue && !queue->destroyed);
-    return queue->size;
+
+    rwMutexReadLock(queue->rwMutex);
+    const unsigned size = queue->size;
+    rwMutexReadUnlock(queue->rwMutex);
+
+    return size;
 }
 
 static void destroyValuesIfNotEmpty(Queue* queue) {
@@ -101,6 +103,6 @@ void queueDestroy(Queue* queue) {
 
     destroyValuesIfNotEmpty(queue);
     SDL_free(queue->values);
-    SDL_DestroyMutex(queue->mutex);
+    rwMutexDestroy(queue->rwMutex);
     SDL_free(queue);
 }

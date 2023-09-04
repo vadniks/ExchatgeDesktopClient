@@ -18,14 +18,10 @@
 
 //#include "sqlite3proxy.h" // precompiled version of this header is included automatically by cmake
 #include <SDL_stdinc.h>
-#include <SDL_mutex.h>
 #include <assert.h>
 #include <unistd.h>
+#include "../utils/rwMutex.h"
 #include "database.h"
-
-#define SYNCHRONIZED_BEGIN assert(!SDL_LockMutex(this->mutex));
-#define SYNCHRONIZED_END assert(!SDL_UnlockMutex(this->mutex));
-#define SYNCHRONIZED(x) SYNCHRONIZED_BEGIN x SYNCHRONIZED_END
 
 STATIC_CONST_STRING FILE_NAME = "./database.sqlite3";
 
@@ -44,7 +40,7 @@ STATIC_CONST_STRING MACHINE_ID_COLUMN = "machineId";
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
-    SDL_mutex* mutex;
+    RWMutex* rwMutex;
     byte* key;
     unsigned maxMessageTextSize;
     sqlite3* db;
@@ -332,8 +328,8 @@ static bool checkKey(void) {
 bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize, unsigned maxMessageTextSize) {
     assert(!this && passwordSize > 0 && usernameSize > 0);
     this = SDL_malloc(sizeof *this);
-    this->mutex = SDL_CreateMutex();
-    SYNCHRONIZED_BEGIN
+    this->rwMutex = rwMutexInit();
+    rwMutexWriteLock(this->rwMutex);
 
     this->key = SDL_malloc(CRYPTO_KEY_SIZE);
     byte* key = cryptoMakeKey(passwordBuffer, passwordSize);
@@ -346,7 +342,7 @@ bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned us
     if (successful) createTablesIfNotExist();
 
     if (!checkKey()) successful = false;
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
     return successful;
 }
 
@@ -360,7 +356,7 @@ static void conversationExistsBinder(const unsigned* userId, sqlite3_stmt* state
 
 bool databaseConversationExists(unsigned userId) {
     assert(this);
-    SYNCHRONIZED_BEGIN
+    rwMutexReadLock(this->rwMutex);
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -379,7 +375,7 @@ bool databaseConversationExists(unsigned userId) {
         (StatementProcessor) &existsResultHandler, &result
     );
 
-    SYNCHRONIZED_END
+    rwMutexReadUnlock(this->rwMutex);
     return result;
 }
 
@@ -390,7 +386,7 @@ static void addConversationBinder(const void* const* parameters, sqlite3_stmt* s
 
 bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
     assert(this);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
 
     byte* streamStates = cryptoExportStreamsStates(crypto);
     byte* encryptedStreamsStates = cryptoEncryptSingle(this->key, streamStates, CRYPTO_STREAMS_STATES_SIZE);
@@ -415,7 +411,7 @@ bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
     );
 
     SDL_free(encryptedStreamsStates);
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
     return true;
 }
 
@@ -442,7 +438,7 @@ static void getConversationResultHandler(void* const* parameters, sqlite3_stmt* 
 
 Crypto* nullable databaseGetConversation(unsigned userId) {
     assert(this);
-    SYNCHRONIZED_BEGIN
+    rwMutexReadLock(this->rwMutex);
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -471,7 +467,7 @@ Crypto* nullable databaseGetConversation(unsigned userId) {
     cryptoSetUpAutonomous(crypto, this->key, decryptedStreamsStates);
     SDL_free(decryptedStreamsStates);
 
-    SYNCHRONIZED_END
+    rwMutexReadUnlock(this->rwMutex);
     return crypto;
 }
 
@@ -480,7 +476,7 @@ static void removeConversationBinder(const unsigned* userId, sqlite3_stmt* state
 
 void databaseRemoveConversation(unsigned userId) {
     assert(this);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -498,7 +494,7 @@ void databaseRemoveConversation(unsigned userId) {
         NULL, NULL
     );
 
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statement) {
@@ -514,7 +510,7 @@ static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statem
 
 bool databaseAddMessage(const DatabaseMessage* message) {
     assert(this);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -536,7 +532,7 @@ bool databaseAddMessage(const DatabaseMessage* message) {
     );
     SDL_free(encryptedText);
 
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
     return true;
 }
 
@@ -577,7 +573,7 @@ static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { 
 
 List* nullable databaseGetMessages(unsigned conversation) {
     assert(this);
-    SYNCHRONIZED_BEGIN
+    rwMutexReadLock(this->rwMutex);
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -596,7 +592,7 @@ List* nullable databaseGetMessages(unsigned conversation) {
         (StatementProcessor) &getMessagesResultHandler, messages
     );
 
-    SYNCHRONIZED_END
+    rwMutexReadUnlock(this->rwMutex);
     if (listSize(messages))
         return messages;
     else {
@@ -610,7 +606,7 @@ static void removeMessagesBinder(const unsigned* conversation, sqlite3_stmt* sta
 
 void databaseRemoveMessages(unsigned conversation) {
     assert(this);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -628,18 +624,18 @@ void databaseRemoveMessages(unsigned conversation) {
         NULL, NULL
     );
 
-    SYNCHRONIZED_END
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 void databaseClean(void) {
     assert(this);
-    SYNCHRONIZED_BEGIN
+    rwMutexWriteLock(this->rwMutex);
 
     SDL_free(this->key);
     assert(!sqlite3_close(this->db));
 
-    SYNCHRONIZED_END
-    SDL_DestroyMutex(this->mutex);
+    rwMutexWriteUnlock(this->rwMutex);
+    rwMutexDestroy(this->rwMutex);
     SDL_free(this);
     this = NULL;
 }
