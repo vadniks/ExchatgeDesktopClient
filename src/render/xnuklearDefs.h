@@ -13,6 +13,6 @@
 #define NK_INCLUDE_FONT_BAKING
 #define NK_INCLUDE_DEFAULT_FONT
 #define NK_INCLUDE_STANDARD_BOOL
-#define INCLUDE_STYLE
+#define NK_INCLUDE_STYLE
 
 #pragma clang diagnostic pop
