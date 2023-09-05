@@ -22,48 +22,47 @@
 #include "rwMutex.h"
 
 struct RWMutex_t {
-    SDL_mutex* mutex;
+    SDL_mutex* rMutex;
+    SDL_mutex* gMutex;
     atomic unsigned counter;
-    SDL_cond* cond;
 };
 
 RWMutex* rwMutexInit(void) {
     RWMutex* rwMutex = SDL_malloc(sizeof *rwMutex);
-    rwMutex->mutex = SDL_CreateMutex();
+    rwMutex->rMutex = SDL_CreateMutex();
+    rwMutex->gMutex = SDL_CreateMutex();
     rwMutex->counter = 0;
-    rwMutex->cond = SDL_CreateCond();
     return rwMutex;
 }
 
 void rwMutexReadLock(RWMutex* rwMutex) {
-    SDL_LockMutex(rwMutex->mutex);
-    (rwMutex->counter)++;
-    SDL_UnlockMutex(rwMutex->mutex);
+    SDL_LockMutex(rwMutex->rMutex);
+
+    if (++(rwMutex->counter) == 1)
+        SDL_LockMutex(rwMutex->gMutex);
+
+    SDL_UnlockMutex(rwMutex->rMutex);
 }
 
 void rwMutexReadUnlock(RWMutex* rwMutex) {
-    SDL_LockMutex(rwMutex->mutex);
+    SDL_LockMutex(rwMutex->rMutex);
 
     if (!(--(rwMutex->counter)))
-        SDL_CondSignal(rwMutex->cond);
+        SDL_UnlockMutex(rwMutex->gMutex);
 
-    SDL_UnlockMutex(rwMutex->mutex);
+    SDL_UnlockMutex(rwMutex->rMutex);
 }
 
 void rwMutexWriteLock(RWMutex* rwMutex) {
-    SDL_LockMutex(rwMutex->mutex);
-
-    while (rwMutex->counter)
-        SDL_CondWait(rwMutex->cond, rwMutex->mutex);
+    SDL_LockMutex(rwMutex->gMutex);
 }
 
 void rwMutexWriteUnlock(RWMutex* rwMutex) {
-    SDL_CondSignal(rwMutex->cond);
-    SDL_UnlockMutex(rwMutex->mutex);
+    SDL_UnlockMutex(rwMutex->gMutex);
 }
 
 void rwMutexDestroy(RWMutex* rwMutex) {
-    SDL_DestroyCond(rwMutex->cond);
-    SDL_DestroyMutex(rwMutex->mutex);
+    SDL_DestroyMutex(rwMutex->gMutex);
+    SDL_DestroyMutex(rwMutex->rMutex);
     SDL_free(rwMutex);
 }
