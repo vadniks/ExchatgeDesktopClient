@@ -53,13 +53,11 @@ void rwMutexReadUnlock(RWMutex* rwMutex) {
     SDL_UnlockMutex(rwMutex->rMutex);
 }
 
-void rwMutexWriteLock(RWMutex* rwMutex) {
-    SDL_LockMutex(rwMutex->gMutex);
-}
+void rwMutexWriteLock(RWMutex* rwMutex)
+{ SDL_LockMutex(rwMutex->gMutex); }
 
-void rwMutexWriteUnlock(RWMutex* rwMutex) {
-    SDL_UnlockMutex(rwMutex->gMutex);
-}
+void rwMutexWriteUnlock(RWMutex* rwMutex)
+{ SDL_UnlockMutex(rwMutex->gMutex); }
 
 void rwMutexDestroy(RWMutex* rwMutex) {
     SDL_DestroyMutex(rwMutex->gMutex);
