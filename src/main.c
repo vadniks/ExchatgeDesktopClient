@@ -24,6 +24,13 @@
 int main(int argc, const char* const* argv) {
     if (!lifecycleInit(argc, argv)) return EXIT_FAILURE;
 
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\r\033[1;32m     \n"
+        "_______ _     _ _______ _     _ _______ _______  ______ _______\n"
+        "|______  \\___/  |       |_____| |_____|    |    |  ____ |______\n"
+        "|______ _/   \\_ |_____  |     | |     |    |    |_____| |______\n"
+        "                   free software (GNU GPL v3)                   \033[0m"
+    );
+
     SDL_version version;
     SDL_GetVersion(&version);
     assert(version.major == 2);
