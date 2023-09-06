@@ -88,6 +88,8 @@ void logicInit(unsigned argc, const char* const* argv) {
     assert(optionsIsAdmin());
     assert(!SDL_memcmp(optionsHost(), "127.0.0.1", 9));
     assert(optionsPort() == 8080);
+    assert(optionsServerSignPublicKey());
+    assert(optionsServerSignPublicKeySize() == CRYPTO_KEY_SIZE);
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }

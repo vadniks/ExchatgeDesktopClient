@@ -33,6 +33,7 @@ typedef struct {
     char* host;
     unsigned port;
     byte* serverSignPublicKey;
+    unsigned serverSignPublicKeySize;
 } Options;
 
 static Options* options = NULL;
@@ -85,8 +86,30 @@ static void parsePortOption(const char* line)
 { options->port = SDL_atoi(line + SDL_strlen(HOST_OPTION) + 1); }
 
 static void parseSskpOption(const char* line) {
+    const unsigned size = SDL_strlen(line);
 
+    byte* nums = NULL;
+    unsigned count = 0;
+    char* num = NULL;
 
+    for (unsigned i = SDL_strlen(SSPK_OPTION) + 1, j = 0; i <= size; i++) {
+        num = SDL_realloc(num, ++j);
+
+        if (line[i] == ',' || i == size) {
+            num[j - 1] = 0;
+
+            nums = SDL_realloc(nums, ++count);
+            nums[count - 1] = (byte) SDL_atoi(num);
+
+            SDL_free(num);
+            num = NULL;
+            j = 0;
+        } else
+            num[j - 1] = line[i];
+    }
+
+    options->serverSignPublicKey = nums;
+    options->serverSignPublicKeySize = count;
 }
 
 bool optionsInit(void) {
@@ -142,9 +165,14 @@ const byte* optionsServerSignPublicKey(void) {
     return options->serverSignPublicKey;
 }
 
+unsigned optionsServerSignPublicKeySize(void) {
+    assert(options);
+    return options->serverSignPublicKeySize;
+}
+
 void optionsClear(void) {
     assert(options);
     SDL_free(options->host);
-//    SDL_free(options->serverSignPublicKey);
+    SDL_free(options->serverSignPublicKey);
     SDL_free(options);
 }

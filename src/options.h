@@ -26,4 +26,5 @@ bool optionsIsAdmin(void);
 const char* optionsHost(void);
 unsigned optionsPort(void);
 const byte* optionsServerSignPublicKey(void);
+unsigned optionsServerSignPublicKeySize(void);
 void optionsClear(void);
