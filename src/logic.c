@@ -57,39 +57,19 @@ THIS(
 )
 #pragma clang diagnostic pop
 
-static void parseArguments(unsigned argc, const char* const* argv) {
-    assert(argc <= 1 || argc == 2 && argv[1]); // 'cause argv[0] is path to the executable everytime
-
-    if (argc <= 1) {
-        this->adminMode = false;
-        return;
-    }
-
-    const unsigned patternSize = 7;
-    const char pattern[patternSize] = "--admin"; // Just unlock access to admin operations, they're executed on the server after it verifies the caller, so verification on the client side is unnecessary
-    this->adminMode = !SDL_memcmp(argv[1], pattern, patternSize);
-}
-
 void logicInit(unsigned argc, const char* const* argv) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
     this->netInitialized = false;
     this->usersList = userInitList();
     this->messagesList = conversationMessageInitList();
-    parseArguments(argc, argv);
     this->state = STATE_UNAUTHENTICATED;
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
     this->databaseInitialized = false;
     this->rwops = NULL;
 
     assert(optionsInit());
-
-    // TODO: test only -----\/
-    assert(optionsIsAdmin());
-    assert(!SDL_memcmp(optionsHost(), "127.0.0.1", 9));
-    assert(optionsPort() == 8080);
-    assert(optionsServerSignPublicKey());
-    assert(optionsServerSignPublicKeySize() == CRYPTO_KEY_SIZE);
+    this->adminMode = optionsIsAdmin();
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
@@ -575,6 +555,10 @@ static void processCredentials(void** data) {
 
     netInit:
     this->netInitialized = netInit(
+        optionsHost(),
+        optionsPort(),
+        optionsServerSignPublicKey(),
+        optionsServerSignPublicKeySize(),
         &onMessageReceived,
         &onLogInResult,
         &onErrorReceived,

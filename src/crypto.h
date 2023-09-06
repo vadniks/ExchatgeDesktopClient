@@ -33,6 +33,7 @@ typedef struct Crypto_t Crypto;
 Crypto* nullable cryptoInit(void);
 
 // as client:
+void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize); // must be called before performing any client side operations
 bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey); // returns true on success
 byte* nullable cryptoInitializeCoderStreams(Crypto* crypto, const byte* serverStreamHeader); // expects a HEADER_SIZE-sized server header's bytes, returns a deallocation-required HEADER-SIZE-sized client header's bytes on success and null otherwise
 bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedBytes, unsigned unsignedSize);

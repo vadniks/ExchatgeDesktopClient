@@ -44,6 +44,10 @@ extern const unsigned NET_MESSAGE_BODY_SIZE;
 extern const int NET_FLAG_PROCEED; // just send message to another user
 
 bool netInit( // blocks the caller thread until secure connection is established
+    const char* host,
+    unsigned port,
+    const byte* serverSignPublicKey,
+    unsigned serverSignPublicKeySize,
     NetMessageReceivedCallback onMessageReceived,
     NetNotifierCallback onLogInResult,
     NetServiceCallback onErrorReceived, // not called on login error & register error as there are separated callback for them

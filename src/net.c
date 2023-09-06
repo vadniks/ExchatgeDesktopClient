@@ -38,9 +38,6 @@ typedef enum : unsigned {
     STATE_FINISHED_WITH_ERROR = 7
 } States;
 
-static const char* HOST = "127.0.0.1"; // TODO: add possibility to change this
-STATIC_CONST_UNSIGNED PORT = 8080;
-
 STATIC_CONST_UNSIGNED INT_SIZE = sizeof(int);
 STATIC_CONST_UNSIGNED LONG_SIZE = sizeof(long);
 
@@ -94,6 +91,8 @@ STATIC_CONST_UNSIGNED INVITE_DENY = 2;
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
+    char* host;
+    unsigned port;
     TCPsocket socket;
     SDLNet_SocketSet socketSet;
     unsigned state;
@@ -156,9 +155,10 @@ STATIC_CONST_UNSIGNED USER_INFO_SIZE = INT_SIZE + sizeof(bool) + NET_USERNAME_SI
 
 staticAssert(sizeof(bool) == 1 && sizeof(NetUserInfo) == 21);
 
-static void initiateSecuredConnection(void) {
+static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned serverSignPublicKeySize) {
     this->connectionCrypto = cryptoInit();
     assert(this->connectionCrypto);
+    cryptoSetServerSignPublicKey(serverSignPublicKey, serverSignPublicKeySize);
 
     const unsigned signedPublicKeySize = CRYPTO_SIGNATURE_SIZE + CRYPTO_KEY_SIZE;
     byte serverSignedPublicKey[signedPublicKeySize];
@@ -195,6 +195,10 @@ static void initiateSecuredConnection(void) {
 }
 
 bool netInit(
+    const char* host,
+    unsigned port,
+    const byte* serverSignPublicKey,
+    unsigned serverSignPublicKeySize,
     NetMessageReceivedCallback onMessageReceived,
     NetNotifierCallback onLogInResult,
     NetServiceCallback onErrorReceived,
@@ -213,6 +217,12 @@ bool netInit(
     assert(*((byte*) &byteOrderChecker) == 0xef); // checks whether the app is running on a x64 littleEndian architecture so the byte order won't mess up data marshalling
 
     this = SDL_malloc(sizeof *this);
+
+    const unsigned hostSize = SDL_strlen(host);
+    this->host = SDL_malloc(hostSize);
+    SDL_memcpy(this->host, host, hostSize);
+
+    this->port = port;
     this->socket = NULL;
     this->socketSet = NULL;
     this->onMessageReceived = onMessageReceived;
@@ -243,7 +253,7 @@ bool netInit(
     assert(!SDLNet_Init());
 
     IPaddress address;
-    assert(!SDLNet_ResolveHost(&address, HOST, PORT));
+    assert(!SDLNet_ResolveHost(&address, this->host, this->port));
 
 #if SDL_NET_MAJOR_VERSION == 2 && SDL_NET_MINOR_VERSION == 2
     this->socket = SDLNet_TCP_Open(&address);
@@ -262,7 +272,7 @@ bool netInit(
     assert(this->socketSet);
     assert(SDLNet_TCP_AddSocket(this->socketSet, this->socket) == 1);
 
-    initiateSecuredConnection();
+    initiateSecuredConnection(serverSignPublicKey, serverSignPublicKeySize);
     this->messageBuffer = SDL_malloc(this->encryptedMessageSize);
 
     if (this->state != STATE_SECURE_CONNECTION_ESTABLISHED) {
@@ -981,6 +991,7 @@ void netClean(void) {
 
     rwMutexWriteUnlock(this->rwMutex);
     rwMutexDestroy(this->rwMutex);
+    SDL_free(this->host);
     SDL_free(this);
     this = NULL;
 }

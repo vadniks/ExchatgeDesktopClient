@@ -42,11 +42,7 @@ STATIC_CONST_UNSIGNED NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
 static const byte TAG_INTERMEDIATE = crypto_secretstream_xchacha20poly1305_TAG_MESSAGE; // 0
 __attribute_maybe_unused__ static const byte TAG_LAST = crypto_secretstream_xchacha20poly1305_TAG_FINAL; // 3
 
-static const byte serverSignPublicKey[SERVER_SIGN_PUBLIC_KEY_SIZE] = {
-    255, 23, 21, 243, 148, 177, 186, 0, 73, 34, 173, 130, 234, 251, 83, 130,
-    138, 54, 215, 5, 170, 139, 175, 148, 71, 215, 74, 172, 27, 225, 26, 249
-};
-
+static byte serverSignPublicKey[SERVER_SIGN_PUBLIC_KEY_SIZE] = {0};
 static atomic bool sodiumInitialized = false;
 
 struct Crypto_t {
@@ -64,6 +60,12 @@ Crypto* cryptoInit(void) {
     else sodiumInitialized = true;
 
     return (Crypto*) SDL_malloc(sizeof(Crypto));
+}
+
+void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize) {
+    assert(serverSignPublicKeySize == SERVER_SIGN_PUBLIC_KEY_SIZE);
+    for (unsigned i = 0; i < SERVER_SIGN_PUBLIC_KEY_SIZE; !serverSignPublicKey[i++] ? (void) 0 : assert(false));
+    SDL_memcpy(serverSignPublicKey, xServerSignPublicKey, SERVER_SIGN_PUBLIC_KEY_SIZE);
 }
 
 bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
