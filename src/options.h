@@ -24,7 +24,7 @@
 struct Options_t;
 typedef struct Options_t Options;
 
-void optionsInit(void);
+bool optionsInit(void);
 bool optionsIsAdmin(void);
 const char* optionsHost(void);
 unsigned optionsPort(void);

@@ -37,33 +37,32 @@ struct Options_t {
     byte* serverSignPublicKey;
 };
 
-static char** readOptionsFile(unsigned* linesCountBuffer) {
+static char** nullable readOptionsFile(unsigned* linesCountBuffer) {
     SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "r");
-    assert(rwOps);
+    if (!rwOps) return NULL;
 
     char buffer[MAX_FILE_SIZE];
     const unsigned actualFileSize = SDL_RWread(rwOps, buffer, 1, MAX_FILE_SIZE);
-    assert(actualFileSize);
     SDL_RWclose(rwOps);
+    if (!actualFileSize) return NULL;
 
     char** lines = NULL;
     unsigned linesCount = 0;
 
     char* line = NULL;
     for (unsigned i = 0, j = 0; i <= actualFileSize; i++) {
+        line = SDL_realloc(line, ++j);
+
         if (buffer[i] == '\n' || i == actualFileSize) {
-            line = SDL_realloc(line, ++j);
-            line[j] = 0;
+            line[j - 1] = 0;
 
             lines = SDL_realloc(lines, ++linesCount * sizeof(void*));
             lines[linesCount - 1] = line;
 
             j = 0;
             line = NULL;
-        } else {
-            line = SDL_realloc(line, ++j);
+        } else
             line[j - 1] = buffer[i];
-        }
     }
 
     *linesCountBuffer = linesCount;
@@ -72,13 +71,17 @@ static char** readOptionsFile(unsigned* linesCountBuffer) {
 
 #include "stdio.h"
 
-static void parseAdminOption(const char* line) {
-    options->admin = SDL_strstr(line, "true");
-    printf("admin %s %lu\n", line, SDL_strlen(line));
-}
+static void parseAdminOption(const char* line) { options->admin = SDL_strstr(line, "true"); }
 
 static void parseHostOption(const char* line) {
-    printf("host %s %lu\n", line, SDL_strlen(line));
+    const unsigned size = SDL_strlen(line),
+        declarationSize = SDL_strlen(HOST_OPTION) + 1,
+        payloadSize = size - declarationSize;
+
+    options->host = SDL_malloc(payloadSize);
+    SDL_memcpy(options->host, line + declarationSize, payloadSize);
+
+    printf("host %s\n", options->host);
 }
 
 static void parsePortOption(const char* line) {
@@ -89,12 +92,21 @@ static void parseSskpOption(const char* line) {
     printf("sskp %s %lu\n", line, SDL_strlen(line));
 }
 
-void optionsInit(void) {
+bool optionsInit(void) {
     assert(!options);
     options = SDL_malloc(sizeof *options);
+    options->admin = false;
+    options->host = NULL;
+    options->port = 0;
+    options->serverSignPublicKey = NULL;
 
     unsigned linesCount = 0;
     char** lines = readOptionsFile(&linesCount);
+    if (!lines) {
+        SDL_free(options);
+        options = NULL;
+        return false;
+    }
 
     char* line;
     for (unsigned i = 0; i < linesCount; i++) {
@@ -109,6 +121,8 @@ void optionsInit(void) {
         SDL_free(line);
     }
     SDL_free(lines);
+
+    return true;
 }
 
 bool optionsIsAdmin(void) {

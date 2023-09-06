@@ -82,7 +82,7 @@ void logicInit(unsigned argc, const char* const* argv) {
     this->databaseInitialized = false;
     this->rwops = NULL;
 
-    optionsInit();
+    assert(optionsInit());
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
