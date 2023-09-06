@@ -132,10 +132,10 @@ bool optionsInit(void) {
     for (unsigned i = 0; i < linesCount; i++) {
         line = lines[i];
 
-        if (SDL_strstr((char*) line, ADMIN_OPTION)) parseAdminOption(line);
-        else if (SDL_strstr((char*) line, HOST_OPTION)) parseHostOption(line);
-        else if (SDL_strstr((char*) line, PORT_OPTION)) parsePortOption(line);
-        else if (SDL_strstr((char*) line, SSPK_OPTION)) parseSskpOption(line);
+        if (SDL_strstr(line, ADMIN_OPTION)) parseAdminOption(line);
+        else if (SDL_strstr(line, HOST_OPTION)) parseHostOption(line);
+        else if (SDL_strstr(line, PORT_OPTION)) parsePortOption(line);
+        else if (SDL_strstr(line, SSPK_OPTION)) parseSskpOption(line);
         else assert(false);
 
         SDL_free(line);
