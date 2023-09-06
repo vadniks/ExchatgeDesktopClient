@@ -106,7 +106,7 @@ static void asyncActionsThreadLooper(void) {
     }
 }
 
-bool lifecycleInit(unsigned argc, const char** argv) {
+bool lifecycleInit(unsigned argc, const char* const* argv) {
     this = SDL_malloc(sizeof *this);
     this->running = true;
     this->updateThreadCounter = 1;

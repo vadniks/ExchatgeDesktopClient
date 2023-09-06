@@ -53,6 +53,8 @@ set(LIB_UTILS_NAME "utils")
 add_subdirectory(src/utils)
 target_link_libraries(${PROJECT_NAME} ${LIB_UTILS_NAME})
 
+file(COPY options.txt DESTINATION ${CMAKE_BINARY_DIR})
+
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(SEND_ERROR "Target is not 64 bits")
 endif()

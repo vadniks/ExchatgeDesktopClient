@@ -21,7 +21,7 @@
 #include <assert.h>
 #include "lifecycle.h"
 
-int main(int argc, const char** argv) {
+int main(int argc, const char* const* argv) {
     if (!lifecycleInit(argc, argv)) return EXIT_FAILURE;
 
     SDL_version version;

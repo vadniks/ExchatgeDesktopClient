@@ -27,6 +27,7 @@
 #include "conversationMessage.h"
 #include "lifecycle.h"
 #include "database/database.h"
+#include "options.h"
 #include "logic.h"
 
 const unsigned LOGIC_MAX_FILE_PATH_SIZE = 0x1ff; // 511, (1 << 9) - 1
@@ -56,7 +57,7 @@ THIS(
 )
 #pragma clang diagnostic pop
 
-static void parseArguments(unsigned argc, const char** argv) {
+static void parseArguments(unsigned argc, const char* const* argv) {
     assert(argc <= 1 || argc == 2 && argv[1]); // 'cause argv[0] is path to the executable everytime
 
     if (argc <= 1) {
@@ -69,7 +70,7 @@ static void parseArguments(unsigned argc, const char** argv) {
     this->adminMode = !SDL_memcmp(argv[1], pattern, patternSize);
 }
 
-void logicInit(unsigned argc, const char** argv) {
+void logicInit(unsigned argc, const char* const* argv) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
     this->netInitialized = false;
@@ -80,6 +81,8 @@ void logicInit(unsigned argc, const char** argv) {
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
     this->databaseInitialized = false;
     this->rwops = NULL;
+
+    optionsInit();
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
@@ -880,6 +883,8 @@ void logicClean(void) {
     assert(!this->rwops);
 
     if (this->databaseInitialized) databaseClean();
+
+    optionsClear();
 
     SDL_free(this->currentUserName);
 
