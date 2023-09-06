@@ -84,6 +84,11 @@ void logicInit(unsigned argc, const char* const* argv) {
 
     assert(optionsInit());
 
+    // TODO: test only -----\/
+    assert(optionsIsAdmin());
+    assert(!SDL_memcmp(optionsHost(), "127.0.0.1", 9));
+    assert(optionsPort() == 8080);
+
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
 

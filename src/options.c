@@ -69,9 +69,8 @@ static char** nullable readOptionsFile(unsigned* linesCountBuffer) {
     return lines;
 }
 
-#include "stdio.h"
-
-static void parseAdminOption(const char* line) { options->admin = SDL_strstr(line, "true"); }
+static void parseAdminOption(const char* line)
+{ options->admin = SDL_strstr(line, "true"); }
 
 static void parseHostOption(const char* line) {
     const unsigned size = SDL_strlen(line),
@@ -80,16 +79,14 @@ static void parseHostOption(const char* line) {
 
     options->host = SDL_malloc(payloadSize);
     SDL_memcpy(options->host, line + declarationSize, payloadSize);
-
-    printf("host %s\n", options->host);
 }
 
-static void parsePortOption(const char* line) {
-    printf("port %s %lu\n", line, SDL_strlen(line));
-}
+static void parsePortOption(const char* line)
+{ options->port = SDL_atoi(line + SDL_strlen(HOST_OPTION) + 1); }
 
 static void parseSskpOption(const char* line) {
-    printf("sskp %s %lu\n", line, SDL_strlen(line));
+
+
 }
 
 bool optionsInit(void) {
@@ -147,7 +144,7 @@ const byte* optionsServerSignPublicKey(void) {
 
 void optionsClear(void) {
     assert(options);
-//    SDL_free(options->host);
+    SDL_free(options->host);
 //    SDL_free(options->serverSignPublicKey);
     SDL_free(options);
 }
