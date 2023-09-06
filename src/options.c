@@ -28,14 +28,14 @@ STATIC_CONST_STRING HOST_OPTION = "host";
 STATIC_CONST_STRING PORT_OPTION = "port";
 STATIC_CONST_STRING SSPK_OPTION = "sspk";
 
-static Options* options = NULL;
-
-struct Options_t {
+typedef struct {
     bool admin;
     char* host;
     unsigned port;
     byte* serverSignPublicKey;
-};
+} Options;
+
+static Options* options = NULL;
 
 static char** nullable readOptionsFile(unsigned* linesCountBuffer) {
     SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "r");

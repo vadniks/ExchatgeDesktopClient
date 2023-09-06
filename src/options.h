@@ -21,9 +21,6 @@
 #include <stdbool.h>
 #include "defs.h"
 
-struct Options_t;
-typedef struct Options_t Options;
-
 bool optionsInit(void);
 bool optionsIsAdmin(void);
 const char* optionsHost(void);
