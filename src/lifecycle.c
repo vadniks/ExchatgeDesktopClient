@@ -40,33 +40,14 @@ typedef struct {
 THIS(
     atomic bool running;
     SDL_TimerID threadsSynchronizerTimerId;
-    unsigned updateThreadCounter;
-    SDL_cond* netUpdateCond;
-    SDL_mutex* netUpdateLock;
-    SDL_Thread* netThread;
     Queue* asyncActionsQueue; // <AsyncAction*>
     SDL_Thread* asyncActionsThread;
 )
 #pragma clang diagnostic pop
 
-static void updateSynchronized(Function action, SDL_cond* cond, SDL_mutex* lock) {
-    SDL_LockMutex(lock);
-    action(NULL);
-    SDL_CondWait(cond, lock);
-    SDL_UnlockMutex(lock);
-}
-
-static void netThread(void)
-{ while (this->running) updateSynchronized((Function) &logicNetListen, this->netUpdateCond, this->netUpdateLock); }
-
 static unsigned synchronizeThreadUpdates(void) {
-    if (this->updateThreadCounter == NET_UPDATE_PERIOD) {
-        this->updateThreadCounter = 1;
-        SDL_CondSignal(this->netUpdateCond);
-    } else
-        this->updateThreadCounter++;
-
-    return this->running ? UI_UPDATE_PERIOD : 0;
+    lifecycleAsync((LifecycleAsyncActionFunction) &logicNetListen, NULL, 0);
+    return this->running ? NET_UPDATE_PERIOD : 0;
 }
 
 void lifecycleAsync(LifecycleAsyncActionFunction function, void* nullable parameter, unsigned long delayMillis) {
@@ -109,10 +90,6 @@ static void asyncActionsThreadLooper(void) {
 bool lifecycleInit(void) {
     this = SDL_malloc(sizeof *this);
     this->running = true;
-    this->updateThreadCounter = 1;
-    this->netUpdateCond = SDL_CreateCond();
-    this->netUpdateLock = SDL_CreateMutex();
-    this->netThread = SDL_CreateThread((int (*)(void*)) &netThread, "netThread", NULL);
     this->asyncActionsQueue = queueInit((QueueDeallocator) &asyncActionDeallocator);
     this->asyncActionsThread = SDL_CreateThread((SDL_ThreadFunction) &asyncActionsThreadLooper, "asyncActionsThread", NULL);
 
@@ -165,10 +142,7 @@ static bool processEvents(void) {
     return false;
 }
 
-static void stopApp(void) {
-    this->running = false;
-    SDL_CondSignal(this->netUpdateCond);
-}
+static void stopApp(void) { this->running = false; }
 
 void lifecycleLoop(void) {
     unsigned long startMillis, differenceMillis;
@@ -199,10 +173,6 @@ void lifecycleClean(void) {
     SDL_RemoveTimer(this->threadsSynchronizerTimerId);
 
     renderClean();
-
-    SDL_WaitThread(this->netThread, NULL);
-    SDL_DestroyMutex(this->netUpdateLock);
-    SDL_DestroyCond(this->netUpdateCond);
 
     SDL_free(this);
     this = NULL;
