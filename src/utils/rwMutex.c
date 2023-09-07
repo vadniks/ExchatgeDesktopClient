@@ -47,7 +47,7 @@ void rwMutexReadLock(RWMutex* rwMutex) {
 void rwMutexReadUnlock(RWMutex* rwMutex) {
     SDL_LockMutex(rwMutex->rMutex);
 
-    if (!(--(rwMutex->counter)))
+    if (--(rwMutex->counter) == 0)
         SDL_UnlockMutex(rwMutex->gMutex);
 
     SDL_UnlockMutex(rwMutex->rMutex);

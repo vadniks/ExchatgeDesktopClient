@@ -451,14 +451,19 @@ static void onDisconnected(void) {
     (*(this->onDisconnected))();
     netClean();
 }
-
+#include <stdio.h>
 static bool checkSocket(void) {
-    rwMutexReadLock(this->rwMutex);
+//    puts("cs 1"); // TODO: debug only
+    rwMutexWriteLock(this->rwMutex);
+//    puts("cs 2"); // TODO: debug only
 
     const bool result = SDLNet_CheckSockets(this->socketSet, 0) == 1
         && SDLNet_SocketReady(this->socket) != 0;
 
-    rwMutexReadUnlock(this->rwMutex);
+//    puts("cs 3"); // TODO: debug only
+
+    rwMutexWriteUnlock(this->rwMutex);
+//    puts("cs 4"); // TODO: debug only
     return result;
 }
 
@@ -484,6 +489,7 @@ void netListen(void) {
     const bool settingUpConversation = this->settingUpConversation;
     rwMutexReadUnlock(this->rwMutex);
     if (settingUpConversation) return;
+    puts("@"); // TODO: debug only
 
     if (!checkSocket()) return;
 
@@ -503,6 +509,7 @@ unsigned netCurrentUserId(void) {
 }
 
 bool netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
+    puts("ns 1"); // TODO: debug only
     assert(this && size > 0 && size <= NET_MESSAGE_BODY_SIZE);
 
     Message message = {
@@ -524,12 +531,17 @@ bool netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     byte* packedMessage = packMessage(&message);
     byte* encryptedMessage = cryptoEncrypt(this->connectionCrypto, packedMessage, MESSAGE_SIZE, false);
     SDL_free(packedMessage);
+    puts("ns 2"); // TODO: debug only
     if (!encryptedMessage) return false;
 
-    rwMutexWriteLock(this->rwMutex);
+    puts("ns 3"); // TODO: debug only
+    rwMutexWriteLock(this->rwMutex); // TODO: <--------------------
+    puts("ns 4"); // TODO: debug only
     this->lastSentFlag = flag;
     const int bytesSent = SDLNet_TCP_Send(this->socket, encryptedMessage, (int) this->encryptedMessageSize);
+    puts("ns 5"); // TODO: debug only
     rwMutexWriteUnlock(this->rwMutex);
+    puts("ns 6"); // TODO: debug only
 
     SDL_free(encryptedMessage);
     return bytesSent == (int) this->encryptedMessageSize;
@@ -610,13 +622,15 @@ static void onUsersFetched(const Message* message) {
 
 static bool waitForReceiveWithTimeout(void) {
     const unsigned long startMillis = (*(this->currentTimeMillisGetter))();
+//    puts("wfrwt 1"); // TODO: debug only
     while ((*(this->currentTimeMillisGetter))() - startMillis < TIMEOUT) {
+//        puts("wfrwt 2"); // TODO: debug only
         if (checkSocket())
             return true;
     }
     return false;
 }
-#include <stdio.h>
+
 Crypto* nullable netCreateConversation(unsigned id) {
     assert(this);
 
@@ -640,10 +654,14 @@ Crypto* nullable netCreateConversation(unsigned id) {
 
     Message* message;
 
+    puts("1 ! a"); // TODO: debug only
     if (!waitForReceiveWithTimeout()) { // TODO: <-----------------
+        puts("1 ! b"); // TODO: debug only
         rwMutexWriteLock(this->rwMutex);
+        puts("1 ! c"); // TODO: debug only
         this->settingUpConversation = false;
         rwMutexWriteUnlock(this->rwMutex);
+        puts("1 ! d"); // TODO: debug only
         return NULL;
     }
     puts("1 d"); // TODO: debug only
@@ -764,12 +782,16 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
+    rwMutexReadLock(this->rwMutex);
     if (inviteProcessingTimeoutExceeded()) {
+        rwMutexReadUnlock(this->rwMutex);
+
         rwMutexWriteLock(this->rwMutex);
         this->settingUpConversation = false;
         rwMutexWriteUnlock(this->rwMutex);
         return NULL;
     }
+    rwMutexReadUnlock(this->rwMutex);
     puts("2 c"); // TODO: debug only
 
     if (!accept) {
@@ -783,14 +805,20 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     puts("2 d"); // TODO: debug only
 
     Crypto* crypto = cryptoInit();
+    puts("2 ! a"); // TODO: debug only
     const byte* akaServerPublicKey = cryptoGenerateKeyPairAsServer(crypto);
+    puts("2 ! b"); // TODO: debug only
 
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
+    puts("2 ! c"); // TODO: debug only
     if (!netSend(FLAG_EXCHANGE_KEYS, body, CRYPTO_KEY_SIZE, fromId)) { // TODO: <-----------------
+        puts("2 ! d"); // TODO: debug only
         rwMutexWriteLock(this->rwMutex);
+        puts("2 ! e"); // TODO: debug only
         this->settingUpConversation = false;
         rwMutexWriteUnlock(this->rwMutex);
+        puts("2 ! f"); // TODO: debug only
 
         cryptoDestroy(crypto);
         return NULL;
