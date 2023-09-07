@@ -30,7 +30,7 @@ Client side uses the following libraries:
 * [SQLite3](https://sqlite.org),
 * [GNU C Library (GLIBC)](https://www.gnu.org/software/libc).
 
-## The project is currently in Beta stage
+## The project is currently in development stage
 
 [The server](https://github.com/vadniks/ExchatgeServer)
 
