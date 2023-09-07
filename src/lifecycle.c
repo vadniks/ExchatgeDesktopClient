@@ -158,15 +158,20 @@ void lifecycleLoop(void) {
             sleep((unsigned long) UI_UPDATE_PERIOD - differenceMillis);
     }
 }
-
+#include <stdio.h>
 void lifecycleClean(void) {
     if (!this) return;
 
+    puts("a");
     SDL_WaitThread(this->asyncActionsThread, NULL);
+    puts("b");
     queueDestroy(this->asyncActionsQueue);
+    puts("c");
 
-    logicClean();
+    logicClean(); // TODO: <------ freezes here after replying to a conversation creation invite
+    puts("d");
     renderClean();
+    puts("e");
 
     SDL_free(this);
     this = NULL;
