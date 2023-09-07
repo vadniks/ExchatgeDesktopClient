@@ -21,8 +21,8 @@
 #include <assert.h>
 #include "lifecycle.h"
 
-int main(int argc, const char* const* argv) {
-    if (!lifecycleInit(argc, argv)) return EXIT_FAILURE;
+int main(void) {
+    if (!lifecycleInit()) return EXIT_FAILURE;
 
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\r\033[1;32m"
         "_______ _     _ _______ _     _ _______ _______  ______ _______\n"

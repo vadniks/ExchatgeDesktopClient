@@ -57,7 +57,7 @@ THIS(
 )
 #pragma clang diagnostic pop
 
-void logicInit(unsigned argc, const char* const* argv) {
+void logicInit(void) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
     this->netInitialized = false;

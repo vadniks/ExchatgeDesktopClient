@@ -106,7 +106,7 @@ static void asyncActionsThreadLooper(void) {
     }
 }
 
-bool lifecycleInit(unsigned argc, const char* const* argv) {
+bool lifecycleInit(void) {
     this = SDL_malloc(sizeof *this);
     this->running = true;
     this->updateThreadCounter = 1;
@@ -136,7 +136,7 @@ bool lifecycleInit(unsigned argc, const char* const* argv) {
         &logicOnFileChooserRequested,
         &logicFileChooseResultHandler
     );
-    logicInit(argc, argv);
+    logicInit();
     renderSetMaxMessageSizeAndInitConversationMessageBuffer(logicUnencryptedMessageBodySize());
     renderSetAdminMode(logicIsAdminMode());
     renderSetUsersList(logicUsersList());
