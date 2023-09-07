@@ -489,7 +489,6 @@ void netListen(void) {
     const bool settingUpConversation = this->settingUpConversation;
     rwMutexReadUnlock(this->rwMutex);
     if (settingUpConversation) return;
-    puts("@"); // TODO: debug only
 
     if (!checkSocket()) return;
 
