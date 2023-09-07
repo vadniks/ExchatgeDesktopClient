@@ -710,8 +710,13 @@ Crypto* nullable netCreateConversation(unsigned id) {
     return crypto;
 }
 
-static inline bool inviteProcessingTimeoutExceeded(void)
-{ return (*(this->currentTimeMillisGetter))() - this->inviteProcessingStartMillis > TIMEOUT; }
+static bool inviteProcessingTimeoutExceeded(void) {
+    rwMutexReadLock(this->rwMutex);
+    const unsigned long start = this->inviteProcessingStartMillis;
+    rwMutexReadUnlock(this->rwMutex);
+
+    return (*(this->currentTimeMillisGetter))() - start > TIMEOUT;
+}
 
 Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     assert(this);
@@ -723,14 +728,10 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
-    rwMutexReadLock(this->rwMutex);
     if (inviteProcessingTimeoutExceeded()) {
-        rwMutexReadUnlock(this->rwMutex);
-
         finishSettingUpConversation();
         return NULL;
     }
-    rwMutexReadUnlock(this->rwMutex);
 
     if (!accept) {
         finishSettingUpConversation();
