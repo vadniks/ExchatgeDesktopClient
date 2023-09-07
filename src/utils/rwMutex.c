@@ -17,30 +17,73 @@
  */
 
 #include <SDL_stdinc.h>
-#include <pthread.h>
-#include <assert.h>
+#include <SDL_mutex.h>
+#include <stdbool.h>
+#include "../defs.h"
 #include "rwMutex.h"
 
-struct RWMutex_t { pthread_rwlock_t lock; };
+struct RWMutex_t {
+    SDL_mutex* mutex;
+    SDL_cond* cond;
+    atomic unsigned readers;
+    atomic unsigned writers;
+    atomic bool writing;
+};
 
 RWMutex* rwMutexInit(void) {
     RWMutex* rwMutex = SDL_malloc(sizeof *rwMutex);
-    rwMutex->lock = (pthread_rwlock_t) PTHREAD_RWLOCK_INITIALIZER;
+    rwMutex->mutex = SDL_CreateMutex();
+    rwMutex->cond = SDL_CreateCond();
+    rwMutex->readers = 0;
+    rwMutex->writers = 0;
+    rwMutex->writing = false;
     return rwMutex;
 }
 
-void rwMutexReadLock(RWMutex* rwMutex)
-{ assert(!pthread_rwlock_rdlock(&(rwMutex->lock))); }
+void rwMutexReadLock(RWMutex* rwMutex) {
+    SDL_LockMutex(rwMutex->mutex);
 
-void rwMutexReadUnlock(RWMutex* rwMutex)
-{ assert(!pthread_rwlock_unlock(&(rwMutex->lock))); }
+    while (rwMutex->writers > 0 || rwMutex->writing)
+        SDL_CondWait(rwMutex->cond, rwMutex->mutex);
 
-void rwMutexWriteLock(RWMutex* rwMutex)
-{ assert(!pthread_rwlock_wrlock(&(rwMutex->lock))); }
+    rwMutex->readers++;
+    SDL_UnlockMutex(rwMutex->mutex);
+}
 
-void rwMutexWriteUnlock(RWMutex* rwMutex)
-{ assert(!pthread_rwlock_unlock(&(rwMutex->lock))); }
+void rwMutexReadUnlock(RWMutex* rwMutex) {
+    SDL_LockMutex(rwMutex->mutex);
+
+    rwMutex->readers--;
+    if (!rwMutex->readers)
+        SDL_CondBroadcast(rwMutex->cond);
+
+    SDL_UnlockMutex(rwMutex->mutex);
+}
+
+void rwMutexWriteLock(RWMutex* rwMutex) {
+    SDL_LockMutex(rwMutex->mutex);
+
+    rwMutex->writers++;
+    while (rwMutex->readers > 0 || rwMutex->writing)
+        SDL_CondWait(rwMutex->cond, rwMutex->mutex);
+
+    rwMutex->writers--;
+    rwMutex->writing = true;
+
+    SDL_UnlockMutex(rwMutex->mutex);
+}
+
+void rwMutexWriteUnlock(RWMutex* rwMutex) {
+    SDL_LockMutex(rwMutex->mutex);
+
+    rwMutex->writing = false;
+    SDL_CondBroadcast(rwMutex->cond);
+
+    SDL_UnlockMutex(rwMutex->mutex);
+}
 
 void rwMutexDestroy(RWMutex* rwMutex) {
+    SDL_DestroyMutex(rwMutex->mutex);
+    SDL_DestroyCond(rwMutex->cond);
     SDL_free(rwMutex);
 }

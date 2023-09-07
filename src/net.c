@@ -479,6 +479,12 @@ static Message* nullable receive(void) {
 
 void netListen(void) {
     assert(this);
+
+//    rwMutexReadLock(this->rwMutex);
+//    const bool settingUpConversation = this->settingUpConversation;
+//    rwMutexReadUnlock(this->rwMutex);
+//    if (settingUpConversation) return;
+
     if (!checkSocket()) return;
 
     Message* message = NULL;

@@ -24,7 +24,7 @@
 int main(int argc, const char* const* argv) {
     if (!lifecycleInit(argc, argv)) return EXIT_FAILURE;
 
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\r\033[1;32m     \n"
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\r\033[1;32m"
         "_______ _     _ _______ _     _ _______ _______  ______ _______\n"
         "|______  \\___/  |       |_____| |_____|    |    |  ____ |______\n"
         "|______ _/   \\_ |_____  |     | |     |    |    |_____| |______\n"
