@@ -655,7 +655,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
     Message* message;
 
     puts("1 ! a"); // TODO: debug only
-    if (!waitForReceiveWithTimeout()) { // TODO: <-----------------
+    if (!waitForReceiveWithTimeout()) { // TODO: <----------------- FIXED
         puts("1 ! b"); // TODO: debug only
         rwMutexWriteLock(this->rwMutex);
         puts("1 ! c"); // TODO: debug only
