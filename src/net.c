@@ -933,7 +933,6 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
 
 void netClean(void) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
 
     SDL_free(this->serverKeyStub);
     SDL_free(this->userInfos);
@@ -945,7 +944,6 @@ void netClean(void) {
     SDLNet_TCP_Close(this->socket);
     SDLNet_Quit();
 
-    rwMutexWriteUnlock(this->rwMutex);
     rwMutexDestroy(this->rwMutex);
     SDL_free(this->host);
     SDL_free(this);
