@@ -612,6 +612,12 @@ static bool waitForReceiveWithTimeout(void) {
     return false;
 }
 
+static void finishSettingUpConversation(void) {
+    rwMutexWriteLock(this->rwMutex);
+    this->settingUpConversation = false;
+    rwMutexWriteUnlock(this->rwMutex);
+}
+
 Crypto* nullable netCreateConversation(unsigned id) {
     assert(this);
 
@@ -624,18 +630,14 @@ Crypto* nullable netCreateConversation(unsigned id) {
 
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, INVITE_ASK, id)) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
+        finishSettingUpConversation();
         return NULL;
     }
 
     Message* message;
 
     if (!waitForReceiveWithTimeout()) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
+        finishSettingUpConversation();
         return NULL;
     }
 
@@ -643,10 +645,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
         || message->flag != FLAG_EXCHANGE_KEYS
         || message->size != CRYPTO_KEY_SIZE)
     {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         SDL_free(message);
         return NULL;
     }
@@ -658,10 +657,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
     Crypto* crypto = cryptoInit();
 
     if (!cryptoExchangeKeys(crypto, akaServerPublicKey)) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -669,19 +665,13 @@ Crypto* nullable netCreateConversation(unsigned id) {
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, cryptoClientPublicKey(crypto), CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS_DONE, body, CRYPTO_KEY_SIZE, id)) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
 
     if (!waitForReceiveWithTimeout()) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -690,10 +680,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
         || message->flag != FLAG_EXCHANGE_HEADERS
         || message->size != CRYPTO_HEADER_SIZE)
     {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         SDL_free(message);
         cryptoDestroy(crypto);
         return NULL;
@@ -705,10 +692,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
 
     byte* akaClientStreamHeader = cryptoInitializeCoderStreams(crypto, akaServerStreamHeader);
     if (!akaClientStreamHeader) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -716,18 +700,12 @@ Crypto* nullable netCreateConversation(unsigned id) {
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaClientStreamHeader, CRYPTO_HEADER_SIZE);
     SDL_free(akaClientStreamHeader);
-    if (!netSend(FLAG_EXCHANGE_HEADERS_DONE, body, CRYPTO_HEADER_SIZE, id)) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
 
+    finishSettingUpConversation();
+    if (!netSend(FLAG_EXCHANGE_HEADERS_DONE, body, CRYPTO_HEADER_SIZE, id)) {
         cryptoDestroy(crypto);
         return NULL;
     }
-
-    rwMutexWriteLock(this->rwMutex);
-    this->settingUpConversation = false;
-    rwMutexWriteUnlock(this->rwMutex);
 
     return crypto;
 }
@@ -749,18 +727,13 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     if (inviteProcessingTimeoutExceeded()) {
         rwMutexReadUnlock(this->rwMutex);
 
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
+        finishSettingUpConversation();
         return NULL;
     }
     rwMutexReadUnlock(this->rwMutex);
 
     if (!accept) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         netSend(FLAG_EXCHANGE_KEYS, body, INVITE_DENY, fromId);
         return NULL;
     }
@@ -771,19 +744,13 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, CRYPTO_KEY_SIZE, fromId)) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
 
     if (!waitForReceiveWithTimeout()) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -793,10 +760,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         || message->flag != FLAG_EXCHANGE_KEYS_DONE
         || message->size != CRYPTO_KEY_SIZE)
     {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         SDL_free(message);
         return NULL;
@@ -806,20 +770,14 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     SDL_memcpy(akaClientPublicKey, message->body, CRYPTO_KEY_SIZE);
     SDL_free(message);
     if (!cryptoExchangeKeysAsServer(crypto, akaClientPublicKey)) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
 
     byte* akaServerStreamHeader = cryptoCreateEncoderAsServer(crypto);
     if (!akaServerStreamHeader) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -828,19 +786,13 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     SDL_free(akaServerStreamHeader);
 
     if (!netSend(FLAG_EXCHANGE_HEADERS, body, CRYPTO_HEADER_SIZE, fromId)) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
 
     if (!waitForReceiveWithTimeout()) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -849,10 +801,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
         || message->flag != FLAG_EXCHANGE_HEADERS_DONE
         || message->size != CRYPTO_HEADER_SIZE)
     {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishSettingUpConversation();
         SDL_free(message);
         cryptoDestroy(crypto);
         return NULL;
@@ -861,18 +810,12 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     byte akaClientStreamHeader[CRYPTO_HEADER_SIZE];
     SDL_memcpy(akaClientStreamHeader, message->body, CRYPTO_HEADER_SIZE);
     SDL_free(message);
-    if (!cryptoCreateDecoderStreamAsServer(crypto, akaClientStreamHeader)) {
-        rwMutexWriteLock(this->rwMutex);
-        this->settingUpConversation = false;
-        rwMutexWriteUnlock(this->rwMutex);
 
+    finishSettingUpConversation();
+    if (!cryptoCreateDecoderStreamAsServer(crypto, akaClientStreamHeader)) {
         cryptoDestroy(crypto);
         return NULL;
     }
-
-    rwMutexWriteLock(this->rwMutex);
-    this->settingUpConversation = false;
-    rwMutexWriteUnlock(this->rwMutex);
 
     return crypto;
 }
