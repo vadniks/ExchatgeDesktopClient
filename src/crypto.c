@@ -64,7 +64,6 @@ Crypto* cryptoInit(void) {
 
 void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize) {
     assert(serverSignPublicKeySize == SERVER_SIGN_PUBLIC_KEY_SIZE);
-    for (unsigned i = 0; i < SERVER_SIGN_PUBLIC_KEY_SIZE; !serverSignPublicKey[i++] ? (void) 0 : assert(false));
     SDL_memcpy(serverSignPublicKey, xServerSignPublicKey, SERVER_SIGN_PUBLIC_KEY_SIZE);
 }
 
