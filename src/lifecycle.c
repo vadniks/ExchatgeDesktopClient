@@ -39,13 +39,13 @@ typedef struct {
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
     atomic bool running;
-    SDL_TimerID threadsSynchronizerTimerId;
+    SDL_TimerID netUpdateTimerId;
     Queue* asyncActionsQueue; // <AsyncAction*>
     SDL_Thread* asyncActionsThread;
 )
 #pragma clang diagnostic pop
 
-static unsigned synchronizeThreadUpdates(void) {
+static unsigned netUpdate(void) {
     lifecycleAsync((LifecycleAsyncActionFunction) &logicNetListen, NULL, 0);
     return this->running ? NET_UPDATE_PERIOD : 0;
 }
@@ -119,9 +119,9 @@ bool lifecycleInit(void) {
     renderSetUsersList(logicUsersList());
     renderSetMessagesList(logicMessagesList());
 
-    this->threadsSynchronizerTimerId = SDL_AddTimer(
+    this->netUpdateTimerId = SDL_AddTimer(
         UI_UPDATE_PERIOD,
-        (unsigned (*)(unsigned, void*)) &synchronizeThreadUpdates,
+        (unsigned (*)(unsigned, void*)) &netUpdate,
         NULL
     );
 
@@ -142,7 +142,7 @@ static bool processEvents(void) {
     return false;
 }
 
-static void stopApp(void) { this->running = false; }
+inline static void stopApp(void) { this->running = false; }
 
 void lifecycleLoop(void) {
     unsigned long startMillis, differenceMillis;
@@ -170,7 +170,7 @@ void lifecycleClean(void) {
 
     logicClean();
 
-    SDL_RemoveTimer(this->threadsSynchronizerTimerId);
+    SDL_RemoveTimer(this->netUpdateTimerId);
 
     renderClean();
 
