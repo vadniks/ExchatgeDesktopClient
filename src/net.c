@@ -452,8 +452,15 @@ static void onDisconnected(void) {
     netClean();
 }
 
-static bool checkSocket(void)
-{ return SDLNet_CheckSockets(this->socketSet, 0) == 1 && SDLNet_SocketReady(this->socket) != 0; }
+static bool checkSocket(void) {
+    rwMutexReadLock(this->rwMutex);
+
+    const bool result = SDLNet_CheckSockets(this->socketSet, 0) == 1
+        && SDLNet_SocketReady(this->socket) != 0;
+
+    rwMutexReadUnlock(this->rwMutex);
+    return result;
+}
 
 static Message* nullable receive(void) {
     rwMutexWriteLock(this->rwMutex);

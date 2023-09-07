@@ -17,50 +17,30 @@
  */
 
 #include <SDL_stdinc.h>
-#include <SDL_mutex.h>
-#include "../defs.h"
+#include <pthread.h>
+#include <assert.h>
 #include "rwMutex.h"
 
-struct RWMutex_t {
-    SDL_mutex* rMutex;
-    SDL_mutex* gMutex;
-    atomic unsigned counter;
-};
+struct RWMutex_t { pthread_rwlock_t lock; };
 
 RWMutex* rwMutexInit(void) {
     RWMutex* rwMutex = SDL_malloc(sizeof *rwMutex);
-    rwMutex->rMutex = SDL_CreateMutex();
-    rwMutex->gMutex = SDL_CreateMutex();
-    rwMutex->counter = 0;
+    rwMutex->lock = (pthread_rwlock_t) PTHREAD_RWLOCK_INITIALIZER;
     return rwMutex;
 }
 
-void rwMutexReadLock(RWMutex* rwMutex) {
-    SDL_LockMutex(rwMutex->rMutex);
+void rwMutexReadLock(RWMutex* rwMutex)
+{ assert(!pthread_rwlock_rdlock(&(rwMutex->lock))); }
 
-    if (++(rwMutex->counter) == 1)
-        SDL_LockMutex(rwMutex->gMutex);
-
-    SDL_UnlockMutex(rwMutex->rMutex);
-}
-
-void rwMutexReadUnlock(RWMutex* rwMutex) {
-    SDL_LockMutex(rwMutex->rMutex);
-
-    if (!(--(rwMutex->counter)))
-        SDL_UnlockMutex(rwMutex->gMutex);
-
-    SDL_UnlockMutex(rwMutex->rMutex);
-}
+void rwMutexReadUnlock(RWMutex* rwMutex)
+{ assert(!pthread_rwlock_unlock(&(rwMutex->lock))); }
 
 void rwMutexWriteLock(RWMutex* rwMutex)
-{ SDL_LockMutex(rwMutex->gMutex); }
+{ assert(!pthread_rwlock_wrlock(&(rwMutex->lock))); }
 
 void rwMutexWriteUnlock(RWMutex* rwMutex)
-{ SDL_UnlockMutex(rwMutex->gMutex); }
+{ assert(!pthread_rwlock_unlock(&(rwMutex->lock))); }
 
 void rwMutexDestroy(RWMutex* rwMutex) {
-    SDL_DestroyMutex(rwMutex->gMutex);
-    SDL_DestroyMutex(rwMutex->rMutex);
     SDL_free(rwMutex);
 }
