@@ -22,45 +22,34 @@
 #include "rwMutex.h"
 
 struct RWMutex_t {
-    SDL_mutex* rMutex;
-    SDL_mutex* gMutex;
+    SDL_mutex* mutex;
     atomic unsigned counter;
 };
 
 RWMutex* rwMutexInit(void) {
     RWMutex* rwMutex = SDL_malloc(sizeof *rwMutex);
-    rwMutex->rMutex = SDL_CreateMutex();
-    rwMutex->gMutex = SDL_CreateMutex();
+    rwMutex->mutex = SDL_CreateMutex();
     rwMutex->counter = 0;
     return rwMutex;
 }
 
 void rwMutexReadLock(RWMutex* rwMutex) {
-    SDL_LockMutex(rwMutex->rMutex);
-
     if (++(rwMutex->counter) == 1)
-        SDL_LockMutex(rwMutex->gMutex);
-
-    SDL_UnlockMutex(rwMutex->rMutex);
+        SDL_LockMutex(rwMutex->mutex);
 }
 
 void rwMutexReadUnlock(RWMutex* rwMutex) {
-    SDL_LockMutex(rwMutex->rMutex);
-
     if (--(rwMutex->counter) == 0)
-        SDL_UnlockMutex(rwMutex->gMutex);
-
-    SDL_UnlockMutex(rwMutex->rMutex);
+        SDL_UnlockMutex(rwMutex->mutex);
 }
 
 void rwMutexWriteLock(RWMutex* rwMutex)
-{ SDL_LockMutex(rwMutex->gMutex); }
+{ SDL_LockMutex(rwMutex->mutex); }
 
 void rwMutexWriteUnlock(RWMutex* rwMutex)
-{ SDL_UnlockMutex(rwMutex->gMutex); }
+{ SDL_UnlockMutex(rwMutex->mutex); }
 
 void rwMutexDestroy(RWMutex* rwMutex) {
-    SDL_DestroyMutex(rwMutex->gMutex);
-    SDL_DestroyMutex(rwMutex->rMutex);
+    SDL_DestroyMutex(rwMutex->mutex);
     SDL_free(rwMutex);
 }
