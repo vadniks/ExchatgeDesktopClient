@@ -18,6 +18,7 @@
 
 #include <SDL_stdinc.h>
 #include <SDL_mutex.h>
+#include <assert.h>
 #include "../defs.h"
 #include "rwMutex.h"
 
@@ -35,19 +36,19 @@ RWMutex* rwMutexInit(void) {
 
 void rwMutexReadLock(RWMutex* rwMutex) {
     if (++(rwMutex->counter) == 1)
-        SDL_LockMutex(rwMutex->mutex);
+        assert(!SDL_LockMutex(rwMutex->mutex));
 }
 
 void rwMutexReadUnlock(RWMutex* rwMutex) {
     if (--(rwMutex->counter) == 0)
-        SDL_UnlockMutex(rwMutex->mutex);
+        assert(!SDL_UnlockMutex(rwMutex->mutex));
 }
 
-void rwMutexWriteLock(RWMutex* rwMutex)
-{ SDL_LockMutex(rwMutex->mutex); }
+void rwMutexWriteLock(RWMutex* rwMutex) // TODO: machine id is changed on every system reboot, change it to smth else in database
+{ assert(!SDL_LockMutex(rwMutex->mutex)); }
 
 void rwMutexWriteUnlock(RWMutex* rwMutex)
-{ SDL_UnlockMutex(rwMutex->mutex); }
+{ assert(!SDL_UnlockMutex(rwMutex->mutex)); }
 
 void rwMutexDestroy(RWMutex* rwMutex) {
     SDL_DestroyMutex(rwMutex->mutex);
