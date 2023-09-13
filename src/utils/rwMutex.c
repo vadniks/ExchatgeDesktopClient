@@ -44,7 +44,7 @@ void rwMutexReadUnlock(RWMutex* rwMutex) {
         assert(!SDL_UnlockMutex(rwMutex->mutex));
 }
 
-void rwMutexWriteLock(RWMutex* rwMutex) // TODO: machine id is changed on every system reboot, change it to smth else in database
+void rwMutexWriteLock(RWMutex* rwMutex)
 { assert(!SDL_LockMutex(rwMutex->mutex)); }
 
 void rwMutexWriteUnlock(RWMutex* rwMutex)

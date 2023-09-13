@@ -309,7 +309,7 @@ static void setMachineId(void) {
 
     SDL_free(encryptedId);
 }
-
+#include <SDL_log.h>
 static bool checkKey(void) {
     bool machineIdAlreadyInserted = false;
 
@@ -319,6 +319,8 @@ static bool checkKey(void) {
         setMachineId();
         return true;
     }
+
+    SDL_Log("db ck %ld %ld", gethostid(), *id); // TODO: "On Linux glibc, gethostid() returns a value based on the IP address, which is neither unique nor unchanging"
 
     bool checked = id ? *id == gethostid() : false;
     SDL_free(id);
