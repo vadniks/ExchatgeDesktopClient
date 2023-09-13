@@ -334,6 +334,7 @@ bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned us
     this->key = SDL_malloc(CRYPTO_KEY_SIZE);
     byte* key = cryptoMakeKey(passwordBuffer, passwordSize);
     SDL_memcpy(this->key, key, CRYPTO_KEY_SIZE);
+    cryptoFillWithRandomBytes(key, CRYPTO_KEY_SIZE);
     SDL_free(key);
 
     this->maxMessageTextSize = maxMessageTextSize;
@@ -636,6 +637,7 @@ void databaseClean(void) {
 
     rwMutexWriteUnlock(this->rwMutex);
     rwMutexDestroy(this->rwMutex);
+    cryptoFillWithRandomBytes(this->key, CRYPTO_KEY_SIZE);
     SDL_free(this);
     this = NULL;
 }
