@@ -18,8 +18,8 @@
 
 //#include "sqlite3proxy.h" // precompiled version of this header is included automatically by cmake
 #include <SDL_stdinc.h>
+#include <SDL_rwops.h>
 #include <assert.h>
-#include <unistd.h>
 #include "../utils/rwMutex.h"
 #include "database.h"
 
@@ -287,6 +287,24 @@ static long* nullable getMachineId(bool* exists) {
 static void setMachineIdBinder(const byte* encryptedId, sqlite3_stmt* statement)
 { assert(!sqlite3_bind_blob(statement, 1, encryptedId, (int) cryptoSingleEncryptedSize(sizeof(long)), SQLITE_STATIC)); }
 
+static long hostId(void) {
+    const long dummy = (long) 0xfffffffffffffffful;
+
+    SDL_RWops* rwOps = SDL_RWFromFile("/etc/machine-id", "rb");
+    if (!rwOps) return dummy;
+
+    const byte size = 1 << 5;
+    byte buffer[size];
+
+    const bool sizeMatched = SDL_RWread(rwOps, buffer, 1, size) == size;
+    SDL_RWclose(rwOps);
+    if (!sizeMatched) return dummy;
+
+    long hash = 0;
+    for (byte i = 0; i < size; i++, hash = 63 * hash + i & 0xff);
+    return hash;
+}
+
 static void setMachineId(void) {
     const unsigned bufferSize = 255;
     char sql[bufferSize];
@@ -298,7 +316,7 @@ static void setMachineId(void) {
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
-    const long id = gethostid(); // check out: man machine-id, man gethostid, cat /etc/machine-id, cat /var/lib/dbus/machine-id
+    const long id = hostId();
     byte* encryptedId = cryptoEncryptSingle(this->key, (const byte*) &id, sizeof(long));
 
     executeSingle(
@@ -309,7 +327,7 @@ static void setMachineId(void) {
 
     SDL_free(encryptedId);
 }
-#include <SDL_log.h>
+
 static bool checkKey(void) {
     bool machineIdAlreadyInserted = false;
 
@@ -320,9 +338,7 @@ static bool checkKey(void) {
         return true;
     }
 
-    SDL_Log("db ck %ld %ld", gethostid(), *id); // TODO: "On Linux glibc, gethostid() returns a value based on the IP address, which is neither unique nor unchanging"
-
-    bool checked = id ? *id == gethostid() : false;
+    bool checked = id ? *id == hostId() : false;
     SDL_free(id);
     return checked;
 }
