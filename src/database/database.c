@@ -632,12 +632,12 @@ void databaseClean(void) {
     assert(this);
     rwMutexWriteLock(this->rwMutex);
 
+    cryptoFillWithRandomBytes(this->key, CRYPTO_KEY_SIZE);
     SDL_free(this->key);
     assert(!sqlite3_close(this->db));
 
     rwMutexWriteUnlock(this->rwMutex);
     rwMutexDestroy(this->rwMutex);
-    cryptoFillWithRandomBytes(this->key, CRYPTO_KEY_SIZE);
     SDL_free(this);
     this = NULL;
 }
