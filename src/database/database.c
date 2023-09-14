@@ -301,7 +301,7 @@ static long hostId(void) {
     if (!sizeMatched) return dummy;
 
     long hash = 0;
-    for (byte i = 0; i < size; hash = 63 * hash + (buffer[i++] & 0xff));
+    for (byte i = 0; i < size; hash = 63 * hash + buffer[i++]);
     return hash;
 }
 
