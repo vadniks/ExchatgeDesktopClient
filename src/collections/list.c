@@ -44,59 +44,58 @@ List* listInit(ListDeallocator nullable deallocator) {
 
 void listAddBack(List* list, const void* value) {
     assert(list && !list->destroyed);
-    rwMutexWriteLock(list->rwMutex);
-    assert(list->size < MAX_SIZE);
 
-    list->values = SDL_realloc(list->values, ++(list->size) * VOID_PTR_SIZE);
-    list->values[list->size - 1] = (void*) value;
+    RW_MUTEX_WRITE_LOCKED(list->rwMutex,
+        assert(list->size < MAX_SIZE);
 
-    rwMutexWriteUnlock(list->rwMutex);
+        list->values = SDL_realloc(list->values, ++(list->size) * VOID_PTR_SIZE);
+        list->values[list->size - 1] = (void*) value;
+    )
 }
 
 void listAddFront(List* list, const void* value) {
     assert(list && !list->destroyed);
-    rwMutexWriteLock(list->rwMutex);
-    assert(list->size < MAX_SIZE);
 
-    void** temp = SDL_malloc(++(list->size) * VOID_PTR_SIZE);
-    temp[0] = (void*) value;
-    for (unsigned i = 1; i < list->size; temp[i] = (list->values)[i - 1], i++);
+    RW_MUTEX_WRITE_LOCKED(list->rwMutex,
+        assert(list->size < MAX_SIZE);
 
-    SDL_free(list->values);
-    list->values = temp;
+        void** temp = SDL_malloc(++(list->size) * VOID_PTR_SIZE);
+        temp[0] = (void*) value;
+        for (unsigned i = 1; i < list->size; temp[i] = (list->values)[i - 1], i++);
 
-    rwMutexWriteUnlock(list->rwMutex);
+        SDL_free(list->values);
+        list->values = temp;
+    )
 }
 
 const void* listGet(List* list, unsigned index) {
     assert(list && !list->destroyed);
-    rwMutexReadLock(list->rwMutex);
-    assert(list->values && list->size > 0 && list->size < MAX_SIZE && index < MAX_SIZE);
 
-    const void* value = list->values[index];
-    rwMutexReadUnlock(list->rwMutex);
+    RW_MUTEX_READ_LOCKED(list->rwMutex,
+        assert(list->values && list->size > 0 && list->size < MAX_SIZE && index < MAX_SIZE);
+        const void* value = list->values[index];
+    )
     return value;
 }
 
 unsigned listSize(const List* list) {
     assert(list && !list->destroyed);
 
-    rwMutexReadLock(list->rwMutex);
-    const unsigned size = list->size;
-    rwMutexReadUnlock(list->rwMutex);
-
+    RW_MUTEX_READ_LOCKED(list->rwMutex, const unsigned size = list->size;)
     return size;
 }
 
 const void* nullable listBinarySearch(List* list, const void* key, ListComparator comparator) {
     assert(list && !list->destroyed);
-    rwMutexReadLock(list->rwMutex);
-    assert(list->values && list->size > 0);
 
-    const unsigned long index = (void**) SDL_bsearch(key, list->values, list->size, VOID_PTR_SIZE, comparator) - list->values;
-    const void* value = index >= list->size ? NULL : list->values[index];
+    RW_MUTEX_READ_LOCKED(list->rwMutex,
+        assert(list->values && list->size > 0);
 
-    rwMutexReadUnlock(list->rwMutex);
+        const unsigned long index =
+            (void**) SDL_bsearch(key, list->values, list->size, VOID_PTR_SIZE, comparator) - list->values;
+
+        const void* value = index >= list->size ? NULL : list->values[index];
+    )
     return value;
 }
 
@@ -108,15 +107,14 @@ static void destroyValuesIfNotEmpty(List* list) {
 
 void listClear(List* list) {
     assert(list && !list->destroyed);
-    rwMutexWriteLock(list->rwMutex);
 
-    destroyValuesIfNotEmpty(list);
-    list->size = 0;
+    RW_MUTEX_WRITE_LOCKED(list->rwMutex,
+        destroyValuesIfNotEmpty(list);
+        list->size = 0;
 
-    SDL_free(list->values);
-    list->values = NULL;
-
-    rwMutexWriteUnlock(list->rwMutex);
+        SDL_free(list->values);
+        list->values = NULL;
+    )
 }
 
 void listDestroy(List* list) {
