@@ -19,18 +19,21 @@
 #include <SDL_stdinc.h>
 #include <SDL_mutex.h>
 #include <assert.h>
+#include <stdbool.h>
 #include "../defs.h"
 #include "rwMutex.h"
 
 struct RWMutex_t {
     SDL_mutex* mutex;
     atomic unsigned counter;
+    atomic bool writeLocked;
 };
 
 RWMutex* rwMutexInit(void) {
     RWMutex* rwMutex = SDL_malloc(sizeof *rwMutex);
     rwMutex->mutex = SDL_CreateMutex();
     rwMutex->counter = 0;
+    rwMutex->writeLocked = false;
     return rwMutex;
 }
 
@@ -40,15 +43,25 @@ void rwMutexReadLock(RWMutex* rwMutex) {
 }
 
 void rwMutexReadUnlock(RWMutex* rwMutex) {
+    assert(rwMutex->counter);
+
     if (--(rwMutex->counter) == 0)
         assert(!SDL_UnlockMutex(rwMutex->mutex));
 }
 
-void rwMutexWriteLock(RWMutex* rwMutex)
-{ assert(!SDL_LockMutex(rwMutex->mutex)); }
+void rwMutexWriteLock(RWMutex* rwMutex) {
+    assert(!rwMutex->counter);
 
-void rwMutexWriteUnlock(RWMutex* rwMutex)
-{ assert(!SDL_UnlockMutex(rwMutex->mutex)); }
+    assert(!SDL_LockMutex(rwMutex->mutex));
+    rwMutex->writeLocked = true;
+}
+
+void rwMutexWriteUnlock(RWMutex* rwMutex) {
+    assert(!rwMutex->counter && rwMutex->writeLocked);
+
+    rwMutex->writeLocked = false;
+    assert(!SDL_UnlockMutex(rwMutex->mutex));
+}
 
 void rwMutexDestroy(RWMutex* rwMutex) {
     SDL_DestroyMutex(rwMutex->mutex);
