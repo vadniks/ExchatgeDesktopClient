@@ -23,7 +23,12 @@ add_compile_options("-Wno-empty-body")
 add_compile_options("-std=gnu11")
 
 add_compile_options("-Ofast") # -O3
-add_link_options("-s")
+#add_link_options("-s")
+
+0x439486 renderShowInfiniteProgressBar
+0x40c4d8 logicOnUserForConversationChosen
+0x43a50d drawUsersList
+0x4396c1 renderDraw
 
 file(GLOB sources CONFIGURE_DEPENDS "src/*.c" "src/*.h")
 add_executable(${PROJECT_NAME} ${sources})
