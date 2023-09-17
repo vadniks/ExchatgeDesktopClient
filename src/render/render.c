@@ -358,12 +358,12 @@ void renderSetWindowTitle(const char* title) {
     SDL_memcpy(xTitle + winTitleSize + separatorSize, title, this->usernameSize);
     xTitle[size - 1] = 0;
 
-    WRITE_LOCKED(this->rwMutex, SDL_SetWindowTitle(this->window, xTitle);)
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex, SDL_SetWindowTitle(this->window, xTitle);)
 }
 
 void renderAlterConversationMessageBuffer(const char* text, unsigned size) {
     assert(this && size <= this->maxMessageSize);
-    WRITE_LOCKED(this->rwMutex,
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
         assert(this->state == STATE_CONVERSATION);
         SDL_memset(this->conversationMessage, 0, this->maxMessageSize);
         SDL_memcpy(this->conversationMessage, text, size);
@@ -373,7 +373,7 @@ void renderAlterConversationMessageBuffer(const char* text, unsigned size) {
 
 void renderAlterFilePathBuffer(const char* filePath, unsigned size) {
     assert(this && size <= this->maxFilePathSize);
-    WRITE_LOCKED(this->rwMutex,
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
         assert(this->state == STATE_FILE_CHOOSER);
         SDL_memset(this->enteredFilePath, 0, this->maxFilePathSize);
         SDL_memcpy(this->enteredFilePath, filePath, size);
@@ -383,7 +383,7 @@ void renderAlterFilePathBuffer(const char* filePath, unsigned size) {
 
 void renderShowLogIn(void) {
     assert(this);
-    WRITE_LOCKED(this->rwMutex,
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
         SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize * sizeof(char));
         this->enteredUsernameSize = 0;
         this->enteredPasswordSize = 0;
@@ -393,12 +393,12 @@ void renderShowLogIn(void) {
 
 void renderShowRegister(void) {
     assert(this);
-    WRITE_LOCKED(this->rwMutex, this->state = STATE_REGISTER;)
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->state = STATE_REGISTER;)
 }
 
 void renderShowUsersList(const char* currentUserName) {
     assert(this && this->usersList);
-    WRITE_LOCKED(this->rwMutex,
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
         SDL_memcpy(this->currentUserName, currentUserName, this->usernameSize);
         this->state = STATE_USERS_LIST;
     )
@@ -406,7 +406,7 @@ void renderShowUsersList(const char* currentUserName) {
 
 void renderShowConversation(const char* conversationName) {
     assert(this && this->conversationMessage && this->maxMessageSize && this->conversationMessagesList);
-    WRITE_LOCKED(this->rwMutex,
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
         SDL_memcpy(this->conversationName, conversationName, this->conversationNameSize);
         this->state = STATE_CONVERSATION;
     )
@@ -414,18 +414,18 @@ void renderShowConversation(const char* conversationName) {
 
 void renderShowFileChooser(void) {
     assert(this);
-    WRITE_LOCKED(this->rwMutex, this->state = STATE_FILE_CHOOSER;)
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->state = STATE_FILE_CHOOSER;)
 }
 
 bool renderIsConversationShown(void) {
     assert(this);
-    READ_LOCKED(this->rwMutex, const States state = this->state;)
+    RW_MUTEX_READ_LOCKED(this->rwMutex, const States state = this->state;)
     return state == STATE_CONVERSATION;
 }
 
 bool renderIsFileChooserShown(void) {
     assert(this);
-    READ_LOCKED(this->rwMutex, const States state = this->state;)
+    RW_MUTEX_READ_LOCKED(this->rwMutex, const States state = this->state;)
     return state == STATE_FILE_CHOOSER;
 }
 
@@ -500,7 +500,7 @@ bool renderShowFileExchangeRequestDialog(const char* fromUserName, unsigned file
 
 void renderSetControlsBlocking(bool blocking) {
     assert(this);
-    WRITE_LOCKED(this->rwMutex, this->allowInput = !blocking;)
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->allowInput = !blocking;)
 }
 
 static void postSystemMessage(const char* text, bool error) { // expects a null-terminated string with length in range (0, SYSTEM_MESSAGE_SIZE_MAX]
@@ -543,12 +543,12 @@ void renderShowFileTransmittedSystemMessage(void) { postSystemMessage(FILE_TRANS
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);
-    WRITE_LOCKED(this->rwMutex, this->loading = true;)
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->loading = true;)
 }
 
 void renderHideInfiniteProgressBar(void) {
     assert(this);
-    WRITE_LOCKED(this->rwMutex, this->loading = false;)
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->loading = false;)
 }
 
 static void drawInfiniteProgressBar(float height) {
@@ -597,7 +597,7 @@ static void drawSplashPage(void) {
 }
 
 static void onProceedClickedAfterLogInRegister(bool logIn) { // TODO: avoid situation when inside a module, its mutex is locked and before unlock, callback is called, which can then invoke another function from this module, which can set write lock
-    (*(this->onCredentialsReceived))( // no need to synchronize this
+    (*(this->onCredentialsReceived))(
         this->enteredCredentialsBuffer,
         this->enteredUsernameSize,
         this->enteredCredentialsBuffer + this->usernameSize,
@@ -605,12 +605,10 @@ static void onProceedClickedAfterLogInRegister(bool logIn) { // TODO: avoid situ
         logIn
     );
 
-    WRITE_LOCKED(this->rwMutex,
-        /*TODO: remove this line*/(*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer, this->usernameSize + this->passwordSize); // TODO: deprecated(credentialsRandomFiller)
-        SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize);
-        this->enteredUsernameSize = 0;
-        this->enteredPasswordSize = 0;
-    )
+    /*TODO: remove this line*/(*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer, this->usernameSize + this->passwordSize); // TODO: deprecated(credentialsRandomFiller)
+    SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize);
+    this->enteredUsernameSize = 0;
+    this->enteredPasswordSize = 0;
 }
 
 static void drawLogInForm(int width, float height, bool logIn) {
@@ -625,7 +623,6 @@ static void drawLogInForm(int width, float height, bool logIn) {
     nk_layout_row_static(this->context, height * 0.25f, width / 2, 2);
 
     nk_label(this->context, USERNAME, NK_TEXT_ALIGN_LEFT);
-    rwMutexWriteLock(this->rwMutex);
     nk_edit_string(
         this->context,
         NK_EDIT_FIELD,
@@ -644,7 +641,6 @@ static void drawLogInForm(int width, float height, bool logIn) {
         (int) this->passwordSize,
         &nk_filter_default
     );
-    rwMutexWriteUnlock(this->rwMutex);
 
     nk_layout_row_static(this->context, height * 0.25f, width / 2, 2);
     if (nk_button_label(this->context, PROCEED)) onProceedClickedAfterLogInRegister(logIn);
@@ -715,20 +711,20 @@ static void drawUserRowColumnDescriptions(__attribute_maybe_unused__ const void*
 
 static void drawUserRowColumnIdAndName(const void* parameter) {
     assert(parameter);
-    nk_label(this->context, /*idString*/ (const char*) ((const void**) parameter)[0], NK_TEXT_ALIGN_LEFT);
-    nk_label(this->context, /*name*/ (const char*) ((const void**) parameter)[1], NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, (const char*) ((const void**) parameter)[0], NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, (const char*) ((const void**) parameter)[1], NK_TEXT_ALIGN_LEFT);
 }
 
 static void drawUserRowColumnStatus(const void* parameter) {
     assert(parameter);
-    nk_label(this->context, /*online*/ *((const bool*) parameter) ? ONLINE : OFFLINE, NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, *((const bool*) parameter) ? ONLINE : OFFLINE, NK_TEXT_ALIGN_LEFT);
 }
 
 static void drawUserRowColumnActions(const void* parameter) {
     assert(parameter);
     const unsigned id = *((const unsigned*) ((const void**) parameter)[0]);
 
-    if (/*conversationExists*/ *((const bool*) ((const void**) parameter)[1])) {
+    if (*((const bool*) ((const void**) parameter)[1])) {
         if (nk_button_label(this->context, CONTINUE_CONVERSATION))
             (*(this->onUserForConversationChosen))(id, RENDER_CONTINUE_CONVERSATION);
 
@@ -784,7 +780,6 @@ static void drawUsersList(void) {
     char groupName[2] = {1, 0};
     if (!nk_group_begin(this->context, groupName, 0)) return;
 
-    rwMutexReadLock(this->rwMutex);
     const unsigned size = listSize(this->usersList);
     for (unsigned i = 0; i < size; i++) {
         const User* user = (User*) listGet(this->usersList, i);
@@ -794,7 +789,6 @@ static void drawUsersList(void) {
 
         drawUserRow(user->id, idString, user->name, user->conversationExists, user->online);
     }
-    rwMutexReadUnlock(this->rwMutex);
 
     nk_group_end(this->context);
 }
@@ -888,7 +882,6 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         fromRatio = aboveInitialWidth ? 0.05f : 0.1f,
         textRatio = aboveInitialWidth ? 0.435f : 0.35f;
 
-    rwMutexReadLock(this->rwMutex);
     const unsigned size = listSize(this->conversationMessagesList);
     for (unsigned i = 0; i < size; i++) {
         const ConversationMessage* message = listGet(this->conversationMessagesList, i);
@@ -903,14 +896,12 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
             timestampColor
         );
     }
-    rwMutexReadUnlock(this->rwMutex);
 
     nk_group_end(this->context);
 
     nk_layout_row_begin(this->context, NK_DYNAMIC, (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f, 2);
 
     nk_layout_row_push(this->context, 0.85f);
-    rwMutexWriteLock(this->rwMutex);
     nk_edit_string(
         this->context,
         NK_EDIT_SIMPLE | NK_EDIT_MULTILINE, // if use NK_EDIT_CLIPBOARD and user actually pastes smth then smth strange happens which causes memory corruption and therefore assert(!SDL_GetNumAllocations()) in main.c fails
@@ -919,7 +910,6 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         (int) this->maxMessageSize,
         nk_filter_default
     );
-    rwMutexWriteUnlock(this->rwMutex);
 
     nk_layout_row_push(this->context, aboveInitialWidth ? 0.069f : 0.067f);
     if (nk_button_label(this->context, SEND)) onSendClicked();
@@ -956,7 +946,6 @@ static void drawFileChooser(void) {
 
     nk_layout_row_dynamic(this->context, rowHeight, 3);
     nk_spacer(this->context);
-    rwMutexWriteLock(this->rwMutex);
     nk_edit_string(
         this->context,
         NK_EDIT_SIMPLE,
@@ -965,7 +954,6 @@ static void drawFileChooser(void) {
         (int) this->maxFilePathSize,
         nk_filter_default
     );
-    rwMutexWriteUnlock(this->rwMutex);
     nk_spacer(this->context);
 
     nk_spacer(this->context);
@@ -976,7 +964,7 @@ static void drawFileChooser(void) {
 static void drawErrorIfNeeded(void) {
     this->systemMessageTicks++;
 
-    if (!queueSize(this->systemMessagesQueue) && !this->currentSystemMessage) return; // TODO: optimize
+    if (!queueSize(this->systemMessagesQueue) && !this->currentSystemMessage) return;
 
     if (this->systemMessageTicks >= 60 * 3) { // 3 seconds
         this->systemMessageTicks = 0;
