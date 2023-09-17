@@ -358,83 +358,76 @@ void renderSetWindowTitle(const char* title) {
     SDL_memcpy(xTitle + winTitleSize + separatorSize, title, this->usernameSize);
     xTitle[size - 1] = 0;
 
-    rwMutexWriteLock(this->rwMutex);
-    SDL_SetWindowTitle(this->window, xTitle);
-    rwMutexWriteUnlock(this->rwMutex);
+    WRITE_LOCKED(this->rwMutex, SDL_SetWindowTitle(this->window, xTitle);)
 }
 
 void renderAlterConversationMessageBuffer(const char* text, unsigned size) {
     assert(this && size <= this->maxMessageSize);
-    rwMutexWriteLock(this->rwMutex);
-
-    assert(this->state == STATE_CONVERSATION);
-    SDL_memset(this->conversationMessage, 0, this->maxMessageSize);
-    SDL_memcpy(this->conversationMessage, text, size);
-    this->enteredConversationMessageSize = size;
-
-    rwMutexWriteUnlock(this->rwMutex);
+    WRITE_LOCKED(this->rwMutex,
+        assert(this->state == STATE_CONVERSATION);
+        SDL_memset(this->conversationMessage, 0, this->maxMessageSize);
+        SDL_memcpy(this->conversationMessage, text, size);
+        this->enteredConversationMessageSize = size;
+    )
 }
 
 void renderAlterFilePathBuffer(const char* filePath, unsigned size) {
     assert(this && size <= this->maxFilePathSize);
-    rwMutexWriteLock(this->rwMutex);
-
-    assert(this->state == STATE_FILE_CHOOSER);
-    SDL_memset(this->enteredFilePath, 0, this->maxFilePathSize);
-    SDL_memcpy(this->enteredFilePath, filePath, size);
-    this->enteredFilePathSize = size;
-
-    rwMutexWriteUnlock(this->rwMutex);
+    WRITE_LOCKED(this->rwMutex,
+        assert(this->state == STATE_FILE_CHOOSER);
+        SDL_memset(this->enteredFilePath, 0, this->maxFilePathSize);
+        SDL_memcpy(this->enteredFilePath, filePath, size);
+        this->enteredFilePathSize = size;
+    )
 }
 
 void renderShowLogIn(void) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
-
-    SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize * sizeof(char));
-    this->enteredUsernameSize = 0;
-    this->enteredPasswordSize = 0;
-    this->state = STATE_LOG_IN;
-
-    rwMutexWriteUnlock(this->rwMutex);
+    WRITE_LOCKED(this->rwMutex,
+        SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize * sizeof(char));
+        this->enteredUsernameSize = 0;
+        this->enteredPasswordSize = 0;
+        this->state = STATE_LOG_IN;
+    )
 }
 
 void renderShowRegister(void) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
-    this->state = STATE_REGISTER;
-    rwMutexWriteUnlock(this->rwMutex);
+    WRITE_LOCKED(this->rwMutex, this->state = STATE_REGISTER;)
 }
 
 void renderShowUsersList(const char* currentUserName) {
     assert(this && this->usersList);
-    rwMutexWriteLock(this->rwMutex);
-
-    SDL_memcpy(this->currentUserName, currentUserName, this->usernameSize);
-    this->state = STATE_USERS_LIST;
-
-    rwMutexWriteUnlock(this->rwMutex);
+    WRITE_LOCKED(this->rwMutex,
+        SDL_memcpy(this->currentUserName, currentUserName, this->usernameSize);
+        this->state = STATE_USERS_LIST;
+    )
 }
 
 void renderShowConversation(const char* conversationName) {
     assert(this && this->conversationMessage && this->maxMessageSize && this->conversationMessagesList);
-    rwMutexWriteLock(this->rwMutex);
-
-    SDL_memcpy(this->conversationName, conversationName, this->conversationNameSize);
-    this->state = STATE_CONVERSATION;
-
-    rwMutexWriteUnlock(this->rwMutex);
+    WRITE_LOCKED(this->rwMutex,
+        SDL_memcpy(this->conversationName, conversationName, this->conversationNameSize);
+        this->state = STATE_CONVERSATION;
+    )
 }
 
 void renderShowFileChooser(void) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
-    this->state = STATE_FILE_CHOOSER;
-    rwMutexWriteUnlock(this->rwMutex);
+    WRITE_LOCKED(this->rwMutex, this->state = STATE_FILE_CHOOSER;)
 }
 
-bool renderIsConversationShown(void) { return this->state == STATE_CONVERSATION; }
-bool renderIsFileChooserShown(void) { return this->state == STATE_FILE_CHOOSER; }
+bool renderIsConversationShown(void) {
+    assert(this);
+    READ_LOCKED(this->rwMutex, const States state = this->state;)
+    return state == STATE_CONVERSATION;
+}
+
+bool renderIsFileChooserShown(void) {
+    assert(this);
+    READ_LOCKED(this->rwMutex, const States state = this->state;)
+    return state == STATE_FILE_CHOOSER;
+}
 
 bool renderShowInviteDialog(const char* fromUserName) {
     assert(this);
@@ -507,9 +500,7 @@ bool renderShowFileExchangeRequestDialog(const char* fromUserName, unsigned file
 
 void renderSetControlsBlocking(bool blocking) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
-    this->allowInput = !blocking;
-    rwMutexWriteUnlock(this->rwMutex);
+    WRITE_LOCKED(this->rwMutex, this->allowInput = !blocking;)
 }
 
 static void postSystemMessage(const char* text, bool error) { // expects a null-terminated string with length in range (0, SYSTEM_MESSAGE_SIZE_MAX]
@@ -552,22 +543,18 @@ void renderShowFileTransmittedSystemMessage(void) { postSystemMessage(FILE_TRANS
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
-    this->loading = true;
-    rwMutexWriteUnlock(this->rwMutex);
+    WRITE_LOCKED(this->rwMutex, this->loading = true;)
 }
 
 void renderHideInfiniteProgressBar(void) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
-    this->loading = false;
-    rwMutexWriteUnlock(this->rwMutex);
+    WRITE_LOCKED(this->rwMutex, this->loading = false;)
 }
 
 static void drawInfiniteProgressBar(float height) {
     const unsigned maxCounterValue = 60 / 12; // 5 times slower than screen update
 
-    if (this->infiniteProgressBarCounter > 0)
+    if (this->infiniteProgressBarCounter > 0) // no need to synchronize as it gets called only in one thread
         this->infiniteProgressBarCounter =
             this->infiniteProgressBarCounter < maxCounterValue ? this->infiniteProgressBarCounter + 1 : 0;
     else {
@@ -609,8 +596,8 @@ static void drawSplashPage(void) {
     nk_spacer(this->context);
 }
 
-static void onProceedClickedAfterLogInRegister(bool logIn) {
-    (*(this->onCredentialsReceived))(
+static void onProceedClickedAfterLogInRegister(bool logIn) { // TODO: avoid situation when inside a module, its mutex is locked and before unlock, callback is called, which can then invoke another function from this module, which can set write lock
+    (*(this->onCredentialsReceived))( // no need to synchronize this
         this->enteredCredentialsBuffer,
         this->enteredUsernameSize,
         this->enteredCredentialsBuffer + this->usernameSize,
@@ -618,10 +605,12 @@ static void onProceedClickedAfterLogInRegister(bool logIn) {
         logIn
     );
 
-    (*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer, this->usernameSize + this->passwordSize); // TODO: deprecated(credentialsRandomFiller)
-    SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize);
-    this->enteredUsernameSize = 0;
-    this->enteredPasswordSize = 0;
+    WRITE_LOCKED(this->rwMutex,
+        /*TODO: remove this line*/(*(this->credentialsRandomFiller))(this->enteredCredentialsBuffer, this->usernameSize + this->passwordSize); // TODO: deprecated(credentialsRandomFiller)
+        SDL_memset(this->enteredCredentialsBuffer, 0, this->usernameSize + this->passwordSize);
+        this->enteredUsernameSize = 0;
+        this->enteredPasswordSize = 0;
+    )
 }
 
 static void drawLogInForm(int width, float height, bool logIn) {
