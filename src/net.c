@@ -99,7 +99,6 @@ THIS(
     unsigned encryptedMessageSize; // constant
     NetMessageReceivedCallback onMessageReceived;
     Crypto* connectionCrypto; // client-server level encryption - different for each connection
-    byte* messageBuffer;
     byte tokenAnonymous[TOKEN_SIZE]; // constant
     byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // constant, unencrypted but clients don't know how token is generated
     byte token[TOKEN_SIZE];
@@ -227,7 +226,6 @@ bool netInit(
     this->socketSet = NULL;
     this->onMessageReceived = onMessageReceived;
     this->connectionCrypto = NULL;
-    this->messageBuffer = NULL;
     SDL_memset(this->tokenAnonymous, 0, TOKEN_SIZE);
     SDL_memset(this->tokenServerUnsignedValue, (1 << 8) - 1, TOKEN_UNSIGNED_VALUE_SIZE);
     SDL_memcpy(this->token, this->tokenAnonymous, TOKEN_SIZE); // until user is authenticated he has an anonymous token
@@ -273,7 +271,6 @@ bool netInit(
     assert(SDLNet_TCP_AddSocket(this->socketSet, this->socket) == 1);
 
     initiateSecuredConnection(serverSignPublicKey, serverSignPublicKeySize);
-    this->messageBuffer = SDL_malloc(this->encryptedMessageSize);
 
     if (this->state != STATE_SECURE_CONNECTION_ESTABLISHED) {
         netClean();
@@ -396,6 +393,7 @@ static void processConversationSetUpMessage(const Message* message) {
         rwMutexReadUnlock(this->rwMutex);
         return;
     }
+    rwMutexReadUnlock(this->rwMutex); // TODO: throw error if the mutex is being attempted to lock in write mode before it was unlocked in read mode and vice versa
 
     rwMutexWriteLock(this->rwMutex);
     this->settingUpConversation = true;
@@ -413,6 +411,7 @@ static void processFileExchangeRequestMessage(const Message* message) {
         rwMutexReadUnlock(this->rwMutex);
         return;
     }
+    rwMutexReadUnlock(this->rwMutex);
 
     rwMutexWriteLock(this->rwMutex);
     this->exchangingFile = true;
@@ -463,13 +462,16 @@ static bool checkSocket(void) {
 }
 
 static Message* nullable receive(void) {
+    byte* buffer = SDL_malloc(this->encryptedMessageSize);
+
     rwMutexWriteLock(this->rwMutex);
-    const int result = SDLNet_TCP_Recv(this->socket, this->messageBuffer, (int) this->encryptedMessageSize);
+    const int result = SDLNet_TCP_Recv(this->socket, buffer, (int) this->encryptedMessageSize);
     rwMutexWriteUnlock(this->rwMutex);
 
     if (result != (int) this->encryptedMessageSize) return NULL;
 
-    byte* decrypted = cryptoDecrypt(this->connectionCrypto, this->messageBuffer, this->encryptedMessageSize, false);
+    byte* decrypted = cryptoDecrypt(this->connectionCrypto, buffer, this->encryptedMessageSize, false);
+    SDL_free(buffer);
     assert(decrypted);
 
     Message* message = unpackMessage(decrypted);
@@ -570,7 +572,7 @@ const byte* netUserInfoName(const NetUserInfo* info) {
     return info->name;
 }
 
-static void resetUserInfos(void) {
+static void resetUserInfos(void) { // TODO: test users list updates with large amount of items
     rwMutexWriteLock(this->rwMutex);
     SDL_free(this->userInfos);
     this->userInfos = NULL;
@@ -821,7 +823,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     return crypto;
 }
 
-bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
+bool netBeginFileExchange(unsigned toId, unsigned fileSize) { // TODO: test this
     assert(fileSize);
 
     rwMutexWriteLock(this->rwMutex);
@@ -933,10 +935,10 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
 
 void netClean(void) {
     assert(this);
+    rwMutexWriteLock(this->rwMutex);
 
     SDL_free(this->serverKeyStub);
     SDL_free(this->userInfos);
-    SDL_free(this->messageBuffer);
 
     if (this->connectionCrypto) cryptoDestroy(this->connectionCrypto);
 
@@ -944,6 +946,7 @@ void netClean(void) {
     SDLNet_TCP_Close(this->socket);
     SDLNet_Quit();
 
+    rwMutexWriteUnlock(this->rwMutex);
     rwMutexDestroy(this->rwMutex);
     SDL_free(this->host);
     SDL_free(this);
