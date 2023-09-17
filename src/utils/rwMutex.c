@@ -49,23 +49,6 @@ void rwMutexReadUnlock(RWMutex* rwMutex) {
         assert(!SDL_UnlockMutex(rwMutex->mutex));
 }
 
-#include <execinfo.h> // TODO: test only
-#include <stdio.h>
-#include <stdlib.h>
-
-__attribute_deprecated__
-static void test(void) { // TODO: test only
-    const unsigned size = 256;
-    void* buffer[size];
-    const unsigned frames = backtrace(buffer, (int) size);
-    char** strings = backtrace_symbols(buffer, (int) frames);
-
-    for (unsigned i = 0; i < frames; i++)
-        printf("%s\n", strings[i]);
-    printf("\n");
-    free(strings);
-}
-
 void rwMutexWriteLock(RWMutex* rwMutex) {
     assert(!rwMutex->counter);
 

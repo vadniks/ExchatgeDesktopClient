@@ -44,18 +44,18 @@ Queue* queueInit(QueueDeallocator nullable deallocator) {
 
 void queuePush(Queue* queue, const void* value) {
     assert(queue && !queue->destroyed);
-    rwMutexWriteLock(queue->rwMutex);
-    assert(queue->size < 0xfffffffe);
 
-    queue->values = SDL_realloc(queue->values, ++(queue->size) * VOID_PTR_SIZE);
-    queue->values[queue->size - 1] = (void*) value;
+    RW_MUTEX_WRITE_LOCKED(queue->rwMutex,
+        assert(queue->size < 0xfffffffe);
 
-    rwMutexWriteUnlock(queue->rwMutex);
+        queue->values = SDL_realloc(queue->values, ++(queue->size) * VOID_PTR_SIZE);
+        queue->values[queue->size - 1] = (void*) value;
+    )
 }
 
 void* queuePop(Queue* queue) {
     assert(queue && !queue->destroyed && queue->size > 0);
-    rwMutexWriteLock(queue->rwMutex);
+    RW_MUTEX_WRITE_LOCK(queue->rwMutex)
     assert(queue->values);
 
     void* value = queue->values[0];
@@ -65,7 +65,7 @@ void* queuePop(Queue* queue) {
         SDL_free(queue->values);
         queue->values = NULL;
         queue->size = 0;
-        rwMutexWriteUnlock(queue->rwMutex);
+        RW_MUTEX_WRITE_UNLOCK(queue->rwMutex)
         return value;
     }
 
@@ -77,17 +77,14 @@ void* queuePop(Queue* queue) {
 
     queue->size = newSize;
 
-    rwMutexWriteUnlock(queue->rwMutex);
+    RW_MUTEX_WRITE_UNLOCK(queue->rwMutex)
     return value;
 }
 
 unsigned queueSize(const Queue* queue) {
     assert(queue && !queue->destroyed);
 
-    rwMutexReadLock(queue->rwMutex);
-    const unsigned size = queue->size;
-    rwMutexReadUnlock(queue->rwMutex);
-
+    RW_MUTEX_READ_LOCKED(queue->rwMutex, const unsigned size = queue->size;)
     return size;
 }
 
