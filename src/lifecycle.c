@@ -72,7 +72,11 @@ static void asyncActionDeallocator(AsyncAction* action) { SDL_free(action); }
 
 static void asyncActionsThreadLooper(void) {
     while (this->running) {
-        if (!queueSize(this->asyncActionsQueue)) continue;
+        if (!queueSize(this->asyncActionsQueue)) {
+            sleep(100);
+            continue;
+        }
+
         AsyncAction* action = queuePop(this->asyncActionsQueue);
 
         if (action->delayMillis > 0) sleep(action->delayMillis);
@@ -153,7 +157,7 @@ void lifecycleLoop(void) {
         } else
             this->netUpdateCounter++;
 
-        differenceMillis = logicCurrentTimeMillis() - startMillis;
+        differenceMillis = logicCurrentTimeMillis() - startMillis - 5;
         if ((unsigned long) UI_UPDATE_PERIOD > differenceMillis)
             sleep((unsigned long) UI_UPDATE_PERIOD - differenceMillis);
     }
