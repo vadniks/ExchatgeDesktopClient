@@ -338,10 +338,7 @@ static byte* packMessage(const Message* msg) {
 static void processErrors(const Message* message) {
     switch ((int) this->lastSentFlag) {
         case FLAG_LOG_IN:
-            rwMutexWriteLock(this->rwMutex);
-            this->state = STATE_FINISHED_WITH_ERROR;
-            rwMutexWriteUnlock(this->rwMutex);
-
+            RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->state = STATE_FINISHED_WITH_ERROR;)
             (*(this->onLogInResult))(false);
             break;
         case FLAG_REGISTER:
@@ -361,12 +358,11 @@ static void processMessagesFromServer(const Message* message) {
 
     switch (message->flag) {
         case FLAG_LOGGED_IN:
-            rwMutexWriteLock(this->rwMutex);
-            this->state = STATE_AUTHENTICATED;
-            this->userId = message->to;
-            SDL_memcpy(this->token, message->body, TOKEN_SIZE);
-            rwMutexWriteUnlock(this->rwMutex);
-
+            RW_MUTEX_WRITE_LOCKED(this->rwMutex,
+                this->state = STATE_AUTHENTICATED;
+                this->userId = message->to;
+                SDL_memcpy(this->token, message->body, TOKEN_SIZE);
+            )
             (*(this->onLogInResult))(true);
             break;
         case FLAG_REGISTERED:
@@ -388,17 +384,15 @@ static void processMessagesFromServer(const Message* message) {
 static void processConversationSetUpMessage(const Message* message) {
     assert(message->flag == FLAG_EXCHANGE_KEYS && message->size == INVITE_ASK);
 
-    rwMutexReadLock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCK(this->rwMutex)
     if (this->settingUpConversation || this->exchangingFile) {
-        rwMutexReadUnlock(this->rwMutex);
+        RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
         return;
-    }
-    rwMutexReadUnlock(this->rwMutex); // TODO: throw error if the mutex is being attempted to lock in write mode before it was unlocked in read mode and vice versa
+    } // TODO: throw error if the mutex is being attempted to lock in write mode before it was unlocked in read mode and vice versa
 
-    rwMutexWriteLock(this->rwMutex);
     this->settingUpConversation = true;
     this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
 
     (*(this->onConversationSetUpInviteReceived))(message->from);
 }
@@ -406,17 +400,15 @@ static void processConversationSetUpMessage(const Message* message) {
 static void processFileExchangeRequestMessage(const Message* message) {
     assert(message->flag == FLAG_FILE_ASK && message->size == INT_SIZE);
 
-    rwMutexReadLock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCK(this->rwMutex)
     if (this->settingUpConversation || this->exchangingFile) {
-        rwMutexReadUnlock(this->rwMutex);
+        RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
         return;
     }
-    rwMutexReadUnlock(this->rwMutex);
 
-    rwMutexWriteLock(this->rwMutex);
     this->exchangingFile = true;
     this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
 
     const unsigned fileSize = *((unsigned*) message->body);
     assert(fileSize);
@@ -452,21 +444,19 @@ static void onDisconnected(void) {
 }
 
 static bool checkSocket(void) {
-    rwMutexWriteLock(this->rwMutex);
-
-    const bool result = SDLNet_CheckSockets(this->socketSet, 0) == 1
-        && SDLNet_SocketReady(this->socket) != 0;
-
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
+        const bool result = SDLNet_CheckSockets(this->socketSet, 0) == 1
+            && SDLNet_SocketReady(this->socket) != 0;
+    )
     return result;
 }
 
 static Message* nullable receive(void) {
     byte* buffer = SDL_malloc(this->encryptedMessageSize);
 
-    rwMutexWriteLock(this->rwMutex);
-    const int result = SDLNet_TCP_Recv(this->socket, buffer, (int) this->encryptedMessageSize);
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
+        const int result = SDLNet_TCP_Recv(this->socket, buffer, (int) this->encryptedMessageSize);
+    )
 
     if (result != (int) this->encryptedMessageSize) return NULL;
 
@@ -523,10 +513,10 @@ bool netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
 
     if (!encryptedMessage) return false;
 
-    rwMutexWriteLock(this->rwMutex);
-    this->lastSentFlag = flag;
-    const int bytesSent = SDLNet_TCP_Send(this->socket, encryptedMessage, (int) this->encryptedMessageSize);
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
+        this->lastSentFlag = flag;
+        const int bytesSent = SDLNet_TCP_Send(this->socket, encryptedMessage, (int) this->encryptedMessageSize);
+    )
 
     SDL_free(encryptedMessage);
     return bytesSent == (int) this->encryptedMessageSize;
@@ -573,17 +563,17 @@ const byte* netUserInfoName(const NetUserInfo* info) {
 }
 
 static void resetUserInfos(void) { // TODO: test users list updates with large amount of items
-    rwMutexWriteLock(this->rwMutex);
-    SDL_free(this->userInfos);
-    this->userInfos = NULL;
-    this->userInfosSize = 0;
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
+        SDL_free(this->userInfos);
+        this->userInfos = NULL;
+        this->userInfosSize = 0;
+    )
 }
 
 static void onUsersFetched(const Message* message) {
     assert(this);
     if (!(message->index)) resetUserInfos();
-    rwMutexWriteLock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCK(this->rwMutex)
 
     this->userInfosSize += message->size;
     assert(this->userInfosSize);
@@ -593,15 +583,14 @@ static void onUsersFetched(const Message* message) {
         (this->userInfos)[j] = unpackUserInfo(message->body + i * USER_INFO_SIZE);
 
     if (message->index < message->count - 1) {
-        rwMutexWriteUnlock(this->rwMutex);
+        RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
         return;
     }
 
     (*(this->onUsersFetched))(this->userInfos, this->userInfosSize);
-
     for (unsigned i = 0; i < this->userInfosSize; SDL_free((this->userInfos)[i++]));
 
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
     resetUserInfos();
 }
 
@@ -614,19 +603,16 @@ static bool waitForReceiveWithTimeout(void) {
     return false;
 }
 
-static void finishSettingUpConversation(void) {
-    rwMutexWriteLock(this->rwMutex);
-    this->settingUpConversation = false;
-    rwMutexWriteUnlock(this->rwMutex);
-}
+static void finishSettingUpConversation(void)
+{ RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->settingUpConversation = false;) }
 
 Crypto* nullable netCreateConversation(unsigned id) {
     assert(this);
 
-    rwMutexWriteLock(this->rwMutex);
-    assert(!this->settingUpConversation && !this->exchangingFile);
-    this->settingUpConversation = true;
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
+        assert(!this->settingUpConversation && !this->exchangingFile);
+        this->settingUpConversation = true;
+    )
 
     byte body[NET_MESSAGE_BODY_SIZE];
 
@@ -713,19 +699,13 @@ Crypto* nullable netCreateConversation(unsigned id) {
 }
 
 static bool inviteProcessingTimeoutExceeded(void) {
-    rwMutexReadLock(this->rwMutex);
-    const unsigned long start = this->inviteProcessingStartMillis;
-    rwMutexReadUnlock(this->rwMutex);
-
+    RW_MUTEX_READ_LOCKED(this->rwMutex, const unsigned long start = this->inviteProcessingStartMillis;)
     return (*(this->currentTimeMillisGetter))() - start > TIMEOUT;
 }
 
 Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     assert(this);
-
-    rwMutexReadLock(this->rwMutex);
-    assert(this->settingUpConversation && !this->exchangingFile);
-    rwMutexReadUnlock(this->rwMutex);
+    RW_MUTEX_READ_LOCKED(this->rwMutex, assert(this->settingUpConversation && !this->exchangingFile);)
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
@@ -823,29 +803,28 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
     return crypto;
 }
 
+static void finishFileExchange(void)
+{ RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->exchangingFile = false;) }
+
 bool netBeginFileExchange(unsigned toId, unsigned fileSize) { // TODO: test this
     assert(fileSize);
 
-    rwMutexWriteLock(this->rwMutex);
-    assert(!this->settingUpConversation && !this->exchangingFile);
-    this->exchangingFile = true;
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
+        assert(!this->settingUpConversation && !this->exchangingFile);
+        this->exchangingFile = true;
+    )
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     *((unsigned*) body) = fileSize;
 
     if (!netSend(FLAG_FILE_ASK, body, INT_SIZE, toId)) {
-        rwMutexWriteLock(this->rwMutex);
-        this->exchangingFile = false;
-        rwMutexWriteUnlock(this->rwMutex);
+        finishFileExchange();
         return false;
     }
 
     if (!waitForReceiveWithTimeout()) {
-        rwMutexWriteLock(this->rwMutex);
-        this->exchangingFile = false;
-        rwMutexWriteUnlock(this->rwMutex);
+        finishFileExchange();
         return false;
     }
 
@@ -854,10 +833,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) { // TODO: test this
         || message->flag != FLAG_FILE_ASK
         || *((unsigned*) message->body) != fileSize)
     {
-        rwMutexWriteLock(this->rwMutex);
-        this->exchangingFile = false;
-        rwMutexWriteUnlock(this->rwMutex);
-
+        finishFileExchange();
         SDL_free(message);
         return false;
     }
@@ -866,29 +842,21 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) { // TODO: test this
     unsigned index = 0, bytesWritten;
     while ((bytesWritten = (*(this->nextFileChunkSupplier))(index++, body))) {
         if (!netSend(FLAG_FILE, body, bytesWritten, toId)) {
-            rwMutexWriteLock(this->rwMutex);
-            this->exchangingFile = false;
-            rwMutexWriteUnlock(this->rwMutex);
+            finishFileExchange();
             return false;
         }
     }
 
-    rwMutexWriteLock(this->rwMutex);
-    this->exchangingFile = false;
-    rwMutexWriteUnlock(this->rwMutex);
-
+    finishFileExchange();
     return true;
 }
 
 bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accept) {
-    rwMutexReadLock(this->rwMutex);
-    assert(!this->settingUpConversation && this->exchangingFile);
-    rwMutexReadUnlock(this->rwMutex);
+    assert(this);
+    RW_MUTEX_READ_LOCKED(this->rwMutex, assert(!this->settingUpConversation && this->exchangingFile);)
 
     if (inviteProcessingTimeoutExceeded()) {
-        rwMutexWriteLock(this->rwMutex);
-        this->exchangingFile = false;
-        rwMutexWriteUnlock(this->rwMutex);
+        finishFileExchange();
         return false;
     }
 
@@ -897,16 +865,12 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     if (accept) *((unsigned*) body) = fileSize;
 
     if (!netSend(FLAG_FILE_ASK, body, INT_SIZE, fromId)) {
-        rwMutexWriteLock(this->rwMutex);
-        this->exchangingFile = false;
-        rwMutexWriteUnlock(this->rwMutex);
+        finishFileExchange();
         return false;
     }
 
     if (!accept) {
-        rwMutexWriteLock(this->rwMutex);
-        this->exchangingFile = false;
-        rwMutexWriteUnlock(this->rwMutex);
+        finishFileExchange();
         return false;
     }
 
@@ -927,15 +891,13 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     }
     SDL_free(message);
 
-    rwMutexWriteLock(this->rwMutex);
-    this->exchangingFile = false;
-    rwMutexWriteUnlock(this->rwMutex);
+    finishFileExchange();
     return true;
 }
 
 void netClean(void) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCK(this->rwMutex)
 
     SDL_free(this->serverKeyStub);
     SDL_free(this->userInfos);
@@ -946,7 +908,7 @@ void netClean(void) {
     SDLNet_TCP_Close(this->socket);
     SDLNet_Quit();
 
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
     rwMutexDestroy(this->rwMutex);
     SDL_free(this->host);
     SDL_free(this);
