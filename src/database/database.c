@@ -31,7 +31,7 @@ STATIC_CONST_STRING STREAMS_STATES_COLUMN = "streamsStates";
 STATIC_CONST_STRING MESSAGES_TABLE = "messages";
 STATIC_CONST_STRING TIMESTAMP_COLUMN = "timestamp";
 STATIC_CONST_STRING CONVERSATION_COLUMN = "conversation";
-STATIC_CONST_STRING FROM_COLUMN = "\"from\""; // quotes are used 'cause it's a reserved keyword in the sql lang
+STATIC_CONST_STRING FROM_COLUMN = "\"from\""; // quotes are used 'cause it's a reserved keyword in sql
 STATIC_CONST_STRING TEXT_COLUMN = "text";
 STATIC_CONST_STRING SIZE_COLUMN = "size";
 STATIC_CONST_STRING SERVICE_TABLE = "service";
@@ -293,7 +293,7 @@ static long hostId(void) {
     SDL_RWops* rwOps = SDL_RWFromFile("/etc/machine-id", "rb");
     if (!rwOps) return dummy;
 
-    const byte size = 1 << 5;
+    const byte size = 1 << 5; // 32
     byte buffer[size];
 
     const bool sizeMatched = SDL_RWread(rwOps, buffer, 1, size) == size;
@@ -347,7 +347,7 @@ bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned us
     assert(!this && passwordSize > 0 && usernameSize > 0);
     this = SDL_malloc(sizeof *this);
     this->rwMutex = rwMutexInit();
-    rwMutexWriteLock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCK(this->rwMutex)
 
     this->key = SDL_malloc(CRYPTO_KEY_SIZE);
     byte* key = cryptoMakeKey(passwordBuffer, passwordSize);
@@ -361,7 +361,7 @@ bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned us
     if (successful) createTablesIfNotExist();
 
     if (!checkKey()) successful = false;
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
     return successful;
 }
 
@@ -375,7 +375,7 @@ static void conversationExistsBinder(const unsigned* userId, sqlite3_stmt* state
 
 bool databaseConversationExists(unsigned userId) {
     assert(this);
-    rwMutexReadLock(this->rwMutex);
+    RW_MUTEX_READ_LOCK(this->rwMutex)
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -394,7 +394,7 @@ bool databaseConversationExists(unsigned userId) {
         (StatementProcessor) &existsResultHandler, &result
     );
 
-    rwMutexReadUnlock(this->rwMutex);
+    RW_MUTEX_READ_UNLOCK(this->rwMutex)
     return result;
 }
 
@@ -405,7 +405,7 @@ static void addConversationBinder(const void* const* parameters, sqlite3_stmt* s
 
 bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCK(this->rwMutex)
 
     byte* streamStates = cryptoExportStreamsStates(crypto);
     byte* encryptedStreamsStates = cryptoEncryptSingle(this->key, streamStates, CRYPTO_STREAMS_STATES_SIZE);
@@ -430,7 +430,7 @@ bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
     );
 
     SDL_free(encryptedStreamsStates);
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
     return true;
 }
 
@@ -457,7 +457,7 @@ static void getConversationResultHandler(void* const* parameters, sqlite3_stmt* 
 
 Crypto* nullable databaseGetConversation(unsigned userId) {
     assert(this);
-    rwMutexReadLock(this->rwMutex);
+    RW_MUTEX_READ_LOCK(this->rwMutex)
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -477,6 +477,7 @@ Crypto* nullable databaseGetConversation(unsigned userId) {
         (StatementProcessor) &getConversationBinder, &userId,
         (StatementProcessor) &getConversationResultHandler, (void*[2]) {encryptedStreamsStates, &found}
     );
+    RW_MUTEX_READ_UNLOCK(this->rwMutex)
     if (!found) return NULL;
 
     byte* decryptedStreamsStates = cryptoDecryptSingle(this->key, encryptedStreamsStates, cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE));
@@ -486,7 +487,7 @@ Crypto* nullable databaseGetConversation(unsigned userId) {
     cryptoSetUpAutonomous(crypto, this->key, decryptedStreamsStates);
     SDL_free(decryptedStreamsStates);
 
-    rwMutexReadUnlock(this->rwMutex);
+    RW_MUTEX_READ_UNLOCK(this->rwMutex)
     return crypto;
 }
 
@@ -495,7 +496,7 @@ static void removeConversationBinder(const unsigned* userId, sqlite3_stmt* state
 
 void databaseRemoveConversation(unsigned userId) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCK(this->rwMutex)
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -513,7 +514,7 @@ void databaseRemoveConversation(unsigned userId) {
         NULL, NULL
     );
 
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
 }
 
 static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statement) {
@@ -529,7 +530,7 @@ static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statem
 
 bool databaseAddMessage(const DatabaseMessage* message) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCK(this->rwMutex)
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -551,7 +552,7 @@ bool databaseAddMessage(const DatabaseMessage* message) {
     );
     SDL_free(encryptedText);
 
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
     return true;
 }
 
@@ -592,7 +593,7 @@ static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { 
 
 List* nullable databaseGetMessages(unsigned conversation) {
     assert(this);
-    rwMutexReadLock(this->rwMutex);
+    RW_MUTEX_READ_LOCK(this->rwMutex)
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -611,7 +612,7 @@ List* nullable databaseGetMessages(unsigned conversation) {
         (StatementProcessor) &getMessagesResultHandler, messages
     );
 
-    rwMutexReadUnlock(this->rwMutex);
+    RW_MUTEX_READ_UNLOCK(this->rwMutex)
     if (listSize(messages))
         return messages;
     else {
@@ -625,7 +626,7 @@ static void removeMessagesBinder(const unsigned* conversation, sqlite3_stmt* sta
 
 void databaseRemoveMessages(unsigned conversation) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCK(this->rwMutex)
 
     const unsigned bufferSize = 0xff;
     char sql[bufferSize];
@@ -643,18 +644,18 @@ void databaseRemoveMessages(unsigned conversation) {
         NULL, NULL
     );
 
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
 }
 
 void databaseClean(void) {
     assert(this);
-    rwMutexWriteLock(this->rwMutex);
+    RW_MUTEX_WRITE_LOCK(this->rwMutex)
 
     cryptoFillWithRandomBytes(this->key, CRYPTO_KEY_SIZE);
     SDL_free(this->key);
     assert(!sqlite3_close(this->db));
 
-    rwMutexWriteUnlock(this->rwMutex);
+    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
     rwMutexDestroy(this->rwMutex);
     SDL_free(this);
     this = NULL;
