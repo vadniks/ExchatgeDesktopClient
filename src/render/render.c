@@ -793,7 +793,7 @@ static void drawUsersList(void) {
     nk_group_end(this->context);
 }
 
-static void drawConversationMessage( // TODO: wrap each message in group, so the messages that aren't currently in drawable are will be skipped and won't be drawn
+static void drawConversationMessage(
     float charHeight,
     const ConversationMessage* message,
     float timestampRatio,
@@ -809,7 +809,15 @@ static void drawConversationMessage( // TODO: wrap each message in group, so the
         )
     ) * (float) FONT_SIZE;
 
-    nk_layout_row_begin(this->context, NK_DYNAMIC, messageHeight < charHeight ? charHeight : messageHeight, 4);
+    const float groupHeight = messageHeight < charHeight ? charHeight : messageHeight;
+
+    byte groupId[sizeof(long) + 1];
+    *groupId = message->timestamp;
+    groupId[sizeof(long)] = 0;
+
+    nk_layout_row_static(this->context, groupHeight + 5, (int) ((float) this->width * 0.95f), 1);
+    if (!nk_group_begin(this->context, (const char*) groupId, NK_WINDOW_NO_SCROLLBAR)) return;
+    nk_layout_row_begin(this->context, NK_DYNAMIC, groupHeight, 4);
 
     char text[this->maxMessageSize + 1];
     SDL_memcpy(text, message->text, message->size);
@@ -839,6 +847,8 @@ static void drawConversationMessage( // TODO: wrap each message in group, so the
         nk_layout_row_push(this->context, textRatio);
         nk_spacer(this->context);
     }
+
+    nk_group_end(this->context);
 }
 
 static void onSendClicked(void) {
