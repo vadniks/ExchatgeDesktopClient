@@ -18,13 +18,8 @@
 
 #pragma once
 
-#define RW_MUTEX_READ_LOCK(m) rwMutexReadLock(m);
-#define RW_MUTEX_READ_UNLOCK(m) rwMutexReadUnlock(m);
-#define RW_MUTEX_READ_LOCKED(m, a) RW_MUTEX_READ_LOCK(m) a RW_MUTEX_READ_UNLOCK(m)
-
-#define RW_MUTEX_WRITE_LOCK(m) rwMutexReadLock(m);
-#define RW_MUTEX_WRITE_UNLOCK(m) rwMutexReadUnlock(m);
-#define RW_MUTEX_WRITE_LOCKED(m, a) RW_MUTEX_WRITE_LOCK(m) a RW_MUTEX_WRITE_UNLOCK(m)
+#define RW_MUTEX_READ_LOCKED(m, a) rwMutexReadLock(m); a rwMutexReadUnlock(m);
+#define RW_MUTEX_WRITE_LOCKED(m, a) rwMutexWriteLock(m); a rwMutexWriteUnlock(m);
 
 struct RWMutex_t;
 typedef struct RWMutex_t RWMutex;

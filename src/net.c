@@ -384,15 +384,15 @@ static void processMessagesFromServer(const Message* message) {
 static void processConversationSetUpMessage(const Message* message) {
     assert(message->flag == FLAG_EXCHANGE_KEYS && message->size == INVITE_ASK);
 
-    RW_MUTEX_WRITE_LOCK(this->rwMutex)
+    rwMutexWriteLock(this->rwMutex);
     if (this->settingUpConversation || this->exchangingFile) {
-        RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
+        rwMutexWriteUnlock(this->rwMutex);
         return;
     } // TODO: throw error if the mutex is being attempted to lock in write mode before it was unlocked in read mode and vice versa
 
     this->settingUpConversation = true;
     this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
-    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
+    rwMutexWriteUnlock(this->rwMutex);
 
     (*(this->onConversationSetUpInviteReceived))(message->from);
 }
@@ -400,15 +400,15 @@ static void processConversationSetUpMessage(const Message* message) {
 static void processFileExchangeRequestMessage(const Message* message) {
     assert(message->flag == FLAG_FILE_ASK && message->size == INT_SIZE);
 
-    RW_MUTEX_WRITE_LOCK(this->rwMutex)
+    rwMutexWriteLock(this->rwMutex);
     if (this->settingUpConversation || this->exchangingFile) {
-        RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
+        rwMutexWriteUnlock(this->rwMutex);
         return;
     }
 
     this->exchangingFile = true;
     this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
-    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
+    rwMutexWriteUnlock(this->rwMutex);
 
     const unsigned fileSize = *((unsigned*) message->body);
     assert(fileSize);
@@ -573,7 +573,7 @@ static void resetUserInfos(void) { // TODO: test users list updates with large a
 static void onUsersFetched(const Message* message) {
     assert(this);
     if (!(message->index)) resetUserInfos();
-    RW_MUTEX_WRITE_LOCK(this->rwMutex)
+    rwMutexWriteLock(this->rwMutex);
 
     this->userInfosSize += message->size;
     assert(this->userInfosSize);
@@ -583,14 +583,14 @@ static void onUsersFetched(const Message* message) {
         (this->userInfos)[j] = unpackUserInfo(message->body + i * USER_INFO_SIZE);
 
     if (message->index < message->count - 1) {
-        RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
+        rwMutexWriteUnlock(this->rwMutex);
         return;
     }
 
     (*(this->onUsersFetched))(this->userInfos, this->userInfosSize);
     for (unsigned i = 0; i < this->userInfosSize; SDL_free((this->userInfos)[i++]));
 
-    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
+    rwMutexWriteUnlock(this->rwMutex);
     resetUserInfos();
 }
 
@@ -897,7 +897,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
 
 void netClean(void) {
     assert(this);
-    RW_MUTEX_WRITE_LOCK(this->rwMutex)
+    rwMutexWriteLock(this->rwMutex);
 
     SDL_free(this->serverKeyStub);
     SDL_free(this->userInfos);
@@ -908,7 +908,7 @@ void netClean(void) {
     SDLNet_TCP_Close(this->socket);
     SDLNet_Quit();
 
-    RW_MUTEX_WRITE_UNLOCK(this->rwMutex)
+    rwMutexWriteUnlock(this->rwMutex);
     rwMutexDestroy(this->rwMutex);
     SDL_free(this->host);
     SDL_free(this);

@@ -55,7 +55,7 @@ void queuePush(Queue* queue, const void* value) {
 
 void* queuePop(Queue* queue) {
     assert(queue && !queue->destroyed && queue->size > 0);
-    RW_MUTEX_WRITE_LOCK(queue->rwMutex)
+    rwMutexWriteLock(queue->rwMutex);
     assert(queue->values);
 
     void* value = queue->values[0];
@@ -65,7 +65,7 @@ void* queuePop(Queue* queue) {
         SDL_free(queue->values);
         queue->values = NULL;
         queue->size = 0;
-        RW_MUTEX_WRITE_UNLOCK(queue->rwMutex)
+        rwMutexWriteUnlock(queue->rwMutex);
         return value;
     }
 
@@ -74,10 +74,9 @@ void* queuePop(Queue* queue) {
 
     SDL_free(queue->values);
     queue->values = temp;
-
     queue->size = newSize;
 
-    RW_MUTEX_WRITE_UNLOCK(queue->rwMutex)
+    rwMutexWriteUnlock(queue->rwMutex);
     return value;
 }
 
