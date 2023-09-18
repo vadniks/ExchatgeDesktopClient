@@ -794,6 +794,7 @@ static void drawUsersList(void) {
 }
 
 static void drawConversationMessage(
+    unsigned width,
     float charHeight,
     const ConversationMessage* message,
     float timestampRatio,
@@ -815,7 +816,7 @@ static void drawConversationMessage(
     *groupId = message->timestamp;
     groupId[sizeof(long)] = 0;
 
-    nk_layout_row_static(this->context, groupHeight + 5, (int) ((float) this->width * 0.95f), 1);
+    nk_layout_row_static(this->context, groupHeight + 5, (int) width, 1);
     if (!nk_group_begin(this->context, (const char*) groupId, NK_WINDOW_NO_SCROLLBAR)) return;
     nk_layout_row_begin(this->context, NK_DYNAMIC, groupHeight, 4);
 
@@ -897,6 +898,7 @@ static void drawConversation(void) { // TODO: generate & sign messages from user
         const ConversationMessage* message = listGet(this->conversationMessagesList, i);
 
         drawConversationMessage(
+            (unsigned) ((float) this->width * (aboveInitialWidth ? 0.98f : 0.95f)),
             height * 0.05f,
             message,
             timestampRatio,
