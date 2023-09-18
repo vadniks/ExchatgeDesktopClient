@@ -492,7 +492,6 @@ static void nextFileChunkReceiver(unsigned fromId, unsigned index, unsigned file
 
     if (this->fileBytesCounter < fileSize) return;
 
-    assert(index);
     SDL_RWclose(this->rwops);
     this->rwops = NULL;
 }
