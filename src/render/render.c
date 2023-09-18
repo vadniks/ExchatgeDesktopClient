@@ -337,7 +337,6 @@ void renderProcessEvent(SDL_Event* event) {
         || event->type == SDL_MOUSEWHEEL;
 
     if (!this->allowInput && inputEvent) return;
-
     nk_sdl_handle_event(event);
 }
 
