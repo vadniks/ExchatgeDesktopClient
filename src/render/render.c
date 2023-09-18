@@ -810,10 +810,11 @@ static void drawConversationMessage(
     ) * (float) FONT_SIZE;
 
     const float groupHeight = messageHeight < charHeight ? charHeight : messageHeight;
+    const unsigned longSize = sizeof(long);
 
-    byte groupId[sizeof(long) + 1];
+    byte groupId[longSize + 1];
     *groupId = message->timestamp;
-    groupId[sizeof(long)] = 0;
+    groupId[longSize] = 0;
 
     nk_layout_row_static(this->context, groupHeight + 5, (int) width, 1);
     if (!nk_group_begin(this->context, (const char*) groupId, NK_WINDOW_NO_SCROLLBAR)) return;
