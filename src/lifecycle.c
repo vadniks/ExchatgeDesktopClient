@@ -26,8 +26,8 @@
 #include "collections/queue.h"
 #include "lifecycle.h"
 
-static const unsigned UI_UPDATE_PERIOD = 1000 / 60;
-static const unsigned NET_UPDATE_PERIOD = 60 / 3;
+static const unsigned UI_UPDATE_PERIOD = 1000 / 60; // 16.7, at most 60 frames per second
+static const unsigned NET_UPDATE_PERIOD = 1000 / 2; // 500, at most 2 updates per second
 
 typedef struct {
     LifecycleAsyncActionFunction function;
@@ -41,7 +41,7 @@ THIS(
     atomic bool running;
     Queue* asyncActionsQueue; // <AsyncAction*>
     SDL_Thread* asyncActionsThread;
-    unsigned netUpdateCounter;
+    SDL_TimerID netUpdateThreadId;
 )
 #pragma clang diagnostic pop
 
@@ -86,12 +86,19 @@ static void asyncActionsThreadLooper(void) {
     }
 }
 
+static unsigned netUpdateLopper(void) { // TODO: add groups and broadcast
+    if (this->running) {
+        logicNetListen(); // gets called in another thread (not even in asyncActionsThread) so the incoming messages can be processed while sending/receiving files and/or setting up conversation
+        return NET_UPDATE_PERIOD;
+    } else
+        return 0;
+}
+
 bool lifecycleInit(void) {
     this = SDL_malloc(sizeof *this);
     this->running = true;
     this->asyncActionsQueue = queueInit((QueueDeallocator) &asyncActionDeallocator);
     this->asyncActionsThread = SDL_CreateThread((SDL_ThreadFunction) &asyncActionsThreadLooper, "asyncActionsThread", NULL);
-    this->netUpdateCounter = 0;
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "1"); // TODO: optimize ui for highDpi displays
     assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
@@ -118,6 +125,8 @@ bool lifecycleInit(void) {
     renderSetAdminMode(logicIsAdminMode());
     renderSetUsersList(logicUsersList());
     renderSetMessagesList(logicMessagesList());
+
+    this->netUpdateThreadId = SDL_AddTimer(NET_UPDATE_PERIOD, (SDL_TimerCallback) &netUpdateLopper, NULL);
 
     return true;
 }
@@ -151,12 +160,6 @@ void lifecycleLoop(void) {
         startMillis = logicCurrentTimeMillis();
         renderDraw();
 
-        if (this->netUpdateCounter >= NET_UPDATE_PERIOD) {
-            this->netUpdateCounter = 0;
-            lifecycleAsync((LifecycleAsyncActionFunction) &logicNetListen, NULL, 0);
-        } else
-            this->netUpdateCounter++;
-
         differenceMillis = logicCurrentTimeMillis() - startMillis - 5;
         if ((unsigned long) UI_UPDATE_PERIOD > differenceMillis)
             sleep((unsigned long) UI_UPDATE_PERIOD - differenceMillis);
@@ -166,6 +169,7 @@ void lifecycleLoop(void) {
 void lifecycleClean(void) {
     if (!this) return;
 
+    SDL_RemoveTimer(this->netUpdateThreadId);
     SDL_WaitThread(this->asyncActionsThread, NULL);
     queueDestroy(this->asyncActionsQueue);
 

@@ -50,7 +50,7 @@ void rwMutexReadUnlock(RWMutex* rwMutex) {
 }
 
 void rwMutexWriteLock(RWMutex* rwMutex) {
-    assert(!rwMutex->counter);
+    assert(!rwMutex->counter); // TODO: remove redundant assertions like this one
 
     assert(!SDL_LockMutex(rwMutex->mutex));
     rwMutex->writeLocked = true;

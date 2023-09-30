@@ -469,10 +469,7 @@ static Message* nullable receive(void) {
     return message;
 }
 
-void netListen(void) {
-    assert(this);
-    if (!checkSocket()) return;
-
+static void readReceivedMessage(void) {
     Message* message = NULL;
 
     if (!(message = receive()))
@@ -481,6 +478,12 @@ void netListen(void) {
         processMessage(message);
         SDL_free(message);
     }
+}
+
+void netListen(void) {
+    assert(this);
+    while (this && checkSocket()) // read all messages that were sent during the past update frame and not only one message per update frame
+        readReceivedMessage(); // checking 'this' for nullability every time despite the assertion before is needed as the module can be re-initialized during the cycle which then will cause SIGSEGV 'cause the address inside 'this' will become invalid - re-initializing after registration is the example
 }
 
 unsigned netCurrentUserId(void) {
