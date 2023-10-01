@@ -441,7 +441,7 @@ static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
     lifecycleAsync((LifecycleAsyncActionFunction) &replyToFileExchangeRequest, parameters, 0);
 }
 
-static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) {
+static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) { // TODO: notify user when a new message has been received
     assert(this && this->rwops);
     lifecycleSleep(500); // TODO: test only <----------------------------------------- REMOVE THIS
     const unsigned targetSize = logicUnencryptedMessageBodySize();
