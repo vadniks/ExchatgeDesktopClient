@@ -537,6 +537,8 @@ void logicProcessEvent(SDL_Event* event) {
                 : STUB;
 }
 
+static long fetchHostId(void); // TODO: add possibility for admin to remove users from database; to disable/enable registration; to ban/unban users; to kick connected users
+
 static void processCredentials(void** data) {
     const char* username = data[0];
     const char* password = data[1];
@@ -550,7 +552,13 @@ static void processCredentials(void** data) {
         this->databaseInitialized = false;
     }
 
-    if (!databaseInit((byte*) password, NET_UNHASHED_PASSWORD_SIZE, NET_USERNAME_SIZE, NET_MESSAGE_BODY_SIZE)) { // password that's used to sign in also used to encrypt messages & other stuff in the database
+    if (!databaseInit(
+        (byte*) password,
+        NET_UNHASHED_PASSWORD_SIZE,
+        NET_USERNAME_SIZE,
+        NET_MESSAGE_BODY_SIZE,
+        &fetchHostId
+    )) { // password that's used to sign in also used to encrypt messages & other stuff in the database
         databaseClean();
         renderShowUnableToDecryptDatabaseError();
         renderHideInfiniteProgressBar();
@@ -873,6 +881,24 @@ void logicOnUpdateUsersListClicked(void) {
 }
 
 unsigned logicUnencryptedMessageBodySize(void) { return NET_MESSAGE_BODY_SIZE - cryptoEncryptedSize(0); } // 928 - 17 = 911
+
+static long fetchHostId(void) {
+    const long dummy = (long) 0xfffffffffffffffful;
+
+    SDL_RWops* rwOps = SDL_RWFromFile("/etc/machine-id", "rb");
+    if (!rwOps) return dummy;
+
+    const byte size = 1 << 5; // 32
+    byte buffer[size];
+
+    const bool sizeMatched = SDL_RWread(rwOps, buffer, 1, size) == size;
+    SDL_RWclose(rwOps);
+    if (!sizeMatched) return dummy;
+
+    long hash = 0;
+    for (byte i = 0; i < size; hash = 63 * hash + buffer[i++]);
+    return hash;
+}
 
 void logicClean(void) {
     assert(this);

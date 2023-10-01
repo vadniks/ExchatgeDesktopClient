@@ -26,6 +26,8 @@
 struct DatabaseMessage_t;
 typedef struct DatabaseMessage_t DatabaseMessage;
 
+typedef long (*DatabaseHostIdSupplier)(void);
+
 DatabaseMessage* databaseMessageCreate(unsigned long timestamp, unsigned conversation, unsigned from, const byte* text, unsigned size); // conversation - id of the user; from (user id), the name of the sender otherwise; size of text, whereas size of from is known to all users of this api
 unsigned long databaseMessageTimestamp(const DatabaseMessage* message);
 unsigned databaseMessageConversation(const DatabaseMessage* message);
@@ -34,7 +36,14 @@ const byte* databaseMessageText(const DatabaseMessage* message);
 unsigned databaseMessageSize(const DatabaseMessage* message);
 void databaseMessageDestroy(DatabaseMessage* message);
 
-bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize, unsigned maxMessageTextSize); // returns true on success (either true or false returned, cleanup is needed to be performed anyway), 'passwordSize'-sized buffer
+bool databaseInit(
+    const byte* passwordBuffer,
+    unsigned passwordSize,
+    unsigned usernameSize,
+    unsigned maxMessageTextSize,
+    DatabaseHostIdSupplier hostIdSupplier
+); // returns true on success (either true or false returned, cleanup is needed to be performed anyway), 'passwordSize'-sized buffer
+
 bool databaseConversationExists(unsigned userId);
 bool databaseAddConversation(unsigned userId, const Crypto* crypto); // the user of this api must check for existence of the entity being added before actually adding that entity, otherwise the function's gonna throw... ...smth that the caller surely doesn't want to be thrown into him
 Crypto* nullable databaseGetConversation(unsigned userId);

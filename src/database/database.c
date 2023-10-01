@@ -41,6 +41,7 @@ STATIC_CONST_STRING MACHINE_ID_COLUMN = "machineId";
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
     RWMutex* rwMutex;
+    DatabaseHostIdSupplier hostIdSupplier;
     byte* key;
     unsigned maxMessageTextSize;
     sqlite3* db;
@@ -287,24 +288,6 @@ static long* nullable getMachineId(bool* exists) {
 static void setMachineIdBinder(const byte* encryptedId, sqlite3_stmt* statement)
 { assert(!sqlite3_bind_blob(statement, 1, encryptedId, (int) cryptoSingleEncryptedSize(sizeof(long)), SQLITE_STATIC)); }
 
-static long hostId(void) {
-    const long dummy = (long) 0xfffffffffffffffful;
-
-    SDL_RWops* rwOps = SDL_RWFromFile("/etc/machine-id", "rb");
-    if (!rwOps) return dummy;
-
-    const byte size = 1 << 5; // 32
-    byte buffer[size];
-
-    const bool sizeMatched = SDL_RWread(rwOps, buffer, 1, size) == size;
-    SDL_RWclose(rwOps);
-    if (!sizeMatched) return dummy;
-
-    long hash = 0;
-    for (byte i = 0; i < size; hash = 63 * hash + buffer[i++]);
-    return hash;
-}
-
 static void setMachineId(void) {
     const unsigned bufferSize = 255;
     char sql[bufferSize];
@@ -316,7 +299,7 @@ static void setMachineId(void) {
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
-    const long id = hostId();
+    const long id = (*(this->hostIdSupplier))();
     byte* encryptedId = cryptoEncryptSingle(this->key, (const byte*) &id, sizeof(long));
 
     executeSingle(
@@ -338,16 +321,24 @@ static bool checkKey(void) {
         return true;
     }
 
-    bool checked = id ? *id == hostId() : false;
+    bool checked = id ? *id == (*(this->hostIdSupplier))() : false;
     SDL_free(id);
     return checked;
 }
 
-bool databaseInit(const byte* passwordBuffer, unsigned passwordSize, unsigned usernameSize, unsigned maxMessageTextSize) {
+bool databaseInit(
+    const byte* passwordBuffer,
+    unsigned passwordSize,
+    unsigned usernameSize,
+    unsigned maxMessageTextSize,
+    DatabaseHostIdSupplier hostIdSupplier
+) {
     assert(!this && passwordSize > 0 && usernameSize > 0);
+
     this = SDL_malloc(sizeof *this);
     this->rwMutex = rwMutexInit();
     rwMutexWriteLock(this->rwMutex);
+    this->hostIdSupplier = hostIdSupplier;
 
     this->key = SDL_malloc(CRYPTO_KEY_SIZE);
     byte* key = cryptoMakeKey(passwordBuffer, passwordSize);
