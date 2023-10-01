@@ -98,8 +98,8 @@ bool renderShowFileExchangeRequestDialog(const char* fromUserName, unsigned file
 
 void renderSetControlsBlocking(bool blocking); // true to block controls, false to unblock, use with show*Dialog
 
-void renderShowSystemMessage(const char* message, bool error); // shows system text to the user, expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE] (with null-terminator included);
-void renderHideSystemMessage(void);
+__attribute_deprecated__ void renderShowSystemMessage(const char* message, bool error); // shows system text to the user, expects a null-terminated string which size is in range (0, MAX_ERROR_TEXT_SIZE] (with null-terminator included);
+__attribute_deprecated__ void renderHideSystemMessage(void);
 void renderShowSystemError(void); // just shows an error system message with text 'Error'
 void renderShowDisconnectedError(void);
 void renderShowUnableToConnectToTheServerError(void); // TODO: too long name
@@ -117,7 +117,7 @@ void renderShowFileIsTooBig(void);
 void renderShowFileTransmittedSystemMessage(void);
 
 void renderShowInfiniteProgressBar(void); // showed only on pages that support it (log in/register, not splash as it's a special case)
-bool renderIsInfiniteProgressBarShown(void);
+__attribute_deprecated__ bool renderIsInfiniteProgressBarShown(void);
 void renderHideInfiniteProgressBar(void);
 
 void renderDraw(void);

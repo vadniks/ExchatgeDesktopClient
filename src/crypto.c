@@ -23,6 +23,9 @@
 
 typedef crypto_secretstream_xchacha20poly1305_state StreamState;
 
+typedef unsigned long long xuint64; // even that 'long' is doubled it is still 64 bits (8 bytes) so it's just unsigned long
+staticAssert(sizeof(xuint64) == sizeof(long));
+
 staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SESSIONKEYBYTES == crypto_secretbox_KEYBYTES);
@@ -225,8 +228,8 @@ const byte* cryptoClientPublicKey(const Crypto* crypto) {
 byte* nullable cryptoEncrypt(Crypto* crypto, const byte* bytes, unsigned bytesSize, bool server) {
     assert(crypto && bytes && bytesSize > 0);
 
-    unsigned long long generatedEncryptedSize = 0;
-    const typeof(generatedEncryptedSize) encryptedSize = cryptoEncryptedSize(bytesSize);
+    xuint64 generatedEncryptedSize = 0;
+    const xuint64 encryptedSize = cryptoEncryptedSize(bytesSize);
     byte* encrypted = SDL_malloc(encryptedSize);
 
     int result = crypto_secretstream_xchacha20poly1305_push(
@@ -234,7 +237,7 @@ byte* nullable cryptoEncrypt(Crypto* crypto, const byte* bytes, unsigned bytesSi
         encrypted,
         &generatedEncryptedSize,
         bytes,
-        (typeof(generatedEncryptedSize)) bytesSize,
+        (xuint64) bytesSize,
         NULL,
         0,
         TAG_INTERMEDIATE
@@ -252,9 +255,9 @@ byte* nullable cryptoEncrypt(Crypto* crypto, const byte* bytes, unsigned bytesSi
 byte* nullable cryptoDecrypt(Crypto* crypto, const byte* bytes, unsigned bytesSize, bool server) {
     assert(crypto && bytes && bytesSize > ENCRYPTED_ADDITIONAL_BYTES_SIZE);
 
-    unsigned long long generatedDecryptedSize = 0;
+    xuint64 generatedDecryptedSize = 0;
     byte tag;
-    const typeof(generatedDecryptedSize) decryptedSize = bytesSize - ENCRYPTED_ADDITIONAL_BYTES_SIZE;
+    const xuint64 decryptedSize = bytesSize - ENCRYPTED_ADDITIONAL_BYTES_SIZE;
     byte* decrypted = SDL_malloc(decryptedSize);
 
     int result = crypto_secretstream_xchacha20poly1305_pull(
@@ -263,7 +266,7 @@ byte* nullable cryptoDecrypt(Crypto* crypto, const byte* bytes, unsigned bytesSi
         &generatedDecryptedSize,
         &tag,
         bytes,
-        (typeof(generatedDecryptedSize)) bytesSize,
+        (xuint64) bytesSize,
         NULL,
         0
     );
