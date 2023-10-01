@@ -126,7 +126,7 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     SDL_free(message); // TODO: limit the messages count per conversation as the encryption is safe only for $(int32.MAX) (> 2147000000) messages
 }
 
-static void onLogInResult(bool successful) {
+static void onLogInResult(bool successful) { // TODO: add broadcasting to all users feature for admin
     assert(this);
     if (successful) {
         this->state = STATE_AUTHENTICATED;

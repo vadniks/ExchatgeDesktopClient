@@ -823,7 +823,7 @@ static void drawConversationMessage(
     groupId[longSize] = 0;
 
     nk_layout_row_static(this->context, groupHeight + 5, (int) width, 1);
-    if (!nk_group_begin(this->context, (const char*) groupId, NK_WINDOW_NO_SCROLLBAR)) return;
+    if (!nk_group_begin(this->context, (const char*) groupId, NK_WINDOW_NO_SCROLLBAR)) return; // TODO: segmentation fault here when continuing conversation 2d time and not for all conversation - only for a particular one
     nk_layout_row_begin(this->context, NK_DYNAMIC, groupHeight, 4);
 
     char text[this->maxMessageSize + 1];
