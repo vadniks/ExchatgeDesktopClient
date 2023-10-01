@@ -458,9 +458,12 @@ static Message* nullable receive(void) {
 
     RW_MUTEX_WRITE_LOCKED(this->rwMutex,
         const int result = SDLNet_TCP_Recv(this->socket, buffer, (int) this->encryptedMessageSize);
-    )
+    ) // Recv returns zero if socket was disconnected or some error happened
 
-    if (result != (int) this->encryptedMessageSize) return NULL;
+    if (result != (int) this->encryptedMessageSize) {
+        SDL_free(buffer);
+        return NULL;
+    }
 
     byte* decrypted = cryptoDecrypt(this->connectionCrypto, buffer, this->encryptedMessageSize, false);
     SDL_free(buffer);
@@ -482,7 +485,7 @@ static void readReceivedMessage(void) {
     }
 }
 
-void netListen(void) { // TODO: UNFREED MEMORY remains when registration fails 2 or more times !!!
+void netListen(void) {
     assert(this);
     while (this && checkSocket()) // read all messages that were sent during the past update frame and not only one message per update frame
         readReceivedMessage(); // checking 'this' for nullability every time despite the assertion before is needed as the module can be re-initialized during the cycle which then will cause SIGSEGV 'cause the address inside 'this' will become invalid - re-initializing after registration is the example
