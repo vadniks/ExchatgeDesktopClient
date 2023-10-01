@@ -458,7 +458,7 @@ static Message* nullable receive(void) {
 
     RW_MUTEX_WRITE_LOCKED(this->rwMutex,
         const int result = SDLNet_TCP_Recv(this->socket, buffer, (int) this->encryptedMessageSize);
-    ) // Recv returns zero if socket was disconnected or some error happened
+    ) // Recv returns zero on socket was disconnection or error appearing
 
     if (result != (int) this->encryptedMessageSize) {
         SDL_free(buffer);
