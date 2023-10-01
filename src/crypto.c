@@ -58,7 +58,7 @@ struct Crypto_t {
     StreamState clientEncryptionState; // serverEncryptionState for *AsServer functions
 };
 
-Crypto* cryptoInit(void) {
+Crypto* nullable cryptoInit(void) {
     if (!sodiumInitialized && sodium_init() < 0) return NULL;
     else sodiumInitialized = true;
 
@@ -186,7 +186,7 @@ const byte* cryptoGenerateKeyPairAsServer(Crypto* crypto) {
 bool cryptoExchangeKeysAsServer(Crypto* crypto, const byte* clientPublicKey) {
     SDL_memcpy(clientPublicKeyAsServer(crypto), clientPublicKey, CRYPTO_KEY_SIZE);
 
-    int result = crypto_kx_server_session_keys(
+    const int result = crypto_kx_server_session_keys(
         crypto->serverKey,
         crypto->clientKey,
         serverPublicKeyAsServer(crypto),
@@ -199,7 +199,7 @@ bool cryptoExchangeKeysAsServer(Crypto* crypto, const byte* clientPublicKey) {
 
 byte* nullable cryptoCreateEncoderAsServer(Crypto* crypto) {
     byte* serverStreamHeader = SDL_malloc(CRYPTO_HEADER_SIZE);
-    int result = crypto_secretstream_xchacha20poly1305_init_push(
+    const int result = crypto_secretstream_xchacha20poly1305_init_push(
         serverEncryptionStateAsServer(crypto), serverStreamHeader, crypto->serverKey
     );
 
@@ -211,7 +211,7 @@ byte* nullable cryptoCreateEncoderAsServer(Crypto* crypto) {
 }
 
 bool cryptoCreateDecoderStreamAsServer(Crypto* crypto, const byte* clientStreamHeader) {
-    int result = crypto_secretstream_xchacha20poly1305_init_pull(
+    const int result = crypto_secretstream_xchacha20poly1305_init_pull(
         serverDecryptionStateAsServer(crypto), clientStreamHeader, crypto->clientKey
     );
     return !result;
@@ -232,7 +232,7 @@ byte* nullable cryptoEncrypt(Crypto* crypto, const byte* bytes, unsigned bytesSi
     const xuint64 encryptedSize = cryptoEncryptedSize(bytesSize);
     byte* encrypted = SDL_malloc(encryptedSize);
 
-    int result = crypto_secretstream_xchacha20poly1305_push(
+    const int result = crypto_secretstream_xchacha20poly1305_push(
         server ? serverEncryptionStateAsServer(crypto) :&(crypto->clientEncryptionState),
         encrypted,
         &generatedEncryptedSize,
@@ -260,7 +260,7 @@ byte* nullable cryptoDecrypt(Crypto* crypto, const byte* bytes, unsigned bytesSi
     const xuint64 decryptedSize = bytesSize - ENCRYPTED_ADDITIONAL_BYTES_SIZE;
     byte* decrypted = SDL_malloc(decryptedSize);
 
-    int result = crypto_secretstream_xchacha20poly1305_pull(
+    const int result = crypto_secretstream_xchacha20poly1305_pull(
         server ? serverDecryptionStateAsServer(crypto) : &(crypto->clientDecryptionState),
         decrypted,
         &generatedDecryptedSize,
