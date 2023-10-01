@@ -28,7 +28,8 @@
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
 STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
 STATIC_CONST_UNSIGNED FONT_SIZE = 14;
-STATIC_CONST_UNSIGNED MAX_U32_DEC_DIGITS_COUNT = 10; // 0xffffffff = 4294967295 10 digits
+STATIC_CONST_UNSIGNED MAX_U32_DEC_DIGITS_COUNT = 10; // 0xffffffff = 4294967295, 10 digits
+STATIC_CONST_UNSIGNED MAX_U64_DEC_DIGITS_COUNT = 20; // 0xffffffffffffffff - 18446744073709551615, 20 digits
 
 typedef enum : unsigned {
     STATE_INITIAL = 0,
@@ -140,6 +141,7 @@ THIS(
     unsigned enteredFilePathSize;
     RenderOnFileChooserRequested onFileChooserRequested;
     RenderFileChooseResultHandler fileChooseResultHandler;
+    unsigned long frameCount;
 )
 #pragma clang diagnostic pop
 
@@ -244,6 +246,7 @@ void renderInit(
     this->enteredFilePathSize = 0;
     this->onFileChooserRequested = onFileChooserRequested;
     this->fileChooseResultHandler = fileChooseResultHandler;
+    this->frameCount = 0;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -502,6 +505,8 @@ void renderSetControlsBlocking(bool blocking) {
     RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->allowInput = !blocking;)
 }
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "ArrayIndexOutOfBounds" // line 519 & 512 - I know what I'm doing
 static void postSystemMessage(const char* text, bool error) { // expects a null-terminated string with length in range (0, SYSTEM_MESSAGE_SIZE_MAX]
     assert(this);
     SystemMessage* message = SDL_malloc(sizeof *message);
@@ -523,6 +528,7 @@ static void postSystemMessage(const char* text, bool error) { // expects a null-
 
     queuePush(this->systemMessagesQueue, message);
 }
+#pragma clang diagnostic pop
 
 void renderShowSystemError(void) { postSystemMessage(ERROR_TEXT, true); }
 void renderShowDisconnectedError(void) { postSystemMessage(DISCONNECTED, true); }
@@ -816,14 +822,13 @@ static void drawConversationMessage(
     ) * (float) FONT_SIZE;
 
     const float groupHeight = messageHeight < charHeight ? charHeight : messageHeight;
-    const unsigned longSize = sizeof(long);
 
-    byte groupId[longSize + 1];
-    *groupId = message->timestamp;
-    groupId[longSize] = 0;
+    const unsigned groupIdSize = MAX_U64_DEC_DIGITS_COUNT + this->conversationNameSize + MAX_U64_DEC_DIGITS_COUNT + 1;
+    char groupId[groupIdSize];
+    SDL_snprintf(groupId, groupIdSize, "%lu%s%lu", this->frameCount, this->conversationName, message->timestamp);
 
-    nk_layout_row_static(this->context, groupHeight + 5, (int) width, 1);
-    if (!nk_group_begin(this->context, (const char*) groupId, NK_WINDOW_NO_SCROLLBAR)) return; // TODO: segmentation fault here when continuing conversation 2d time and not for all conversation - only for a particular one
+    nk_layout_row_static(this->context, groupHeight + 25, (int) width, 1);
+    if (!nk_group_begin(this->context, groupId, NK_WINDOW_NO_SCROLLBAR)) return;
     nk_layout_row_begin(this->context, NK_DYNAMIC, groupHeight, 4);
 
     char text[this->maxMessageSize + 1];
@@ -1058,6 +1063,7 @@ void renderDraw(void) {
     nk_sdl_render(NK_ANTI_ALIASING_ON);
 
     SDL_RenderPresent(this->renderer);
+    this->frameCount++;
 }
 
 void renderClean(void) {

@@ -748,7 +748,7 @@ void logicOnServerShutdownRequested(void) {
     lifecycleAsync((LifecycleAsyncActionFunction) &netShutdownServer, NULL, 0);
 }
 
-void logicOnReturnFromConversationPageRequested(void) {
+void logicOnReturnFromConversationPageRequested(void) { // TODO: fix other file exchange bugs (on receiver's side when sending a message to receiver while it's receiving a file)
     assert(this && this->databaseInitialized);
     renderShowUsersList(this->currentUserName);
 }
