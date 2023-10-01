@@ -54,6 +54,7 @@ THIS(
     atomic bool databaseInitialized;
     SDL_RWops* nullable rwops;
     atomic unsigned fileBytesCounter;
+    atomic bool longOperationInProcess;
 )
 #pragma clang diagnostic pop
 
@@ -67,6 +68,7 @@ void logicInit(void) {
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
     this->databaseInitialized = false;
     this->rwops = NULL;
+    this->longOperationInProcess = false;
 
     assert(optionsInit());
     this->adminMode = optionsIsAdmin();
@@ -128,15 +130,17 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     SDL_free(message);
 
     releaseLocks:
-    if (renderIsInfiniteProgressBarShown()) return; // some other task (like file exchange) is being processed so don't dismiss loading
+    if (this->longOperationInProcess) return;
     renderHideInfiniteProgressBar();
-    renderSetControlsBlocking(false);
+    renderSetControlsBlocking(false); // TODO: limit the messages count per conversation as the encryption is safe only for $(int32.MAX) (> 2147000000) messages
 }
 
 static void onLogInResult(bool successful) {
     assert(this);
+    this->longOperationInProcess = false;
     if (successful) {
         this->state = STATE_AUTHENTICATED;
+        this->longOperationInProcess = true;
         netFetchUsers();
     } else {
         this->state = STATE_UNAUTHENTICATED;
@@ -148,13 +152,14 @@ static void onLogInResult(bool successful) {
 
 static void onErrorReceived(__attribute_maybe_unused__ int flag) {
     assert(this);
-    renderHideInfiniteProgressBar();
+    renderHideInfiniteProgressBar(); // TODO: apply these only for logging in/registration
     renderSetControlsBlocking(false);
     renderShowSystemError();
 }
 
 static void onRegisterResult(bool successful) {
     assert(this);
+    this->longOperationInProcess = false;
     this->state = STATE_UNAUTHENTICATED;
     successful ? renderShowRegistrationSucceededSystemMessage() : renderShowSystemError();
     renderHideInfiniteProgressBar();
@@ -195,6 +200,7 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
         }
     }
 
+    this->longOperationInProcess = false;
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
     renderShowUsersList(this->currentUserName);
@@ -202,10 +208,11 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
 
 static void tryLoadPreviousMessages(unsigned id) {
     assert(this && this->databaseInitialized);
+    this->longOperationInProcess = true;
     listClear(this->messagesList);
 
     List* messages = databaseGetMessages(id);
-    if (!messages) return;
+    if (!messages) goto releaseLocks;
 
     const User* user = findUser(id);
     assert(user);
@@ -226,6 +233,9 @@ static void tryLoadPreviousMessages(unsigned id) {
     }
 
     listDestroy(messages);
+
+    releaseLocks:
+    this->longOperationInProcess = false;
 }
 
 static void replyToConversationSetUpInvite(unsigned* fromId) {
@@ -256,6 +266,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
         renderShowUnableToCreateConversation();
 
     releaseLocks:
+    this->longOperationInProcess = false;
     renderSetControlsBlocking(false);
     renderHideInfiniteProgressBar();
 }
@@ -263,6 +274,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
 static void onConversationSetUpInviteReceived(unsigned fromId) {
     assert(this);
 
+    this->longOperationInProcess = true;
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);
 
@@ -290,6 +302,7 @@ static void beginFileExchange(unsigned* fileSize) {
 
     SDL_free(fileSize);
 
+    this->longOperationInProcess = false;
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
 }
@@ -364,6 +377,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
         return;
     }
 
+    this->longOperationInProcess = true;
     unsigned* xFileSize = SDL_malloc(sizeof(int));
     *xFileSize = (unsigned) fileSize;
     lifecycleAsync((LifecycleAsyncActionFunction) &beginFileExchange, xFileSize, 0);
@@ -385,6 +399,7 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
     if (!accepted) {
         assert(!netReplyToFileExchangeInvite(fromId, fileSize, false)); // blocks the thread again
 
+        this->longOperationInProcess = false;
         renderHideInfiniteProgressBar();
         renderSetControlsBlocking(false);
 
@@ -409,6 +424,7 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
     if (!this->rwops) {
         assert(!netReplyToFileExchangeInvite(fromId, fileSize, false));
 
+        this->longOperationInProcess = false;
         renderHideInfiniteProgressBar();
         renderSetControlsBlocking(false);
 
@@ -423,6 +439,7 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
     }
     assert(!this->rwops);
 
+    this->longOperationInProcess = false;
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
     renderShowFileTransmittedSystemMessage();
@@ -431,6 +448,7 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
 static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
     assert(this);
 
+    this->longOperationInProcess = true;
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);
 
@@ -592,8 +610,10 @@ static void processCredentials(void** data) { // TODO: store user credentials in
         this->state = STATE_UNAUTHENTICATED;
         renderShowUnableToConnectToTheServerError();
         renderHideInfiniteProgressBar();
-    } else
+    } else {
+        this->longOperationInProcess = true;
         logIn ? netLogIn(username, password) : netRegister(username, password);
+    }
 
     cleanup:
     logicCredentialsRandomFiller(data[0], NET_USERNAME_SIZE);
@@ -651,7 +671,7 @@ static void startConversation(void** parameters) {
         renderShowConversationAlreadyExists();
     else {
         Crypto* crypto = NULL;
-        if ((crypto = netCreateConversation(*id)))
+        if ((crypto = netCreateConversation(*id))) // blocks the thread until either an error has happened or the conversation has been created
             assert(databaseAddConversation(*id, crypto)),
             cryptoDestroy(crypto),
 
@@ -664,6 +684,7 @@ static void startConversation(void** parameters) {
     SDL_free(id);
     SDL_free(parameters);
 
+    this->longOperationInProcess = false;
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
 }
@@ -683,6 +704,7 @@ static void continueConversation(void** parameters) {
     SDL_free(id);
     SDL_free(parameters);
 
+    this->longOperationInProcess = false;
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
 }
@@ -696,6 +718,7 @@ static void createOrLoadConversation(unsigned id, bool create) {
         return;
     }
 
+    this->longOperationInProcess = true;
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);
 
@@ -717,6 +740,7 @@ static void deleteConversation(unsigned* id) {
 
     SDL_free(id);
 
+    this->longOperationInProcess = false;
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
     logicOnUpdateUsersListClicked();
@@ -734,6 +758,7 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
             createOrLoadConversation(id, chooseVariant == RENDER_START_CONVERSATION);
             break;
         case RENDER_DELETE_CONVERSATION:
+            this->longOperationInProcess = true;
             renderShowInfiniteProgressBar();
             renderSetControlsBlocking(true);
 
@@ -760,7 +785,7 @@ void logicOnReturnFromConversationPageRequested(void) {
     renderShowUsersList(this->currentUserName);
 }
 
-static void utoa(char* buffer, unsigned length, unsigned number) { // unsigned to ascii (string)
+static void utoa(char* buffer, unsigned length, unsigned number) { // unsigned to ascii (string) (and to utf-8 too as all the english letters are presented in utf-8 the same way as they're in ascii)
     byte* digits = NULL;
     unsigned digitsSize = 0;
 
@@ -873,6 +898,7 @@ void logicOnSendClicked(const char* text, unsigned size) {
 void logicOnUpdateUsersListClicked(void) {
     assert(this);
 
+    this->longOperationInProcess = true;
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);
 
