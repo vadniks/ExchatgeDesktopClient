@@ -24,6 +24,7 @@
 typedef void (*LifecycleAsyncActionFunction)(void* nullable); // parameter is nullable as it's optional, parameter must be deallocated by the action
 
 bool lifecycleInit(void);
+void lifecycleSleep(unsigned long delayMillis);
 void lifecycleLoop(void);
 void lifecycleAsync(LifecycleAsyncActionFunction function, void* nullable parameter, unsigned long delayMillis); // delay can be zero in which case no delay is happened
 void lifecycleClean(void);

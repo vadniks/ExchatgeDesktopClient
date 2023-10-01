@@ -128,6 +128,7 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     SDL_free(message);
 
     releaseLocks:
+    if (renderIsInfiniteProgressBarShown()) return; // some other task (like file exchange) is being processed so don't dismiss loading
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
 }
@@ -442,6 +443,7 @@ static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
 
 static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) {
     assert(this && this->rwops);
+    lifecycleSleep(500); // TODO: test only <----------------------------------------- REMOVE THIS
     const unsigned targetSize = logicUnencryptedMessageBodySize();
 
     byte unencryptedBuffer[targetSize];

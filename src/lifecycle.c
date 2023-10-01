@@ -57,29 +57,18 @@ void lifecycleAsync(LifecycleAsyncActionFunction function, void* nullable parame
     queuePush(this->asyncActionsQueue, action);
 }
 
-static void sleep(unsigned long delayMillis) {
-    assert(delayMillis > 0 && delayMillis <= 10000);
-    const ldiv_t dv = ldiv((long) delayMillis, (long) 1e3f);
-
-    struct timespec timespec;
-    timespec.tv_sec = dv.quot;
-    timespec.tv_nsec = dv.rem * (long) 1e6f;
-
-    nanosleep(&timespec, NULL);
-}
-
 static void asyncActionDeallocator(AsyncAction* action) { SDL_free(action); }
 
 static void asyncActionsThreadLooper(void) {
     while (this->running) {
         if (!queueSize(this->asyncActionsQueue)) {
-            sleep(100);
+            lifecycleSleep(100);
             continue;
         }
 
         AsyncAction* action = queuePop(this->asyncActionsQueue);
 
-        if (action->delayMillis > 0) sleep(action->delayMillis);
+        if (action->delayMillis > 0) lifecycleSleep(action->delayMillis);
         (*(action->function))(action->parameter);
 
         asyncActionDeallocator(action);
@@ -131,6 +120,17 @@ bool lifecycleInit(void) {
     return true;
 }
 
+void lifecycleSleep(unsigned long delayMillis) {
+    assert(delayMillis > 0 && delayMillis <= 10000);
+    const ldiv_t dv = ldiv((long) delayMillis, (long) 1e3f);
+
+    struct timespec timespec;
+    timespec.tv_sec = dv.quot;
+    timespec.tv_nsec = dv.rem * (long) 1e6f;
+
+    nanosleep(&timespec, NULL);
+}
+
 static bool processEvents(void) {
     SDL_Event event;
     renderInputBegan();
@@ -162,7 +162,7 @@ void lifecycleLoop(void) {
 
         differenceMillis = logicCurrentTimeMillis() - startMillis - 5;
         if ((unsigned long) UI_UPDATE_PERIOD > differenceMillis)
-            sleep((unsigned long) UI_UPDATE_PERIOD - differenceMillis);
+            lifecycleSleep((unsigned long) UI_UPDATE_PERIOD - differenceMillis);
     }
 }
 
