@@ -539,7 +539,7 @@ void logicProcessEvent(SDL_Event* event) {
 
 static long fetchHostId(void); // TODO: add possibility for admin to remove users from database; to disable/enable registration; to ban/unban users; to kick connected users
 
-static void processCredentials(void** data) {
+static void processCredentials(void** data) { // TODO: store user credentials in encrypted form for automatic logging in
     const char* username = data[0];
     const char* password = data[1];
     const bool logIn = *((bool*) data[2]);
