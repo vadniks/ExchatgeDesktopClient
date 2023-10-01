@@ -236,6 +236,7 @@ bool netInit(
     this->onDisconnected = onDisconnected;
     this->currentTimeMillisGetter = currentTimeMillisGetter;
     this->onUsersFetched = onUsersFetched;
+    this->lastSentFlag = 0;
     this->userInfos = NULL;
     this->userInfosSize = 0;
     this->serverKeyStub = SDL_calloc(CRYPTO_KEY_SIZE, sizeof(byte));
@@ -342,6 +343,7 @@ static void processErrors(const Message* message) {
             (*(this->onLogInResult))(false);
             break;
         case FLAG_REGISTER:
+            RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->state = STATE_FINISHED_WITH_ERROR;)
             (*(this->onRegisterResult))(false);
             break;
         default:
@@ -353,7 +355,7 @@ static void processErrors(const Message* message) {
 static void onUsersFetched(const Message* message);
 
 static void processMessagesFromServer(const Message* message) {
-    int cst = checkServerToken(message->token);
+    const bool cst = checkServerToken(message->token);
     assert(cst);
 
     switch (message->flag) {

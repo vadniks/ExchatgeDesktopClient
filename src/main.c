@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <SDL.h>
 #include <assert.h>
+#include <stdio.h>
 #include "lifecycle.h"
 
 int main(void) {
@@ -42,6 +43,7 @@ int main(void) {
     lifecycleClean();
 
     const int allocations = SDL_GetNumAllocations();
+    printf("allocations %d\n", allocations);
     assert(!allocations || allocations == 1);
     // unknown bug occurs on 2.28.1: SDL_GetNumAllocations() returns 1 everytime only SDL_Init() was called with SDL_INIT_VIDEO constant (after SDL_Quit() was called). on 2.26.5 it returns 0 as expected
 

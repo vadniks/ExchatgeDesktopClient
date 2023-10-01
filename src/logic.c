@@ -154,6 +154,7 @@ static void onErrorReceived(__attribute_maybe_unused__ int flag) {
 
 static void onRegisterResult(bool successful) {
     assert(this);
+    this->state = STATE_UNAUTHENTICATED;
     successful ? renderShowRegistrationSucceededSystemMessage() : renderShowSystemError();
     renderHideInfiniteProgressBar();
 }
@@ -543,7 +544,13 @@ static void processCredentials(void** data) {
 
     assert(this);
     if (!logIn) goto netInit;
-    if (!this->databaseInitialized && !databaseInit((byte*) password, NET_UNHASHED_PASSWORD_SIZE, NET_USERNAME_SIZE, NET_MESSAGE_BODY_SIZE)) { // password that's used to sign in also used to encrypt messages & other stuff in the database
+
+    if (this->databaseInitialized) {
+        databaseClean();
+        this->databaseInitialized = false;
+    }
+
+    if (!databaseInit((byte*) password, NET_UNHASHED_PASSWORD_SIZE, NET_USERNAME_SIZE, NET_MESSAGE_BODY_SIZE)) { // password that's used to sign in also used to encrypt messages & other stuff in the database
         databaseClean();
         renderShowUnableToDecryptDatabaseError();
         renderHideInfiniteProgressBar();
@@ -575,8 +582,8 @@ static void processCredentials(void** data) {
         this->state = STATE_UNAUTHENTICATED;
         renderShowUnableToConnectToTheServerError();
         renderHideInfiniteProgressBar();
-    }
-    if (this->netInitialized) logIn ? netLogIn(username, password) : netRegister(username, password);
+    } else
+        logIn ? netLogIn(username, password) : netRegister(username, password);
 
     cleanup:
     logicCredentialsRandomFiller(data[0], NET_USERNAME_SIZE);
