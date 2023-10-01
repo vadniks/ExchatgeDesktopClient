@@ -535,7 +535,7 @@ void logicProcessEvent(SDL_Event* event) {
             : keyCode == SDLK_c
                 ? clipboardCopy()
                 : STUB;
-}
+} // TODO: when exchanging file add support for file names and perform checksum
 
 static long fetchHostId(void); // TODO: add possibility for admin to remove users from database; to disable/enable registration; to ban/unban users; to kick connected users
 
