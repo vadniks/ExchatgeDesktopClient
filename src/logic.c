@@ -436,7 +436,6 @@ static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
 
 static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) { // TODO: notify user when a new message has been received
     assert(this && this->rwops);
-    lifecycleSleep(500); // TODO: test only <----------------------------------------- REMOVE THIS
     const unsigned targetSize = logicUnencryptedMessageBodySize();
 
     byte unencryptedBuffer[targetSize];
@@ -748,7 +747,7 @@ void logicOnServerShutdownRequested(void) {
     lifecycleAsync((LifecycleAsyncActionFunction) &netShutdownServer, NULL, 0);
 }
 
-void logicOnReturnFromConversationPageRequested(void) { // TODO: fix other file exchange bugs (on receiver's side when sending a message to receiver while it's receiving a file)
+void logicOnReturnFromConversationPageRequested(void) {
     assert(this && this->databaseInitialized);
     renderShowUsersList(this->currentUserName);
 }
