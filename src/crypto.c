@@ -74,7 +74,7 @@ bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
     assert(crypto && !crypto_kx_keypair(crypto->clientPublicKey, crypto->clientSecretKey));
     SDL_memcpy(crypto->serverPublicKey, serverPublicKey, CRYPTO_KEY_SIZE);
 
-    int result = crypto_kx_client_session_keys(
+    const int result = crypto_kx_client_session_keys(
         crypto->clientKey,
         crypto->serverKey,
         crypto->clientPublicKey,
