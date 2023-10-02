@@ -580,7 +580,7 @@ static void resetUserInfos(void) { // TODO: test users list updates with large a
 
 static void onUsersFetched(const Message* message) { // TODO: block other tasks while forming the users list
     assert(this);
-    if (!(message->index)) resetUserInfos();
+    if (!(message->index)) resetUserInfos(); // TODO: test with large amount of elements & test with sleep()
     rwMutexWriteLock(this->rwMutex);
 
     this->userInfosSize += message->size;
