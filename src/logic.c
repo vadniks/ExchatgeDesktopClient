@@ -413,12 +413,12 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
         renderShowUnableToTransmitFileError();
         assert(!SDL_RWclose(this->rwops));
         this->rwops = NULL;
-    }
-    assert(!this->rwops);
+    } else
+        renderShowFileTransmittedSystemMessage();
 
+    assert(!this->rwops);
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
-    renderShowFileTransmittedSystemMessage();
 }
 
 static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {

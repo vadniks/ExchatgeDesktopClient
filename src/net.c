@@ -885,20 +885,19 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     Message* message = NULL;
     unsigned index = 0;
 
-    unsigned long lastReceivedChunkMillis = 0; // TODO: transfer file name as well and add sum checking
+    unsigned long lastReceivedChunkMillis; // TODO: transfer file name as well and add sum checking
     while (waitForReceiveWithTimeout() && (message = receive())) { // TODO: add progress bar (not infinite, the real one with %)
-        if ((*(this->currentTimeMillisGetter))() - lastReceivedChunkMillis >= TIMEOUT)
-            goto cleanup;
-
         if (message->flag == FLAG_FILE && message->size > 0)
             lastReceivedChunkMillis = (*(this->currentTimeMillisGetter))();
         else
             continue;
 
+        if ((*(this->currentTimeMillisGetter))() - lastReceivedChunkMillis >= TIMEOUT)
+            break;
+
         assert(message->size <= NET_MESSAGE_BODY_SIZE);
         (*(this->netNextFileChunkReceiver))(fromId, index++, fileSize, message->size, message->body);
 
-        cleanup:
         SDL_free(message);
         message = NULL;
     }
