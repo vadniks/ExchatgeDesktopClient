@@ -87,6 +87,7 @@ STATIC_CONST_STRING FILE_IS_EMPTY = "File is empty";
 STATIC_CONST_STRING UNABLE_TO_TRANSMIT_FILE = "Unable to transmit file";
 STATIC_CONST_STRING FILE_IS_TOO_BIG = "File is too big (> 20 mb)";
 STATIC_CONST_STRING FILE_TRANSMITTED = "File transmitted";
+STATIC_CONST_STRING ENTER_ABSOLUTE_PATH_TO_FILE = "Enter absolute path to the file";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -953,6 +954,9 @@ static void drawFileChooser(void) {
     const float height = currentHeight(), rowHeight = (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f;
     const bool aboveInitialWidth = this->width >= WINDOW_WIDTH * 2;
 
+    char title[this->conversationNameSize + 1];
+    SDL_memcpy(title, this->conversationName, this->conversationNameSize);
+
     { nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3);
         nk_layout_row_push(this->context, 0.2f);
         if (nk_button_label(this->context, BACK)) (*(this->fileChooseResultHandler))(NULL, 0);
@@ -961,13 +965,23 @@ static void drawFileChooser(void) {
         nk_label(this->context, FILE_SELECTION, NK_TEXT_ALIGN_RIGHT);
 
         nk_layout_row_push(this->context, aboveInitialWidth ? 0.47f : 0.42f);
-        nk_spacer(this->context);
+        nk_label(this->context, this->conversationName, NK_TEXT_ALIGN_RIGHT);
     nk_layout_row_end(this->context); }
 
     nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
     nk_spacer(this->context);
 
     nk_layout_row_dynamic(this->context, rowHeight, 3);
+
+    nk_spacer(this->context);
+    nk_label_colored(
+        this->context,
+        ENTER_ABSOLUTE_PATH_TO_FILE,
+        NK_TEXT_ALIGN_CENTERED,
+        (struct nk_color) {0xff, 0xff, 0xff, 0x88}
+    );
+    nk_spacer(this->context);
+
     nk_spacer(this->context);
     nk_edit_string(
         this->context,
