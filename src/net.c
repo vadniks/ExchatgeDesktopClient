@@ -370,7 +370,7 @@ static void processMessagesFromServer(const Message* message) {
         case FLAG_REGISTERED:
             (*(this->onRegisterResult))(true);
             break;
-        case FLAG_FETCH_USERS:
+        case FLAG_FETCH_USERS: // TODO: raise assert if the users list hasn't been fully formed
             onUsersFetched(message);
             break;
         case FLAG_UNAUTHENTICATED:
@@ -578,7 +578,7 @@ static void resetUserInfos(void) { // TODO: test users list updates with large a
     )
 }
 
-static void onUsersFetched(const Message* message) {
+static void onUsersFetched(const Message* message) { // TODO: block other tasks while forming the users list
     assert(this);
     if (!(message->index)) resetUserInfos();
     rwMutexWriteLock(this->rwMutex);
@@ -814,7 +814,7 @@ Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
 static void finishFileExchange(void)
 { RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->exchangingFile = false;) }
 
-bool netBeginFileExchange(unsigned toId, unsigned fileSize) { // TODO: test this
+bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     assert(fileSize);
 
     RW_MUTEX_WRITE_LOCKED(this->rwMutex,
@@ -885,15 +885,20 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     Message* message = NULL;
     unsigned index = 0;
 
-    while (waitForReceiveWithTimeout()
-        && (message = receive())
-        && message->flag == FLAG_FILE
-        && message->size > 0)
-    {
-        assert(message->size <= NET_MESSAGE_BODY_SIZE);
+    unsigned long lastReceivedChunkMillis = 0; // TODO: transfer file name as well and add sum checking
+    while (waitForReceiveWithTimeout() && (message = receive())) { // TODO: add progress bar (not infinite, the real one with %)
+        if ((*(this->currentTimeMillisGetter))() - lastReceivedChunkMillis >= TIMEOUT)
+            goto cleanup;
 
+        if (message->flag == FLAG_FILE && message->size > 0)
+            lastReceivedChunkMillis = (*(this->currentTimeMillisGetter))();
+        else
+            continue;
+
+        assert(message->size <= NET_MESSAGE_BODY_SIZE);
         (*(this->netNextFileChunkReceiver))(fromId, index++, fileSize, message->size, message->body);
 
+        cleanup:
         SDL_free(message);
         message = NULL;
     }

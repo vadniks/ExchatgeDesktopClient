@@ -274,7 +274,7 @@ static void beginFileExchange(unsigned* fileSize) {
     this->fileBytesCounter = 0;
 
     if (!netBeginFileExchange(this->toUserId, *fileSize) || this->fileBytesCounter != *fileSize) { // blocks the thread until file is fully transmitted or error occurred or receiver declined the exchanging
-        SDL_RWclose(this->rwops);
+        assert(!SDL_RWclose(this->rwops));
         this->rwops = NULL;
 
         renderShowUnableToTransmitFileError();
@@ -336,7 +336,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     const long fileSize = SDL_RWsize(this->rwops);
 
     if (fileSize < 0 || !fileSize) {
-        SDL_RWclose(this->rwops);
+        assert(!SDL_RWclose(this->rwops));
         this->rwops = NULL;
 
         renderHideInfiniteProgressBar();
@@ -347,7 +347,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     }
 
     if (fileSize > MAX_FILE_SIZE) {
-        SDL_RWclose(this->rwops);
+        assert(!SDL_RWclose(this->rwops));
         this->rwops = NULL;
 
         renderHideInfiniteProgressBar();
@@ -411,7 +411,7 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
 
     if (!netReplyToFileExchangeInvite(fromId, fileSize, true) || this->fileBytesCounter != fileSize) { // blocks the thread again
         renderShowUnableToTransmitFileError();
-        SDL_RWclose(this->rwops);
+        assert(!SDL_RWclose(this->rwops));
         this->rwops = NULL;
     }
     assert(!this->rwops);
@@ -461,7 +461,7 @@ static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) { /
 
     closeFile:
     assert(index);
-    SDL_RWclose(this->rwops);
+    assert(!SDL_RWclose(this->rwops));
     this->rwops = NULL;
     return 0;
 }
@@ -488,7 +488,7 @@ static void nextFileChunkReceiver(unsigned fromId, unsigned index, unsigned file
 
     if (this->fileBytesCounter < fileSize) return;
 
-    SDL_RWclose(this->rwops);
+    assert(!SDL_RWclose(this->rwops));
     this->rwops = NULL;
 }
 
@@ -881,7 +881,7 @@ static long fetchHostId(void) {
     byte buffer[size];
 
     const bool sizeMatched = SDL_RWread(rwOps, buffer, 1, size) == size;
-    SDL_RWclose(rwOps);
+    assert(!SDL_RWclose(rwOps));
     if (!sizeMatched) return dummy;
 
     long hash = 0;
