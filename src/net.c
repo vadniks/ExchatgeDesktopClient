@@ -889,8 +889,11 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     while (waitForReceiveWithTimeout() && (message = receive())) { // TODO: add progress bar (not infinite, the real one with %)
         if (message->flag == FLAG_FILE && message->size > 0)
             lastReceivedChunkMillis = (*(this->currentTimeMillisGetter))();
-        else
+        else {
+            processMessage(message); // TODO: send the other messages processing to the net listen thread
+            SDL_free(message);
             continue;
+        }
 
         if ((*(this->currentTimeMillisGetter))() - lastReceivedChunkMillis >= TIMEOUT)
             break;
