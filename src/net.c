@@ -882,7 +882,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
         return false;
     }
 
-    Message* message = NULL;
+    Message* message = NULL; // TODO: add possibility for admin to disable/enable file exchanging and set the maximum/minimum fie size
     unsigned index = 0;
 
     unsigned long lastReceivedChunkMillis; // TODO: transfer file name as well and add sum checking
