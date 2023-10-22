@@ -711,7 +711,7 @@ static bool inviteProcessingTimeoutExceeded(void) {
     return (*(this->currentTimeMillisGetter))() - start > TIMEOUT;
 }
 
-Crypto* netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) {
+Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) { // TODO: create a dashboard page with some analysis for admin
     assert(this);
     RW_MUTEX_READ_LOCKED(this->rwMutex, assert(this->settingUpConversation && !this->exchangingFile);)
 
