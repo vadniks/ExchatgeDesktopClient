@@ -40,6 +40,7 @@ typedef struct {
     unsigned passwordSize;
     char* credentials;
     OptionsHostIdSupplier hostIdSupplier;
+    SDL_mutex* fileWriteGuard;
 } Options;
 
 static Options* options = NULL; // TODO: replace with 'this'
@@ -161,6 +162,7 @@ bool optionsInit(unsigned usernameSize, unsigned passwordSize, OptionsHostIdSupp
     options->passwordSize = passwordSize;
     options->credentials = NULL;
     options->hostIdSupplier = hostIdSupplier;
+    options->fileWriteGuard = NULL;
 
     unsigned linesCount = 0;
     char** lines = readOptionsFile(&linesCount);
@@ -185,6 +187,7 @@ bool optionsInit(unsigned usernameSize, unsigned passwordSize, OptionsHostIdSupp
     }
     SDL_free(lines);
 
+    options->fileWriteGuard = SDL_CreateMutex();
     return true;
 }
 
@@ -235,6 +238,8 @@ static int findOffsetOfOptionPayload(const char* option) {
 
 void optionsSetCredentials(const char* nullable credentials) {
     assert(options);
+    SDL_LockMutex(options->fileWriteGuard);
+
     const unsigned size = credentialsSize();
 
     if (!credentials) {
@@ -261,6 +266,7 @@ void optionsSetCredentials(const char* nullable credentials) {
     SDL_RWclose(rwOps);
 
     SDL_free(encoded);
+    SDL_UnlockMutex(options->fileWriteGuard);
 }
 
 void optionsClear(void) {
@@ -271,5 +277,6 @@ void optionsClear(void) {
     SDL_free(options->host);
     SDL_free(options->serverSignPublicKey);
     SDL_free(options->credentials);
+    SDL_DestroyMutex(options->fileWriteGuard);
     SDL_free(options);
 }

@@ -110,10 +110,11 @@ bool lifecycleInit(void) {
         &logicFileChooseResultHandler
     );
     logicInit();
-    renderSetMaxMessageSizeAndInitConversationMessageBuffer(logicUnencryptedMessageBodySize());
+    renderSetMaxMessageSizeAndInitConversationMessageBuffer(logicUnencryptedMessageBodySize()); // TODO: unite all setters to one global setter
     renderSetAdminMode(logicIsAdminMode());
     renderSetUsersList(logicUsersList());
     renderSetMessagesList(logicMessagesList());
+    renderSetAutoLoggingIn(logicAutoLoggingIn());
 
     this->netUpdateThreadId = SDL_AddTimer(NET_UPDATE_PERIOD, (SDL_TimerCallback) &netUpdateLopper, NULL);
 

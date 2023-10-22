@@ -54,6 +54,7 @@ THIS(
     atomic bool databaseInitialized;
     SDL_RWops* nullable rwops;
     atomic unsigned fileBytesCounter;
+    bool autoLoggingIn;
 )
 #pragma clang diagnostic pop
 
@@ -72,6 +73,7 @@ void logicInit(void) {
 
     assert(optionsInit(NET_USERNAME_SIZE, NET_UNHASHED_PASSWORD_SIZE, &fetchHostId));
     this->adminMode = optionsIsAdmin();
+    this->autoLoggingIn = optionsCredentials() != NULL;
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
@@ -95,6 +97,11 @@ List* logicUsersList(void) {
 List* logicMessagesList(void) {
     assert(this);
     return this->messagesList;
+}
+
+bool* logicAutoLoggingIn(void) {
+    assert(this);
+    return &(this->autoLoggingIn);
 }
 
 static int findUserComparator(const unsigned* xId, const User* const* user)
@@ -539,6 +546,14 @@ static void processCredentials(void** data) { // TODO: store user credentials in
     const char* username = data[0];
     const char* password = data[1];
     const bool logIn = *((bool*) data[2]);
+
+    if (logIn) {
+        char credentials[NET_USERNAME_SIZE + NET_UNHASHED_PASSWORD_SIZE];
+        SDL_memcpy(credentials, username, NET_USERNAME_SIZE);
+        SDL_memcpy(credentials + NET_USERNAME_SIZE, password, NET_UNHASHED_PASSWORD_SIZE);
+        optionsSetCredentials(credentials);
+        logicCredentialsRandomFiller(credentials, sizeof credentials);
+    }
 
     assert(this);
     if (!logIn) goto netInit;
