@@ -892,6 +892,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
         else {
             processMessage(message); // TODO: send the other messages processing to the net listen thread
             SDL_free(message);
+            message = NULL; // TODO: add queue for incoming messages
             continue;
         }
 
