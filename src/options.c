@@ -218,6 +218,21 @@ char* nullable optionsCredentials(void) {
     return options->credentials;
 }
 
+static int findOffsetOfOptionPayload(const char* option) {
+    SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "r");
+    if (!rwOps) return -1;
+
+    char buffer[MAX_FILE_SIZE] = {0};
+    const unsigned actualFileSize = SDL_RWread(rwOps, buffer, 1, MAX_FILE_SIZE);
+    SDL_RWclose(rwOps);
+    if (!actualFileSize) return -1;
+
+    const char* optionStart = SDL_strstr(buffer, option) + SDL_strlen(option) + 1;
+    if (!optionStart) return -1;
+
+    return (int) ((unsigned long) optionStart - (unsigned long) buffer);
+}
+
 void optionsSetCredentials(const char* nullable credentials) {
     assert(options);
     const unsigned size = credentialsSize();
@@ -235,10 +250,15 @@ void optionsSetCredentials(const char* nullable credentials) {
     char* encoded = cryptoBase64Encode(encrypted, cryptoSingleEncryptedSize(size));
     SDL_free(encrypted);
 
-//    SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "w"); // TODO
-//    assert(rwOps);
-//
-//    SDL_RWwrite()
+    SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "w"); // TODO
+    assert(rwOps);
+
+    const int offset = findOffsetOfOptionPayload(CREDENTIALS_OPTION);
+    if (offset > 0) {
+        SDL_RWseek(rwOps, offset, RW_SEEK_SET);
+        SDL_RWwrite(rwOps, encoded, 1, SDL_strlen(encoded));
+    }
+    SDL_RWclose(rwOps);
 
     SDL_free(encoded);
 }
