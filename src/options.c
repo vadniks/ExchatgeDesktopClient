@@ -18,6 +18,7 @@
 
 #include <SDL.h>
 #include <assert.h>
+#include "crypto.h"
 #include "options.h"
 
 STATIC_CONST_STRING OPTIONS_FILE = "options.txt";
@@ -27,6 +28,7 @@ STATIC_CONST_STRING ADMIN_OPTION = "admin";
 STATIC_CONST_STRING HOST_OPTION = "host";
 STATIC_CONST_STRING PORT_OPTION = "port";
 STATIC_CONST_STRING SSPK_OPTION = "sspk";
+STATIC_CONST_STRING CREDENTIALS_OPTION = "credentials";
 
 typedef struct {
     bool admin;
@@ -34,9 +36,13 @@ typedef struct {
     unsigned port;
     byte* serverSignPublicKey;
     unsigned serverSignPublicKeySize;
+    unsigned usernameSize;
+    unsigned passwordSize;
+    char* credentials;
+    OptionsHostIdSupplier hostIdSupplier;
 } Options;
 
-static Options* options = NULL;
+static Options* options = NULL; // TODO: replace with 'this'
 
 static char** nullable readOptionsFile(unsigned* linesCountBuffer) {
     SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "r");
@@ -112,13 +118,41 @@ static void parseSskpOption(const char* line) {
     options->serverSignPublicKeySize = count;
 }
 
-bool optionsInit(void) {
+static void parseCredentialsOption(const char* line) {
+    const int lineSize = (int) SDL_strlen(line),
+        optionSize = (int) SDL_strlen(CREDENTIALS_OPTION) + 1,
+        payloadSize = lineSize - optionSize;
+    if (payloadSize <= 0) return;
+
+    unsigned decodedSize = 0;
+    byte* decoded = cryptoBase64Decode(line + optionSize, payloadSize, &decodedSize);
+    if (!decoded) return;
+    assert(decodedSize == options->usernameSize + options->passwordSize);
+
+    const long hostId = (*(options->hostIdSupplier))();
+    byte key[CRYPTO_KEY_SIZE];
+    for (unsigned i = 0; i < CRYPTO_KEY_SIZE; key[i] = ((byte*) &hostId)[i % sizeof(long)], i++);
+
+    byte* decrypted = cryptoDecryptSingle(key, decoded, decodedSize);
+    SDL_free(decoded);
+    if (!decrypted) return;
+
+    options->credentials = SDL_calloc(decodedSize, 1);
+    SDL_memcpy(options->credentials, decrypted, decodedSize);
+    SDL_free(decrypted);
+}
+
+bool optionsInit(unsigned usernameSize, unsigned passwordSize, OptionsHostIdSupplier hostIdSupplier) {
     assert(!options);
     options = SDL_malloc(sizeof *options);
     options->admin = false;
     options->host = NULL;
     options->port = 0;
     options->serverSignPublicKey = NULL;
+    options->usernameSize = usernameSize;
+    options->passwordSize = passwordSize;
+    options->credentials = NULL;
+    options->hostIdSupplier = hostIdSupplier;
 
     unsigned linesCount = 0;
     char** lines = readOptionsFile(&linesCount);
@@ -136,6 +170,7 @@ bool optionsInit(void) {
         else if (SDL_strstr(line, HOST_OPTION)) parseHostOption(line);
         else if (SDL_strstr(line, PORT_OPTION)) parsePortOption(line);
         else if (SDL_strstr(line, SSPK_OPTION)) parseSskpOption(line);
+        else if (SDL_strstr(line, CREDENTIALS_OPTION)) parseCredentialsOption(line);
         else assert(false);
 
         SDL_free(line);
@@ -170,9 +205,27 @@ unsigned optionsServerSignPublicKeySize(void) {
     return options->serverSignPublicKeySize;
 }
 
+char* nullable optionsCredentials(void) {
+    return NULL; // TODO
+}
+
+void optionsSetCredentials(const char* nullable credentials) {
+    assert(options);
+    const unsigned size = options->usernameSize + options->passwordSize;
+
+    if (!credentials)
+        cryptoFillWithRandomBytes((byte*) options->credentials, size);
+    else
+        SDL_memcpy(options->credentials, credentials, size);
+}
+
 void optionsClear(void) {
     assert(options);
+
+    optionsSetCredentials(NULL);
+
     SDL_free(options->host);
     SDL_free(options->serverSignPublicKey);
+    SDL_free(options->credentials);
     SDL_free(options);
 }

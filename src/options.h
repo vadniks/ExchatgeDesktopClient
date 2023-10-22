@@ -21,10 +21,14 @@
 #include <stdbool.h>
 #include "defs.h"
 
-bool optionsInit(void);
+typedef long (*OptionsHostIdSupplier)(void);
+
+bool optionsInit(unsigned usernameSize, unsigned passwordSize, OptionsHostIdSupplier hostIdSupplier);
 bool optionsIsAdmin(void);
 const char* optionsHost(void);
 unsigned optionsPort(void);
 const byte* optionsServerSignPublicKey(void);
 unsigned optionsServerSignPublicKeySize(void);
+char* nullable optionsCredentials(void);
+void optionsSetCredentials(const char* nullable credentials); // if null - fills the buffer with random bytes
 void optionsClear(void);

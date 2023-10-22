@@ -57,6 +57,8 @@ THIS(
 )
 #pragma clang diagnostic pop
 
+static long fetchHostId(void);
+
 void logicInit(void) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -68,7 +70,7 @@ void logicInit(void) {
     this->databaseInitialized = false;
     this->rwops = NULL;
 
-    assert(optionsInit());
+    assert(optionsInit(NET_USERNAME_SIZE, NET_UNHASHED_PASSWORD_SIZE, &fetchHostId));
     this->adminMode = optionsIsAdmin();
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
