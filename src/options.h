@@ -29,6 +29,6 @@ const char* optionsHost(void);
 unsigned optionsPort(void);
 const byte* optionsServerSignPublicKey(void);
 unsigned optionsServerSignPublicKeySize(void);
-char* nullable optionsCredentials(void);
+const char* nullable optionsCredentials(void);
 void optionsSetCredentials(const char* nullable credentials); // if null - fills the buffer with random bytes
 void optionsClear(void);

@@ -213,7 +213,7 @@ unsigned optionsServerSignPublicKeySize(void) {
     return options->serverSignPublicKeySize;
 }
 
-char* nullable optionsCredentials(void) {
+const char* nullable optionsCredentials(void) {
     assert(options);
     return options->credentials;
 }

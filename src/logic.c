@@ -54,6 +54,7 @@ THIS(
     atomic bool databaseInitialized;
     SDL_RWops* nullable rwops;
     atomic unsigned fileBytesCounter;
+    bool autoLoggingIn;
 )
 #pragma clang diagnostic pop
 
@@ -72,6 +73,7 @@ void logicInit(void) {
 
     assert(optionsInit(NET_USERNAME_SIZE, NET_UNHASHED_PASSWORD_SIZE, &fetchHostId));
     this->adminMode = optionsIsAdmin();
+    this->autoLoggingIn = optionsCredentials() != NULL;
 
     lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
 }
