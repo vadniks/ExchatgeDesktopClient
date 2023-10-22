@@ -59,4 +59,6 @@ void cryptoFillWithRandomBytes(byte* filled, unsigned size);
 unsigned cryptoSingleEncryptedSize(unsigned unencryptedSize);
 byte* nullable cryptoEncryptSingle(const byte* key, const byte* bytes, unsigned bytesSize); // used to encrypt a single message, returns mac (tag) + encrypted bytes + nonce
 byte* nullable cryptoDecryptSingle(const byte* key, const byte* bytes, unsigned bytesSize); // used to decrypt a single message, consumes what is returned by encrypt
+char* cryptoBase64Encode(const byte* bytes, unsigned bytesSize); // returns newly allocated null-terminated string
+byte* nullable cryptoBase64Decode(const char* encoded, unsigned encodedSize, unsigned* xDecodedSize); // also accepts pointer to a variable in which the size of the decoded bytes will be stored
 void cryptoDestroy(Crypto* crypto);

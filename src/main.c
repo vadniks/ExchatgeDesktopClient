@@ -17,38 +17,36 @@
  */
 
 //#include <stdlib.h>
-//#include <SDL.h>
+#include <SDL.h>
 //#include <assert.h>
 #include <stdio.h>
 //#include "lifecycle.h"
 #include <sodium.h>
+#include "crypto.h"
 
 typedef unsigned char byte;
 
 int main(void) { // TODO: test only
+    SDL_Init(0);
     if (sodium_init() < 0) abort();
 
     const unsigned bytesSize = 10;
     byte bytes[bytesSize];
     for (unsigned i = 0; i < bytesSize; bytes[i] = i, printf("%d", i++));
+    char* encoded = cryptoBase64Encode(bytes, bytesSize); // AAECAwQFBgcICQ==
+    printf("\n|%s|\n", encoded);
 
+    unsigned decodedSize = 0;
+    byte* decoded = cryptoBase64Decode(encoded, SDL_strlen(encoded), &decodedSize);
+    SDL_free(encoded);
+
+    printf("%d\n", decodedSize);
+    if (decoded) for (unsigned i = 0; i < decodedSize; printf("%d", decoded[i++]));
     printf("\n");
-    const unsigned encodedSize = sodium_base64_encoded_len(bytesSize, sodium_base64_VARIANT_ORIGINAL);
-    char encoded[encodedSize];
-    char* result = sodium_bin2base64(encoded, encodedSize, bytes, bytesSize, sodium_base64_VARIANT_ORIGINAL);
-    if (!result) abort();
-    printf("|%s| |%s| %d\n", encoded, result, encoded[encodedSize - 1]);
+    SDL_free(decoded);
 
-    const unsigned decodedSize = encodedSize / 4 * 3;
-    byte decoded[decodedSize];
-    unsigned long actualDecodedSize = 0;
-    const int returned = sodium_base642bin(decoded, decodedSize, encoded, encodedSize, "", &actualDecodedSize, NULL, sodium_base64_VARIANT_ORIGINAL);
-    if (returned != 0) abort();
-    printf("%d %ld\n", decodedSize, actualDecodedSize);
-
-    for (unsigned i = 0; i < actualDecodedSize; printf("%d", decoded[i++]));
-    printf("\n");
-
+    SDL_Quit();
+    if (SDL_GetNumAllocations() > 0) abort();
     return 0;
 }
 

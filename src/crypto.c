@@ -328,6 +328,45 @@ byte* nullable cryptoDecryptSingle(const byte* key, const byte* bytes, unsigned 
     return result;
 }
 
+char* cryptoBase64Encode(const byte* bytes, unsigned bytesSize) {
+    assert(bytesSize);
+
+    const unsigned encodedSize = sodium_base64_encoded_len(bytesSize, sodium_base64_VARIANT_ORIGINAL);
+    assert(encodedSize);
+
+    char* encoded = SDL_malloc(encodedSize);
+    assert(sodium_bin2base64(encoded, encodedSize, bytes, bytesSize, sodium_base64_VARIANT_ORIGINAL));
+    assert(!encoded[encodedSize - 1]);
+
+    return encoded;
+}
+
+byte* nullable cryptoBase64Decode(const char* encoded, unsigned encodedSize, unsigned* xDecodedSize) {
+    const unsigned decodedSize = encodedSize / 4 * 3;
+    if (!encodedSize || !decodedSize) return NULL;
+
+    byte* decoded = SDL_malloc(decodedSize);
+    unsigned long actualDecodedSize = 0;
+
+    if (sodium_base642bin(
+        decoded,
+        decodedSize,
+        encoded,
+        encodedSize,
+        "",
+        &actualDecodedSize,
+        NULL,
+        sodium_base64_VARIANT_ORIGINAL
+    ) != 0 || !actualDecodedSize) {
+        SDL_free(decoded);
+        return NULL;
+    }
+
+    decoded = SDL_realloc(decoded, actualDecodedSize);
+    *xDecodedSize = (unsigned) actualDecodedSize;
+    return decoded;
+}
+
 void cryptoDestroy(Crypto* crypto) {
     assert(crypto);
     cryptoFillWithRandomBytes((byte*) crypto, sizeof(Crypto));
