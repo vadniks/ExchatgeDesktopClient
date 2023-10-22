@@ -238,7 +238,7 @@ void optionsSetCredentials(const char* nullable credentials) {
     const unsigned size = credentialsSize();
 
     if (!credentials) {
-        cryptoFillWithRandomBytes((byte*) options->credentials, size);
+        !options->credentials ? STUB : cryptoFillWithRandomBytes((byte*) options->credentials, size);
         return;
     }
 

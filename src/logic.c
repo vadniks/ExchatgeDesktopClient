@@ -533,7 +533,7 @@ void logicProcessEvent(SDL_Event* event) {
                 : STUB;
 } // TODO: when exchanging file add support for file names and perform checksum
 
-static long fetchHostId(void); // TODO: add possibility for admin to remove users from database; to disable/enable registration; to ban/unban users; to kick connected users
+// TODO: add possibility for admin to remove users from database; to disable/enable registration; to ban/unban users; to kick connected users
 
 static void processCredentials(void** data) { // TODO: store user credentials in encrypted form for automatic logging in
     const char* username = data[0];
