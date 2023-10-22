@@ -60,6 +60,24 @@ THIS(
 
 static long fetchHostId(void);
 
+static void showLoginPageOrPerformAutoLoggingIn(void) {
+    if (!this->autoLoggingIn) {
+        renderShowLogIn();
+        return;
+    }
+
+    const char* credentials = optionsCredentials();
+    assert(credentials);
+
+    logicOnCredentialsReceived(
+        credentials,
+        NET_USERNAME_SIZE,
+        credentials + NET_USERNAME_SIZE,
+        NET_UNHASHED_PASSWORD_SIZE,
+        true
+    );
+}
+
 void logicInit(void) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -75,7 +93,7 @@ void logicInit(void) {
     this->adminMode = optionsIsAdmin();
     this->autoLoggingIn = optionsCredentials() != NULL;
 
-    lifecycleAsync((LifecycleAsyncActionFunction) &renderShowLogIn, NULL, 1000);
+    lifecycleAsync((LifecycleAsyncActionFunction) &showLoginPageOrPerformAutoLoggingIn, NULL, 1000);
 }
 
 bool logicIsAdminMode(void) {
