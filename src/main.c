@@ -16,39 +16,71 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
-#include <SDL.h>
-#include <assert.h>
+//#include <stdlib.h>
+//#include <SDL.h>
+//#include <assert.h>
 #include <stdio.h>
-#include "lifecycle.h"
+//#include "lifecycle.h"
+#include <sodium.h>
 
-int main(void) {
-    if (!lifecycleInit()) return EXIT_FAILURE;
+typedef unsigned char byte;
 
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\r\033[1;32m"
-        "_______ _     _ _______ _     _ _______ _______  ______ _______\n"
-        "|______  \\___/  |       |_____| |_____|    |    |  ____ |______\n"
-        "|______ _/   \\_ |_____  |     | |     |    |    |_____| |______\n"
-        "                   free software (GNU GPL v3)                   \033[0m"
-    );
+int main(void) { // TODO: test only
+    if (sodium_init() < 0) abort();
 
-    SDL_version version;
-    SDL_GetVersion(&version);
-    assert(version.major == 2);
+    const unsigned bytesSize = 10;
+    byte bytes[bytesSize];
+    for (unsigned i = 0; i < bytesSize; bytes[i] = i, printf("%d", i++));
 
-    if (version.major * 1000 + version.minor * 10 + version.patch != 2265)
-        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Tested only on 2.26.5, may work unstable on other versions"); // works on 2.28.1 but there are bugs in it
+    printf("\n");
+    const unsigned encodedSize = sodium_base64_encoded_len(bytesSize, sodium_base64_VARIANT_ORIGINAL);
+    char encoded[encodedSize];
+    char* result = sodium_bin2base64(encoded, encodedSize, bytes, bytesSize, sodium_base64_VARIANT_ORIGINAL);
+    if (!result) abort();
+    printf("|%s| |%s| %d\n", encoded, result, encoded[encodedSize - 1]);
 
-    lifecycleLoop();
-    lifecycleClean();
+    const unsigned decodedSize = encodedSize / 4 * 3;
+    byte decoded[decodedSize];
+    unsigned long actualDecodedSize = 0;
+    const int returned = sodium_base642bin(decoded, decodedSize, encoded, encodedSize, "", &actualDecodedSize, NULL, sodium_base64_VARIANT_ORIGINAL);
+    if (returned != 0) abort();
+    printf("%d %ld\n", decodedSize, actualDecodedSize);
 
-    const int allocations = SDL_GetNumAllocations();
+    for (unsigned i = 0; i < actualDecodedSize; printf("%d", decoded[i++]));
+    printf("\n");
 
-    if (allocations) // TODO: debug only
-        fprintf(stderr, "allocations %d\n", allocations); // Cannout use SDL_Log() here 'cause it will allocate smth internally and the cleanup has been performed before
-
-    assert(!allocations || allocations == 1);
-    // unknown bug occurs on 2.28.1: SDL_GetNumAllocations() returns 1 everytime only SDL_Init() was called with SDL_INIT_VIDEO constant (after SDL_Quit() was called). on 2.26.5 it returns 0 as expected
-
-    return EXIT_SUCCESS;
+    return 0;
 }
+
+
+
+//int main(void) {
+//    if (!lifecycleInit()) return EXIT_FAILURE;
+//
+//    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\r\033[1;32m"
+//        "_______ _     _ _______ _     _ _______ _______  ______ _______\n"
+//        "|______  \\___/  |       |_____| |_____|    |    |  ____ |______\n"
+//        "|______ _/   \\_ |_____  |     | |     |    |    |_____| |______\n"
+//        "                   free software (GNU GPL v3)                   \033[0m"
+//    );
+//
+//    SDL_version version;
+//    SDL_GetVersion(&version);
+//    assert(version.major == 2);
+//
+//    if (version.major * 1000 + version.minor * 10 + version.patch != 2265)
+//        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Tested only on 2.26.5, may work unstable on other versions"); // works on 2.28.1 but there are bugs in it
+//
+//    lifecycleLoop();
+//    lifecycleClean();
+//
+//    const int allocations = SDL_GetNumAllocations();
+//
+//    if (allocations) // TODO: debug only
+//        fprintf(stderr, "allocations %d\n", allocations); // Cannout use SDL_Log() here 'cause it will allocate smth internally and the cleanup has been performed before
+//
+//    assert(!allocations || allocations == 1);
+//    // unknown bug occurs on 2.28.1: SDL_GetNumAllocations() returns 1 everytime only SDL_Init() was called with SDL_INIT_VIDEO constant (after SDL_Quit() was called). on 2.26.5 it returns 0 as expected
+//
+//    return EXIT_SUCCESS;
+//}
