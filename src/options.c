@@ -250,7 +250,7 @@ void optionsSetCredentials(const char* nullable credentials) {
     char* encoded = cryptoBase64Encode(encrypted, cryptoSingleEncryptedSize(size));
     SDL_free(encrypted);
 
-    SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "w"); // TODO
+    SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "w");
     assert(rwOps);
 
     const int offset = findOffsetOfOptionPayload(CREDENTIALS_OPTION);
