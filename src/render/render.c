@@ -88,6 +88,7 @@ STATIC_CONST_STRING UNABLE_TO_TRANSMIT_FILE = "Unable to transmit file";
 STATIC_CONST_STRING FILE_IS_TOO_BIG = "File is too big (> 20 mb)";
 STATIC_CONST_STRING FILE_TRANSMITTED = "File transmitted";
 STATIC_CONST_STRING ENTER_ABSOLUTE_PATH_TO_FILE = "Enter absolute path to the file";
+STATIC_CONST_STRING AUTO_LOGGING_IN = "Auto logging in";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -143,6 +144,7 @@ THIS(
     RenderOnFileChooserRequested onFileChooserRequested;
     RenderFileChooseResultHandler fileChooseResultHandler;
     unsigned long frameCount;
+    bool autoLoggingIn;
 )
 #pragma clang diagnostic pop
 
@@ -248,6 +250,7 @@ void renderInit(
     this->onFileChooserRequested = onFileChooserRequested;
     this->fileChooseResultHandler = fileChooseResultHandler;
     this->frameCount = 0;
+    this->autoLoggingIn = false;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -623,16 +626,22 @@ static void onProceedClickedAfterLogInRegister(bool logIn) { // TODO: avoid situ
     this->enteredPasswordSize = 0;
 }
 
+static unsigned decreaseWidthIfNeeded(unsigned width) { return width <= WINDOW_WIDTH ? width : WINDOW_WIDTH; }
+static unsigned decreaseHeightIfNeeded(unsigned height) { return height <= WINDOW_HEIGHT ? height : WINDOW_HEIGHT; }
+static float currentHeight(void) { return (float) this->height * 0.925f; }
+
 static void drawLogInForm(int width, float height, bool logIn) {
     width -= 15; height -= 25;
 
     char groupName[2] = {1, 0};
     if (!nk_group_begin(this->context, groupName, NK_WINDOW_NO_SCROLLBAR)) return;
 
-    nk_layout_row_dynamic(this->context, height * 0.25f, 1);
+    const float sectionHeightMultiplier = logIn ? 0.2f : 0.25f;
+
+    nk_layout_row_dynamic(this->context, height * sectionHeightMultiplier, 1);
     nk_label(this->context, logIn ? LOG_IN : REGISTER, NK_TEXT_CENTERED);
 
-    nk_layout_row_static(this->context, height * 0.25f, width / 2, 2);
+    nk_layout_row_static(this->context, height * sectionHeightMultiplier, width / 2, 2);
 
     nk_label(this->context, USERNAME, NK_TEXT_ALIGN_LEFT);
     nk_edit_string(
@@ -654,16 +663,30 @@ static void drawLogInForm(int width, float height, bool logIn) {
         &nk_filter_default
     );
 
-    nk_layout_row_static(this->context, height * 0.25f, width / 2, 2);
+    if (logIn) {
+        const float checkboxWidth = (float) decreaseWidthIfNeeded(this->width) * 0.2f,
+            spacerWidth = ((float) width - checkboxWidth) / 2.0f;
+
+        nk_layout_row_begin(this->context, NK_STATIC, height * sectionHeightMultiplier, 3);
+
+        nk_layout_row_push(this->context, spacerWidth);
+        nk_spacer(this->context);
+
+        nk_layout_row_push(this->context, checkboxWidth);
+        nk_checkbox_label(this->context, AUTO_LOGGING_IN, &(this->autoLoggingIn));
+
+        nk_layout_row_push(this->context, spacerWidth);
+        nk_spacer(this->context);
+
+        nk_layout_row_end(this->context);
+    }
+
+    nk_layout_row_static(this->context, height * sectionHeightMultiplier, width / 2, 2);
     if (nk_button_label(this->context, PROCEED)) onProceedClickedAfterLogInRegister(logIn);
     if (nk_button_label(this->context, logIn ? REGISTER : LOG_IN)) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
 
     nk_group_end(this->context);
 }
-
-__attribute_maybe_unused__ static unsigned decreaseWidthIfNeeded(unsigned width) { return width <= WINDOW_WIDTH ? width : WINDOW_WIDTH; }
-static unsigned decreaseHeightIfNeeded(unsigned height) { return height <= WINDOW_HEIGHT ? height : WINDOW_HEIGHT; }
-static float currentHeight(void) { return (float) this->height * 0.925f; }
 
 static void drawLoginPage(bool logIn) {
     const float height = currentHeight();
