@@ -26,6 +26,7 @@ Project is created for Linux x86_64 desktop platforms (PCs).
 Client side is written entirely in C.
 
 Build is performed via [GNU Make](https://www.gnu.org/software/make) 
+or via [Ninja](https://ninja-build.org/) 
 with help of [CMake](https://cmake.org) build system generator.
 
 Client side uses the following libraries: 
@@ -61,7 +62,7 @@ the executable itself:
 ```shell
 chmod +x buildDependencies.sh && ./buildDependencies.sh
 mkdir build && (cd build; cmake .. && make)
-chmod +x extract.sh && ./extract.sh
+chmod +x extract.sh && ./extract.shhttps://ninja-build.org/
 LD_LIBRARY_PATH="$(pwd)/extracted" extracted/ExchatgeDesktopClient
 ```
 
