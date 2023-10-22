@@ -16,69 +16,42 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-//#include <stdlib.h>
+#include <stdlib.h>
 #include <SDL.h>
-//#include <assert.h>
+#include <assert.h>
 #include <stdio.h>
-//#include "lifecycle.h"
-#include <sodium.h>
-#include "crypto.h"
+#include "lifecycle.h"
 
-typedef unsigned char byte;
+int main(void) {
+    if (!lifecycleInit()) return EXIT_FAILURE;
 
-int main(void) { // TODO: test only
-    SDL_Init(0);
-    if (sodium_init() < 0) abort();
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\r\033[1;32m"
+        "_______ _     _ _______ _     _ _______ _______  ______ _______\n"
+        "|______  \\___/  |       |_____| |_____|    |    |  ____ |______\n"
+        "|______ _/   \\_ |_____  |     | |     |    |    |_____| |______\n"
+        "                   free software (GNU GPL v3)                   \033[0m"
+    );
 
-    const unsigned bytesSize = 10;
-    byte bytes[bytesSize];
-    for (unsigned i = 0; i < bytesSize; bytes[i] = i, printf("%d", i++));
-    char* encoded = cryptoBase64Encode(bytes, bytesSize); // AAECAwQFBgcICQ==
-    printf("\n|%s|\n", encoded);
+    SDL_version version;
+    SDL_GetVersion(&version);
+    assert(version.major == 2);
 
-    unsigned decodedSize = 0;
-    byte* decoded = cryptoBase64Decode(encoded, SDL_strlen(encoded), &decodedSize);
-    SDL_free(encoded);
+    bool untested = false;
+    if (version.major * 1000 + version.minor * 10 + version.patch != 2265) {
+        untested = true;
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Tested only on 2.26.5, may work unstable on other versions"); // works on 2.28.1 but there are bugs in it
+    }
 
-    printf("%d\n", decodedSize);
-    if (decoded) for (unsigned i = 0; i < decodedSize; printf("%d", decoded[i++]));
-    printf("\n");
-    SDL_free(decoded);
+    lifecycleLoop();
+    lifecycleClean();
 
-    SDL_Quit();
-    if (SDL_GetNumAllocations() > 0) abort();
-    return 0;
+    const int allocations = SDL_GetNumAllocations();
+
+    if (allocations) // TODO: debug only
+        fprintf(stderr, "allocations %d\n", allocations); // Cannout use SDL_Log() here 'cause it will allocate smth internally and the cleanup has been performed before
+
+    assert(!allocations || untested && allocations == 1);
+    // unknown bug occurs on 2.28.1: SDL_GetNumAllocations() returns 1 everytime only SDL_Init() was called with SDL_INIT_VIDEO constant (after SDL_Quit() was called). on 2.26.5 it returns 0 as expected
+
+    return EXIT_SUCCESS;
 }
-
-
-
-//int main(void) {
-//    if (!lifecycleInit()) return EXIT_FAILURE;
-//
-//    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\r\033[1;32m"
-//        "_______ _     _ _______ _     _ _______ _______  ______ _______\n"
-//        "|______  \\___/  |       |_____| |_____|    |    |  ____ |______\n"
-//        "|______ _/   \\_ |_____  |     | |     |    |    |_____| |______\n"
-//        "                   free software (GNU GPL v3)                   \033[0m"
-//    );
-//
-//    SDL_version version;
-//    SDL_GetVersion(&version);
-//    assert(version.major == 2);
-//
-//    if (version.major * 1000 + version.minor * 10 + version.patch != 2265)
-//        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Tested only on 2.26.5, may work unstable on other versions"); // works on 2.28.1 but there are bugs in it
-//
-//    lifecycleLoop();
-//    lifecycleClean();
-//
-//    const int allocations = SDL_GetNumAllocations();
-//
-//    if (allocations) // TODO: debug only
-//        fprintf(stderr, "allocations %d\n", allocations); // Cannout use SDL_Log() here 'cause it will allocate smth internally and the cleanup has been performed before
-//
-//    assert(!allocations || allocations == 1);
-//    // unknown bug occurs on 2.28.1: SDL_GetNumAllocations() returns 1 everytime only SDL_Init() was called with SDL_INIT_VIDEO constant (after SDL_Quit() was called). on 2.26.5 it returns 0 as expected
-//
-//    return EXIT_SUCCESS;
-//}
