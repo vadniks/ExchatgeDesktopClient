@@ -255,10 +255,11 @@ void optionsSetCredentials(const char* nullable credentials) {
     char* encoded = cryptoBase64Encode(encrypted, cryptoSingleEncryptedSize(size));
     SDL_free(encrypted);
 
-    SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "w");
+    const int offset = findOffsetOfOptionPayload(CREDENTIALS_OPTION);
+
+    SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "aw");
     assert(rwOps);
 
-    const int offset = findOffsetOfOptionPayload(CREDENTIALS_OPTION);
     if (offset > 0) {
         SDL_RWseek(rwOps, offset, RW_SEEK_SET);
         SDL_RWwrite(rwOps, encoded, 1, SDL_strlen(encoded));

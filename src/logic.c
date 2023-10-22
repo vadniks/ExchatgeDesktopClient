@@ -565,16 +565,16 @@ static void processCredentials(void** data) { // TODO: store user credentials in
     const char* password = data[1];
     const bool logIn = *((bool*) data[2]);
 
-    if (logIn) {
+    assert(this);
+    if (!logIn) goto netInit;
+
+    if (this->autoLoggingIn) {
         char credentials[NET_USERNAME_SIZE + NET_UNHASHED_PASSWORD_SIZE];
         SDL_memcpy(credentials, username, NET_USERNAME_SIZE);
         SDL_memcpy(credentials + NET_USERNAME_SIZE, password, NET_UNHASHED_PASSWORD_SIZE);
         optionsSetCredentials(credentials);
         logicCredentialsRandomFiller(credentials, sizeof credentials);
     }
-
-    assert(this);
-    if (!logIn) goto netInit;
 
     if (this->databaseInitialized) {
         databaseClean();
