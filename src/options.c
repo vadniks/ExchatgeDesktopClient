@@ -118,6 +118,17 @@ static void parseSskpOption(const char* line) {
     options->serverSignPublicKeySize = count;
 }
 
+static inline unsigned credentialsSize(void)
+{ return options->usernameSize + options->passwordSize; }
+
+static byte* makeKey(void) {
+    const long hostId = (*(options->hostIdSupplier))();
+    byte* key = SDL_malloc(CRYPTO_KEY_SIZE);
+
+    for (unsigned i = 0; i < CRYPTO_KEY_SIZE; key[i] = ((byte*) &hostId)[i % sizeof(long)], i++);
+    return key;
+}
+
 static void parseCredentialsOption(const char* line) {
     const int lineSize = (int) SDL_strlen(line),
         optionSize = (int) SDL_strlen(CREDENTIALS_OPTION) + 1,
@@ -127,19 +138,16 @@ static void parseCredentialsOption(const char* line) {
     unsigned decodedSize = 0;
     byte* decoded = cryptoBase64Decode(line + optionSize, payloadSize, &decodedSize);
     if (!decoded) return;
-    assert(decodedSize == options->usernameSize + options->passwordSize);
+    assert(decodedSize == cryptoSingleEncryptedSize(credentialsSize()));
 
-    const long hostId = (*(options->hostIdSupplier))();
-    byte key[CRYPTO_KEY_SIZE];
-    for (unsigned i = 0; i < CRYPTO_KEY_SIZE; key[i] = ((byte*) &hostId)[i % sizeof(long)], i++);
+    byte* key = makeKey();
 
     byte* decrypted = cryptoDecryptSingle(key, decoded, decodedSize);
+    SDL_free(key);
     SDL_free(decoded);
     if (!decrypted) return;
 
-    options->credentials = SDL_calloc(decodedSize, 1);
-    SDL_memcpy(options->credentials, decrypted, decodedSize);
-    SDL_free(decrypted);
+    options->credentials = (char*) decrypted;
 }
 
 bool optionsInit(unsigned usernameSize, unsigned passwordSize, OptionsHostIdSupplier hostIdSupplier) {
@@ -206,17 +214,33 @@ unsigned optionsServerSignPublicKeySize(void) {
 }
 
 char* nullable optionsCredentials(void) {
-    return NULL; // TODO
+    assert(options);
+    return options->credentials;
 }
 
 void optionsSetCredentials(const char* nullable credentials) {
     assert(options);
-    const unsigned size = options->usernameSize + options->passwordSize;
+    const unsigned size = credentialsSize();
 
-    if (!credentials)
+    if (!credentials) {
         cryptoFillWithRandomBytes((byte*) options->credentials, size);
-    else
-        SDL_memcpy(options->credentials, credentials, size);
+        return;
+    }
+
+    byte* key = makeKey();
+    byte* encrypted = cryptoEncryptSingle(key, (const byte*) credentials, size);
+    SDL_free(key);
+    assert(encrypted);
+
+    char* encoded = cryptoBase64Encode(encrypted, cryptoSingleEncryptedSize(size));
+    SDL_free(encrypted);
+
+//    SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "w"); // TODO
+//    assert(rwOps);
+//
+//    SDL_RWwrite()
+
+    SDL_free(encoded);
 }
 
 void optionsClear(void) {
