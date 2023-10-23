@@ -40,6 +40,8 @@ typedef void (*RenderOnSendClicked)(const char* text, unsigned size); // receive
 typedef void (*RenderOnUpdateUsersListClicked)(void);
 typedef void (*RenderOnFileChooserRequested)(void);
 typedef void (*RenderFileChooseResultHandler)(const char* nullable filePath, unsigned size); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null and zero size if no file was chosen (return requested) or error occurred
+typedef void (*RenderOnAutoLoggingInChanged)(bool value);
+typedef bool (*RenderAutoLoggingInSupplier)(void);
 
 typedef enum {
     RENDER_DELETE_CONVERSATION = -1,
@@ -49,7 +51,7 @@ typedef enum {
 
 typedef void (*RenderUserForConversationChosenCallback)(unsigned id, RenderConversationChooseVariants chooseVariant);
 
-extern const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE;
+extern const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE; // TODO: make inline all one-line functions in implementation
 
 void renderInit(
     unsigned usernameSize,
@@ -66,15 +68,16 @@ void renderInit(
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
     unsigned maxFilePathSize,
     RenderOnFileChooserRequested onFileChooserRequested,
-    RenderFileChooseResultHandler fileChooseResultHandler
+    RenderFileChooseResultHandler fileChooseResultHandler,
+    RenderOnAutoLoggingInChanged onAutoLoggingInChanged,
+    RenderAutoLoggingInSupplier autoLoggingInSupplier
 );
 
-// these must be called before first call to renderDraw() to initialize things, begin1
+// these must be called before first call to renderDraw() to initialize things, begin1 // TODO: unite them in one function
 void renderSetMaxMessageSizeAndInitConversationMessageBuffer(unsigned size);
 void renderSetAdminMode(bool mode);
 void renderSetUsersList(List* usersList); // <User*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
 void renderSetMessagesList(List* messagesList); // <ConversationMessage*> must be deallocated by the caller after this module gets shut down
-void renderSetAutoLoggingIn(bool* autoLoggingIn);
 // end1
 
 void renderInputBegan(void);

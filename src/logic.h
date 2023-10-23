@@ -29,7 +29,8 @@ bool logicIsAdminMode(void);
 void logicNetListen(void); // causes net module to listen for connection updates
 List* logicUsersList(void); // returns permanent users list in which actual user objects will be inserted/updated/removed later by the net module
 List* logicMessagesList(void); // same as usersList but for conversation messages between users
-bool* logicAutoLoggingIn(void);
+void logicOnAutoLoggingInChanged(bool value);
+bool logicAutoLoggingInSupplier(void);
 void logicOnFileChooserRequested(void);
 void logicFileChooseResultHandler(const char* nullable filePath, unsigned size);
 void logicProcessEvent(SDL_Event* event);

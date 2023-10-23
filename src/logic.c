@@ -117,9 +117,18 @@ List* logicMessagesList(void) {
     return this->messagesList;
 }
 
-bool* logicAutoLoggingIn(void) {
+void logicOnAutoLoggingInChanged(bool value) {
     assert(this);
-    return &(this->autoLoggingIn);
+
+    if (this->autoLoggingIn)
+        optionsSetCredentials(NULL);
+
+    this->autoLoggingIn = value;
+}
+
+bool logicAutoLoggingInSupplier(void) {
+    assert(this);
+    return this->autoLoggingIn;
 }
 
 static int findUserComparator(const unsigned* xId, const User* const* user)
@@ -619,6 +628,9 @@ static void processCredentials(void** data) {
         this->state = STATE_UNAUTHENTICATED;
         renderShowUnableToConnectToTheServerError();
         renderHideInfiniteProgressBar();
+
+        if (this->autoLoggingIn)
+            renderShowLogIn();
     } else
         logIn ? netLogIn(username, password) : netRegister(username, password);
 

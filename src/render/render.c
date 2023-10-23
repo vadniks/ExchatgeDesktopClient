@@ -144,7 +144,8 @@ THIS(
     RenderOnFileChooserRequested onFileChooserRequested;
     RenderFileChooseResultHandler fileChooseResultHandler;
     unsigned long frameCount;
-    bool* autoLoggingIn; // allocated elsewhere
+    RenderOnAutoLoggingInChanged onAutoLoggingInChanged;
+    RenderAutoLoggingInSupplier autoLoggingInSupplier;
 )
 #pragma clang diagnostic pop
 
@@ -198,7 +199,9 @@ void renderInit(
     RenderOnUpdateUsersListClicked onUpdateUsersListClicked,
     unsigned maxFilePathSize,
     RenderOnFileChooserRequested onFileChooserRequested,
-    RenderFileChooseResultHandler fileChooseResultHandler
+    RenderFileChooseResultHandler fileChooseResultHandler,
+    RenderOnAutoLoggingInChanged onAutoLoggingInChanged,
+    RenderAutoLoggingInSupplier autoLoggingInSupplier
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -250,7 +253,8 @@ void renderInit(
     this->onFileChooserRequested = onFileChooserRequested;
     this->fileChooseResultHandler = fileChooseResultHandler;
     this->frameCount = 0;
-    this->autoLoggingIn = NULL;
+    this->onAutoLoggingInChanged = onAutoLoggingInChanged;
+    this->autoLoggingInSupplier = autoLoggingInSupplier;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -323,11 +327,6 @@ void renderSetUsersList(List* usersList) {
 void renderSetMessagesList(List* messagesList) {
     assert(this);
     this->conversationMessagesList = messagesList;
-}
-
-void renderSetAutoLoggingIn(bool* autoLoggingIn) {
-    assert(this);
-    this->autoLoggingIn = autoLoggingIn;
 }
 
 void renderInputBegan(void) {
@@ -678,7 +677,9 @@ static void drawLogInForm(int width, float height, bool logIn) {
         nk_spacer(this->context);
 
         nk_layout_row_push(this->context, checkboxWidth);
-        nk_checkbox_label(this->context, AUTO_LOGGING_IN, this->autoLoggingIn);
+        bool autoLoggingIn = (*(this->autoLoggingInSupplier))();
+        if (nk_checkbox_label(this->context, AUTO_LOGGING_IN, &autoLoggingIn))
+            (*(this->onAutoLoggingInChanged))(autoLoggingIn);
 
         nk_layout_row_push(this->context, spacerWidth);
         nk_spacer(this->context);
