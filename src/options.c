@@ -31,7 +31,9 @@ STATIC_CONST_STRING PORT_OPTION = "port";
 STATIC_CONST_STRING SSPK_OPTION = "sspk";
 STATIC_CONST_STRING CREDENTIALS_OPTION = "credentials";
 
-typedef struct {
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
+THIS(
     bool admin;
     char* host;
     unsigned port;
@@ -42,9 +44,8 @@ typedef struct {
     char* credentials;
     OptionsHostIdSupplier hostIdSupplier;
     SDL_mutex* fileWriteGuard;
-} Options;
-
-static Options* options = NULL; // TODO: replace with 'this'
+)
+#pragma clang diagnostic pop
 
 static char** nullable readOptionsFile(unsigned* linesCountBuffer) {
     SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "r");
@@ -79,19 +80,19 @@ static char** nullable readOptionsFile(unsigned* linesCountBuffer) {
 }
 
 static void parseAdminOption(const char* line)
-{ options->admin = SDL_strstr(line, "true"); }
+{ this->admin = SDL_strstr(line, "true"); }
 
 static void parseHostOption(const char* line) {
     const unsigned size = SDL_strlen(line),
         declarationSize = SDL_strlen(HOST_OPTION) + 1,
         payloadSize = size - declarationSize;
 
-    options->host = SDL_malloc(payloadSize);
-    SDL_memcpy(options->host, line + declarationSize, payloadSize);
+    this->host = SDL_malloc(payloadSize);
+    SDL_memcpy(this->host, line + declarationSize, payloadSize);
 }
 
 static void parsePortOption(const char* line)
-{ options->port = SDL_atoi(line + SDL_strlen(HOST_OPTION) + 1); }
+{ this->port = SDL_atoi(line + SDL_strlen(HOST_OPTION) + 1); }
 
 static void parseSskpOption(const char* line) {
     const unsigned size = SDL_strlen(line);
@@ -116,15 +117,15 @@ static void parseSskpOption(const char* line) {
             num[j - 1] = line[i];
     }
 
-    options->serverSignPublicKey = nums;
-    options->serverSignPublicKeySize = count;
+    this->serverSignPublicKey = nums;
+    this->serverSignPublicKeySize = count;
 }
 
 static inline unsigned credentialsSize(void)
-{ return options->usernameSize + options->passwordSize; }
+{ return this->usernameSize + this->passwordSize; }
 
 static byte* makeKey(void) {
-    const long hostId = (*(options->hostIdSupplier))();
+    const long hostId = (*(this->hostIdSupplier))();
     byte* key = SDL_malloc(CRYPTO_KEY_SIZE);
 
     for (unsigned i = 0; i < CRYPTO_KEY_SIZE; key[i] = ((byte*) &hostId)[i % sizeof(long)], i++);
@@ -149,27 +150,27 @@ static void parseCredentialsOption(const char* line) {
     SDL_free(decoded);
     if (!decrypted) return;
 
-    options->credentials = (char*) decrypted;
+    this->credentials = (char*) decrypted;
 }
 
 bool optionsInit(unsigned usernameSize, unsigned passwordSize, OptionsHostIdSupplier hostIdSupplier) {
-    assert(!options);
-    options = SDL_malloc(sizeof *options);
-    options->admin = false;
-    options->host = NULL;
-    options->port = 0;
-    options->serverSignPublicKey = NULL;
-    options->usernameSize = usernameSize;
-    options->passwordSize = passwordSize;
-    options->credentials = NULL;
-    options->hostIdSupplier = hostIdSupplier;
-    options->fileWriteGuard = NULL;
+    assert(!this);
+    this = SDL_malloc(sizeof *this);
+    this->admin = false;
+    this->host = NULL;
+    this->port = 0;
+    this->serverSignPublicKey = NULL;
+    this->usernameSize = usernameSize;
+    this->passwordSize = passwordSize;
+    this->credentials = NULL;
+    this->hostIdSupplier = hostIdSupplier;
+    this->fileWriteGuard = NULL;
 
     unsigned linesCount = 0;
     char** lines = readOptionsFile(&linesCount);
     if (!lines) {
-        SDL_free(options);
-        options = NULL;
+        SDL_free(this);
+        this = NULL;
         return false;
     }
 
@@ -188,38 +189,38 @@ bool optionsInit(unsigned usernameSize, unsigned passwordSize, OptionsHostIdSupp
     }
     SDL_free(lines);
 
-    options->fileWriteGuard = SDL_CreateMutex();
+    this->fileWriteGuard = SDL_CreateMutex();
     return true;
 }
 
 bool optionsIsAdmin(void) {
-    assert(options);
-    return options->admin;
+    assert(this);
+    return this->admin;
 }
 
 const char* optionsHost(void) {
-    assert(options);
-    return options->host;
+    assert(this);
+    return this->host;
 }
 
 unsigned optionsPort(void) {
-    assert(options);
-    return options->port;
+    assert(this);
+    return this->port;
 }
 
 const byte* optionsServerSignPublicKey(void) {
-    assert(options);
-    return options->serverSignPublicKey;
+    assert(this);
+    return this->serverSignPublicKey;
 }
 
 unsigned optionsServerSignPublicKeySize(void) {
-    assert(options);
-    return options->serverSignPublicKeySize;
+    assert(this);
+    return this->serverSignPublicKeySize;
 }
 
 const char* nullable optionsCredentials(void) {
-    assert(options);
-    return options->credentials;
+    assert(this);
+    return this->credentials;
 }
 
 static int findOffsetOfOptionPayload(const char* option) {
@@ -238,7 +239,7 @@ static int findOffsetOfOptionPayload(const char* option) {
 }
 
 void optionsSetCredentials(const char* nullable credentials) {
-    assert(options);
+    assert(this);
 
     const int offset = findOffsetOfOptionPayload(CREDENTIALS_OPTION);
     assert(offset > 0);
@@ -258,7 +259,7 @@ void optionsSetCredentials(const char* nullable credentials) {
     char* encoded = cryptoBase64Encode(encrypted, cryptoSingleEncryptedSize(size));
     SDL_free(encrypted);
 
-    SDL_LockMutex(options->fileWriteGuard); {
+    SDL_LockMutex(this->fileWriteGuard); {
         SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "r+");
         assert(rwOps);
 
@@ -266,19 +267,19 @@ void optionsSetCredentials(const char* nullable credentials) {
         SDL_RWwrite(rwOps, encoded, 1, SDL_strlen(encoded));
 
         SDL_RWclose(rwOps);
-    } SDL_UnlockMutex(options->fileWriteGuard);
+    } SDL_UnlockMutex(this->fileWriteGuard);
 
     SDL_free(encoded);
 }
 
 void optionsClear(void) {
-    assert(options);
+    assert(this);
 
-    if (options->credentials) cryptoFillWithRandomBytes((byte*) options->credentials, credentialsSize());
+    if (this->credentials) cryptoFillWithRandomBytes((byte*) this->credentials, credentialsSize());
 
-    SDL_free(options->host);
-    SDL_free(options->serverSignPublicKey);
-    SDL_free(options->credentials);
-    SDL_DestroyMutex(options->fileWriteGuard);
-    SDL_free(options);
+    SDL_free(this->host);
+    SDL_free(this->serverSignPublicKey);
+    SDL_free(this->credentials);
+    SDL_DestroyMutex(this->fileWriteGuard);
+    SDL_free(this);
 }
