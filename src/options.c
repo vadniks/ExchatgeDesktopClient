@@ -18,6 +18,7 @@
 
 #include <SDL.h>
 #include <assert.h>
+#include <unistd.h>
 #include "crypto.h"
 #include "options.h"
 
@@ -238,14 +239,16 @@ static int findOffsetOfOptionPayload(const char* option) {
 
 void optionsSetCredentials(const char* nullable credentials) {
     assert(options);
-    SDL_LockMutex(options->fileWriteGuard);
 
-    const unsigned size = credentialsSize();
+    const int offset = findOffsetOfOptionPayload(CREDENTIALS_OPTION);
+    assert(offset > 0);
 
     if (!credentials) {
-        !options->credentials ? STUB : cryptoFillWithRandomBytes((byte*) options->credentials, size);
+        truncate(OPTIONS_FILE, offset);
         return;
     }
+
+    const unsigned size = credentialsSize();
 
     byte* key = makeKey();
     byte* encrypted = cryptoEncryptSingle(key, (const byte*) credentials, size);
@@ -255,25 +258,23 @@ void optionsSetCredentials(const char* nullable credentials) {
     char* encoded = cryptoBase64Encode(encrypted, cryptoSingleEncryptedSize(size));
     SDL_free(encrypted);
 
-    const int offset = findOffsetOfOptionPayload(CREDENTIALS_OPTION);
+    SDL_LockMutex(options->fileWriteGuard); {
+        SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "r+");
+        assert(rwOps);
 
-    SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "aw");
-    assert(rwOps);
-
-    if (offset > 0) {
         SDL_RWseek(rwOps, offset, RW_SEEK_SET);
         SDL_RWwrite(rwOps, encoded, 1, SDL_strlen(encoded));
-    }
-    SDL_RWclose(rwOps);
+
+        SDL_RWclose(rwOps);
+    } SDL_UnlockMutex(options->fileWriteGuard);
 
     SDL_free(encoded);
-    SDL_UnlockMutex(options->fileWriteGuard);
 }
 
 void optionsClear(void) {
     assert(options);
 
-    optionsSetCredentials(NULL);
+    if (options->credentials) cryptoFillWithRandomBytes((byte*) options->credentials, credentialsSize());
 
     SDL_free(options->host);
     SDL_free(options->serverSignPublicKey);

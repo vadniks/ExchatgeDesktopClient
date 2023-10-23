@@ -331,11 +331,11 @@ byte* nullable cryptoDecryptSingle(const byte* key, const byte* bytes, unsigned 
 char* cryptoBase64Encode(const byte* bytes, unsigned bytesSize) {
     assert(bytesSize);
 
-    const unsigned encodedSize = sodium_base64_encoded_len(bytesSize, sodium_base64_VARIANT_ORIGINAL);
+    const unsigned encodedSize = sodium_base64_encoded_len(bytesSize, sodium_base64_VARIANT_URLSAFE);
     assert(encodedSize);
 
     char* encoded = SDL_malloc(encodedSize);
-    assert(sodium_bin2base64(encoded, encodedSize, bytes, bytesSize, sodium_base64_VARIANT_ORIGINAL));
+    assert(sodium_bin2base64(encoded, encodedSize, bytes, bytesSize, sodium_base64_VARIANT_URLSAFE));
     assert(!encoded[encodedSize - 1]);
 
     return encoded;
@@ -356,7 +356,7 @@ byte* nullable cryptoBase64Decode(const char* encoded, unsigned encodedSize, uns
         "",
         &actualDecodedSize,
         NULL,
-        sodium_base64_VARIANT_ORIGINAL
+        sodium_base64_VARIANT_URLSAFE
     ) != 0 || !actualDecodedSize) {
         SDL_free(decoded);
         return NULL;
