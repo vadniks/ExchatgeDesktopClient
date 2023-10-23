@@ -63,7 +63,7 @@ the executable itself:
 ```shell
 chmod +x buildDependencies.sh && ./buildDependencies.sh
 mkdir build && (cd build; cmake .. && make)
-chmod +x extract.sh && ./extract.shhttps://ninja-build.org/
+chmod +x extract.sh && ./extract.sh
 LD_LIBRARY_PATH="$(pwd)/extracted" extracted/ExchatgeDesktopClient
 ```
 
