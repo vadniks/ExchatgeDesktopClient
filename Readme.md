@@ -23,19 +23,19 @@ Project is created for Linux x86_64 desktop platforms (PCs).
 
 ## Dependencies
 
-Client side is written entirely in C.
+Client side is written entirely in C (C11).
 
 Build is performed via [GNU Make](https://www.gnu.org/software/make) 
 or via [Ninja](https://ninja-build.org/) 
 with help of [CMake](https://cmake.org) build system generator.
 
 Client side uses the following libraries: 
-* [SDL2](https://github.com/libsdl-org/SDL), 
-* [SDL2Net](https://github.com/libsdl-org/SDL_net), 
-* [LibSodium](https://github.com/jedisct1/libsodium), 
-* [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear),
-* [SQLite3](https://sqlite.org),
-* [GNU C Library (GLIBC)](https://www.gnu.org/software/libc).
+* [SDL2](https://github.com/libsdl-org/SDL); 
+* [SDL2Net](https://github.com/libsdl-org/SDL_net); 
+* [LibSodium](https://github.com/jedisct1/libsodium); 
+* [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear); 
+* [SQLite3](https://sqlite.org); 
+* [GNU C Library (GLIBC)](https://www.gnu.org/software/libc) - therefore project targets Linux systems. 
 
 ## The project is currently in development stage
 
