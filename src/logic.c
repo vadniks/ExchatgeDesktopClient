@@ -601,6 +601,10 @@ static void processCredentials(void** data) {
         renderShowUnableToDecryptDatabaseError();
         renderHideInfiniteProgressBar();
         this->state = STATE_UNAUTHENTICATED;
+
+        if (this->autoLoggingIn)
+            renderShowLogIn();
+
         goto cleanup;
     } else
         this->databaseInitialized = true;
