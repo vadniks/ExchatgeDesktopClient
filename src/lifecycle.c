@@ -126,10 +126,7 @@ void lifecycleSleep(unsigned long delayMillis) {
     assert(delayMillis > 0 && delayMillis <= 10000);
     const ldiv_t dv = ldiv((long) delayMillis, (long) 1e3f);
 
-    struct timespec timespec;
-    timespec.tv_sec = dv.quot;
-    timespec.tv_nsec = dv.rem * (long) 1e6f;
-
+    const struct timespec timespec = {dv.quot, dv.rem * (long) 1e6f};
     nanosleep(&timespec, NULL);
 }
 
