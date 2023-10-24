@@ -153,6 +153,28 @@ static void parseCredentialsOption(const char* line) {
     this->credentials = (char*) decrypted;
 }
 
+static bool createDefaultOptionsFileIfNotExists(void) {
+    if (!access(OPTIONS_FILE, F_OK))
+        return true;
+
+    const unsigned size = 167;
+    const byte content[size] = // hexdump -ve "1/1 \"x%.2x\"" options.txt
+        "\x61\x64\x6d\x69\x6e\x3d\x74\x72\x75\x65\x0a\x68\x6f\x73\x74\x3d\x31\x32\x37\x2e\x30\x2e\x30\x2e\x31\x0a\x70\x6f"
+        "\x72\x74\x3d\x38\x30\x38\x30\x0a\x73\x73\x70\x6b\x3d\x32\x35\x35\x2c\x32\x33\x2c\x32\x31\x2c\x32\x34\x33\x2c\x31"
+        "\x34\x38\x2c\x31\x37\x37\x2c\x31\x38\x36\x2c\x30\x2c\x37\x33\x2c\x33\x34\x2c\x31\x37\x33\x2c\x31\x33\x30\x2c\x32"
+        "\x33\x34\x2c\x32\x35\x31\x2c\x38\x33\x2c\x31\x33\x30\x2c\x31\x33\x38\x2c\x35\x34\x2c\x32\x31\x35\x2c\x35\x2c\x31"
+        "\x37\x30\x2c\x31\x33\x39\x2c\x31\x37\x35\x2c\x31\x34\x38\x2c\x37\x31\x2c\x32\x31\x35\x2c\x37\x34\x2c\x31\x37\x32"
+        "\x2c\x32\x37\x2c\x32\x32\x35\x2c\x32\x36\x2c\x32\x34\x39\x0a\x63\x72\x65\x64\x65\x6e\x74\x69\x61\x6c\x73\x3d";
+
+    SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "wb");
+    if (!rwOps) return false;
+
+    const unsigned written = SDL_RWwrite(rwOps, content, 1, size);
+
+    SDL_RWclose(rwOps);
+    return written == size;
+}
+
 bool optionsInit(unsigned usernameSize, unsigned passwordSize, OptionsHostIdSupplier hostIdSupplier) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -165,6 +187,8 @@ bool optionsInit(unsigned usernameSize, unsigned passwordSize, OptionsHostIdSupp
     this->credentials = NULL;
     this->hostIdSupplier = hostIdSupplier;
     this->fileWriteGuard = NULL;
+
+    assert(createDefaultOptionsFileIfNotExists());
 
     unsigned linesCount = 0;
     char** lines = readOptionsFile(&linesCount);
@@ -245,7 +269,9 @@ void optionsSetCredentials(const char* nullable credentials) {
     assert(offset > 0);
 
     if (!credentials) {
+        SDL_LockMutex(this->fileWriteGuard);
         truncate(OPTIONS_FILE, offset);
+        SDL_UnlockMutex(this->fileWriteGuard);
         return;
     }
 
