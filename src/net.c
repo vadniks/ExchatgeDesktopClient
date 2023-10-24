@@ -121,6 +121,8 @@ THIS(
     NetNextFileChunkSupplier nextFileChunkSupplier;
     NetNextFileChunkReceiver netNextFileChunkReceiver;
     atomic bool exchangingFile;
+    atomic bool fetchingUserInfos;
+    atomic bool fetchedUserInfos;
 )
 #pragma clang diagnostic pop
 
@@ -248,6 +250,8 @@ bool netInit(
     this->nextFileChunkSupplier = nextFileChunkSupplier;
     this->netNextFileChunkReceiver = netNextFileChunkReceiver;
     this->exchangingFile = false;
+    this->fetchingUserInfos = false;
+    this->fetchedUserInfos = false;
 
     assert(!SDLNet_Init());
 
@@ -487,6 +491,15 @@ static void readReceivedMessage(void) {
 
 void netListen(void) {
     assert(this);
+    RW_MUTEX_READ_LOCKED(this->rwMutex,
+        const bool canReceive = this->fetchingUserInfos
+            || this->fetchedUserInfos
+            || this->settingUpConversation
+            || this->exchangingFile;
+    )
+
+    if (!canReceive) return; // disallow scheduled messages receiving while doing long tasks, which can discard regular messages from other users, the lost messages can then be re-fetched later
+
     while (this && checkSocket()) // read all messages that were sent during the past update frame and not only one message per update frame
         readReceivedMessage(); // checking 'this' for nullability every time despite the assertion before is needed as the module can be re-initialized during the cycle which then will cause SIGSEGV 'cause the address inside 'this' will become invalid - re-initializing after registration is the example
 }
@@ -579,8 +592,11 @@ static void resetUserInfos(void) { // TODO: test users list updates with large a
 }
 
 static void onUsersFetched(const Message* message) { // TODO: block other tasks while forming the users list
-    assert(this);
-    if (!(message->index)) resetUserInfos(); // TODO: test with large amount of elements & test with sleep()
+    assert(this); // TODO: test with large amount of elements & test with sleep()
+    if (!(message->index)) {
+        RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingUserInfos = true;)
+        resetUserInfos();
+    }
     rwMutexWriteLock(this->rwMutex);
 
     this->userInfosSize += message->size;
@@ -600,6 +616,11 @@ static void onUsersFetched(const Message* message) { // TODO: block other tasks 
 
     rwMutexWriteUnlock(this->rwMutex);
     resetUserInfos();
+
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
+        this->fetchingUserInfos = false;
+        this->fetchedUserInfos = true;
+    )
 }
 
 static bool waitForReceiveWithTimeout(void) {
@@ -637,7 +658,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
         return NULL;
     }
 
-    if (!(message = receive()) // TODO: might lose regular messages from other users here
+    if (!(message = receive()) // might lose regular messages from other users here - they can be re-fetched later
         || message->flag != FLAG_EXCHANGE_KEYS
         || message->size != CRYPTO_KEY_SIZE)
     {
@@ -747,7 +768,7 @@ Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned 
     }
 
     Message* message = NULL;
-    if (!(message = receive())
+    if (!(message = receive()) // might lose regular messages from other users here - they can be re-fetched later
         || message->flag != FLAG_EXCHANGE_KEYS_DONE
         || message->size != CRYPTO_KEY_SIZE)
     {
@@ -837,7 +858,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     }
 
     Message* message = NULL;
-    if (!(message = receive())
+    if (!(message = receive()) // might lose regular messages from other users here - they can be re-fetched later
         || message->flag != FLAG_FILE_ASK
         || *((unsigned*) message->body) != fileSize)
     {
@@ -890,9 +911,8 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
         if (message->flag == FLAG_FILE && message->size > 0)
             lastReceivedChunkMillis = (*(this->currentTimeMillisGetter))();
         else {
-            processMessage(message); // TODO: send the other messages processing to the net listen thread
-            SDL_free(message);
-            message = NULL; // TODO: add queue for incoming messages
+            SDL_free(message); // might lose regular messages from other users here - they can be re-fetched later
+            message = NULL;
             continue;
         }
 
