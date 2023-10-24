@@ -637,7 +637,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
         return NULL;
     }
 
-    if (!(message = receive())
+    if (!(message = receive()) // TODO: might lose regular messages from other users here
         || message->flag != FLAG_EXCHANGE_KEYS
         || message->size != CRYPTO_KEY_SIZE)
     {
