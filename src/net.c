@@ -61,6 +61,8 @@ typedef enum : int {
     FLAG_ACCESS_DENIED = 0x0000000b,
 
     FLAG_FETCH_USERS = 0x0000000c,
+    FLAG_FETCH_MESSAGES = 0x0000000d,
+    FLAG_DELETE_MESSAGES = 0x0000000e,
 
     // firstly current user (A, is treated as a client) invites another user (B, is treated as a server) by sending him an invite; if B declines the invite he replies with a message containing this flag and body size = 0
     FLAG_EXCHANGE_KEYS = 0x000000a0, // if B accepts the invite, he replies with his public key, which A treats as a server key (allowing not to rewrite that part of the crypto api)
@@ -123,6 +125,9 @@ THIS(
     atomic bool exchangingFile;
     atomic bool fetchingUserInfos;
     atomic bool fetchedUserInfos;
+    atomic bool fetchingMessages;
+    NetOnNextMessageFetched onNextMessageFetched;
+    NetOnMessagesDeleted onMessagesDeleted;
 )
 #pragma clang diagnostic pop
 
@@ -210,7 +215,9 @@ bool netInit(
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived,
     NetOnFileExchangeInviteReceived onFileExchangeInviteReceived,
     NetNextFileChunkSupplier nextFileChunkSupplier,
-    NetNextFileChunkReceiver netNextFileChunkReceiver
+    NetNextFileChunkReceiver netNextFileChunkReceiver,
+    NetOnNextMessageFetched onNextMessageFetched,
+    NetOnMessagesDeleted onMessagesDeleted
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
@@ -252,6 +259,9 @@ bool netInit(
     this->exchangingFile = false;
     this->fetchingUserInfos = false;
     this->fetchedUserInfos = false;
+    this->fetchingMessages = false;
+    this->onNextMessageFetched = onNextMessageFetched;
+    this->onMessagesDeleted = onMessagesDeleted;
 
     assert(!SDLNet_Init());
 
@@ -350,13 +360,17 @@ static void processErrors(const Message* message) {
             RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->state = STATE_FINISHED_WITH_ERROR;)
             (*(this->onRegisterResult))(false);
             break;
+        case FLAG_DELETE_MESSAGES:
+            (*(this->onMessagesDeleted))(false);
+            break;
         default:
             (*(this->onErrorReceived))(message->flag);
             break;
     }
 }
 
-static void onUsersFetched(const Message* message);
+static void onNextUsersBundleFetched(const Message* message);
+static void onNextMessageFetched(const Message* message);
 
 static void processMessagesFromServer(const Message* message) {
     const bool cst = checkServerToken(message->token);
@@ -375,12 +389,18 @@ static void processMessagesFromServer(const Message* message) {
             (*(this->onRegisterResult))(true);
             break;
         case FLAG_FETCH_USERS: // TODO: raise assert if the users list hasn't been fully formed
-            onUsersFetched(message);
+            onNextUsersBundleFetched(message);
             break;
         case FLAG_UNAUTHENTICATED:
         case FLAG_ERROR:
         case FLAG_ACCESS_DENIED:
             processErrors(message);
+            break;
+        case FLAG_FETCH_MESSAGES:
+            onNextMessageFetched(message);
+            break;
+        case FLAG_DELETE_MESSAGES:
+            (*(this->onMessagesDeleted))(true);
             break;
         default:
             assert(false);
@@ -427,6 +447,8 @@ static void processMessage(const Message* message) {
         processMessagesFromServer(message);
         return;
     }
+
+    if (this->fetchingMessages) return;
 
     switch (this->state) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
@@ -583,6 +605,32 @@ const byte* netUserInfoName(const NetUserInfo* info) {
     return info->name;
 }
 
+static void makeMessagesRelatedRequest(bool from, unsigned id, unsigned long timestamp, int flag) {
+    assert(this);
+    byte body[NET_MESSAGE_BODY_SIZE] = {0};
+
+    body[0] = from ? 1 : 0;
+    *((unsigned long*) &(body[1])) = timestamp;
+    *((unsigned*) &(body[1 + LONG_SIZE])) = id;
+
+    netSend(flag, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
+}
+
+void netFetchMessages(bool from, unsigned id, unsigned long afterTimestamp) {
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;)
+    makeMessagesRelatedRequest(from, id, afterTimestamp, FLAG_FETCH_MESSAGES);
+}
+
+void netDeleteMessages(bool from, unsigned id, unsigned long thisAndBeforeTimestamp)
+{ makeMessagesRelatedRequest(from, id, thisAndBeforeTimestamp, FLAG_DELETE_MESSAGES); }
+
+static void onNextMessageFetched(const Message* message) {
+    assert(this && this->fetchingMessages);
+    const bool last = message->index == message->count - 1;
+    (*(this->onNextMessageFetched))(message->from, message->timestamp, message->size, message->body, last);
+    if (last) { RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;) }
+}
+
 static void resetUserInfos(void) { // TODO: test users list updates with large amount of items
     RW_MUTEX_WRITE_LOCKED(this->rwMutex,
         SDL_free(this->userInfos);
@@ -591,7 +639,7 @@ static void resetUserInfos(void) { // TODO: test users list updates with large a
     )
 }
 
-static void onUsersFetched(const Message* message) { // TODO: block other tasks while forming the users list
+static void onNextUsersBundleFetched(const Message* message) { // TODO: block other tasks while forming the users list
     assert(this); // TODO: test with large amount of elements & test with sleep()
     if (!(message->index)) {
         RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingUserInfos = true;)

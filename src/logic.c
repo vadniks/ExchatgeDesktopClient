@@ -527,6 +527,19 @@ static void nextFileChunkReceiver(unsigned fromId, unsigned index, unsigned file
     this->rwops = NULL;
 }
 
+static void onNextMessageFetched(unsigned from, unsigned long timestamp, unsigned size, const byte* message, bool last) {
+    onMessageReceived(timestamp, from, message, size);
+
+    if (last) {
+        renderSetControlsBlocking(false);
+        renderHideInfiniteProgressBar();
+    }
+}
+
+static void onMessagesDeleted(bool successful) {
+//    renderShow
+}
+
 static void clipboardPaste(void) {
     if (!SDL_HasClipboardText()) return;
     if (!renderIsConversationShown() && !renderIsFileChooserShown()) return;
@@ -625,7 +638,9 @@ static void processCredentials(void** data) {
         &onConversationSetUpInviteReceived,
         &onFileExchangeInviteReceived,
         &nextFileChunkSupplier,
-        &nextFileChunkReceiver
+        &nextFileChunkReceiver,
+        &onNextMessageFetched,
+        &onMessagesDeleted
     );
 
     if (!this->netInitialized) {
