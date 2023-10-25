@@ -363,6 +363,7 @@ static void processErrors(const Message* message) {
         case FLAG_DELETE_MESSAGES:
             (*(this->onMessagesDeleted))(false);
             break;
+        case FLAG_FETCH_MESSAGES: // TODO
         default:
             (*(this->onErrorReceived))(message->flag);
             break;

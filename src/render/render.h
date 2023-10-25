@@ -119,6 +119,7 @@ void renderShowFileIsEmptyError(void);
 void renderShowUnableToTransmitFileError(void);
 void renderShowFileIsTooBig(void);
 void renderShowFileTransmittedSystemMessage(void);
+void renderShowMessagesFetching(bool began);
 
 void renderShowInfiniteProgressBar(void); // showed only on pages that support it (log in/register, not splash as it's a special case)
 __attribute_deprecated__ bool renderIsInfiniteProgressBarShown(void);

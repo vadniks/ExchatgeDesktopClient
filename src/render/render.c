@@ -89,6 +89,8 @@ STATIC_CONST_STRING FILE_IS_TOO_BIG = "File is too big (> 20 mb)";
 STATIC_CONST_STRING FILE_TRANSMITTED = "File transmitted";
 STATIC_CONST_STRING ENTER_ABSOLUTE_PATH_TO_FILE = "Enter absolute path to the file";
 STATIC_CONST_STRING AUTO_LOGGING_IN = "Auto logging in";
+STATIC_CONST_STRING MESSAGES_FETCHING_BEGAN = "Messages fetching began";
+STATIC_CONST_STRING MESSAGES_FETCHING_FINISHED = "Messages fetching finished";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -553,6 +555,7 @@ void renderShowFileIsEmptyError(void) { postSystemMessage(FILE_IS_EMPTY, true); 
 void renderShowUnableToTransmitFileError(void) { postSystemMessage(UNABLE_TO_TRANSMIT_FILE, true); }
 void renderShowFileIsTooBig(void) { postSystemMessage(FILE_IS_TOO_BIG, true); }
 void renderShowFileTransmittedSystemMessage(void) { postSystemMessage(FILE_TRANSMITTED, false); }
+void renderShowMessagesFetching(bool began) { postSystemMessage(began ? MESSAGES_FETCHING_BEGAN : MESSAGES_FETCHING_FINISHED, false); }
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);

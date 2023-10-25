@@ -529,16 +529,14 @@ static void nextFileChunkReceiver(unsigned fromId, unsigned index, unsigned file
 
 static void onNextMessageFetched(unsigned from, unsigned long timestamp, unsigned size, const byte* message, bool last) {
     onMessageReceived(timestamp, from, message, size);
+    if (!last) return;
 
-    if (last) {
-        renderSetControlsBlocking(false);
-        renderHideInfiniteProgressBar();
-    }
+    renderSetControlsBlocking(false);
+    renderHideInfiniteProgressBar();
+    renderShowMessagesFetching(false);
 }
 
-static void onMessagesDeleted(bool successful) {
-//    renderShow
-}
+static void onMessagesDeleted(__attribute_maybe_unused__ bool successful) {}
 
 static void clipboardPaste(void) {
     if (!SDL_HasClipboardText()) return;
