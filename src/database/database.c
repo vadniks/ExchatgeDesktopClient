@@ -602,7 +602,7 @@ List* nullable databaseGetMessages(unsigned conversation) {
     List* messages = listInit((ListDeallocator) &databaseMessageDestroy);
     executeSingle(
         sql, sqlSize,
-        (StatementProcessor) getMessagesBinder, &conversation,
+        (StatementProcessor) &getMessagesBinder, &conversation,
         (StatementProcessor) &getMessagesResultHandler, messages
     );
 
@@ -641,9 +641,37 @@ void databaseRemoveMessages(unsigned conversation) {
     rwMutexWriteUnlock(this->rwMutex);
 }
 
+static void getMostRecentMessageTimestampBinder(const unsigned* conversation, sqlite3_stmt* statement)
+{ assert(!sqlite3_bind_int(statement, 1, (int) *conversation)); }
+
+static void getMostRecentMessageTimestampResultHandler(unsigned long* timestamp, sqlite3_stmt* statement) {
+    assert(sqlite3_step(statement) == SQLITE_ROW);
+    *timestamp = (unsigned long) sqlite3_column_int64(statement, 0);
+}
+
 unsigned long databaseGetMostRecentMessageTimestamp(unsigned conversation) {
-    // TODO
-    return 0;
+    assert(this);
+    rwMutexReadLock(this->rwMutex);
+
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "select %s from %s order by %s desc limit 1",
+        CONVERSATION_COLUMN, MESSAGES_TABLE, TIMESTAMP_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    unsigned long timestamp = 0;
+    executeSingle(
+        sql, sqlSize,
+        (StatementProcessor) &getMostRecentMessageTimestampBinder, &conversation,
+        (StatementProcessor) &getMostRecentMessageTimestampResultHandler, &timestamp
+    );
+
+    rwMutexReadUnlock(this->rwMutex);
+    return timestamp;
 }
 
 void databaseClean(void) {
