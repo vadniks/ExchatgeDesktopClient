@@ -641,6 +641,11 @@ void databaseRemoveMessages(unsigned conversation) {
     rwMutexWriteUnlock(this->rwMutex);
 }
 
+unsigned long databaseGetMostRecentMessageTimestamp(unsigned conversation) {
+    // TODO
+    return 0;
+}
+
 void databaseClean(void) {
     assert(this);
     rwMutexWriteLock(this->rwMutex);

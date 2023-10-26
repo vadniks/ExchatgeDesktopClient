@@ -55,6 +55,7 @@ THIS(
     SDL_RWops* nullable rwops;
     atomic unsigned fileBytesCounter;
     bool autoLoggingIn;
+    atomic unsigned missingMessagesFetchers;
 )
 #pragma clang diagnostic pop
 
@@ -88,6 +89,7 @@ void logicInit(void) {
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
     this->databaseInitialized = false;
     this->rwops = NULL;
+    this->missingMessagesFetchers = 0;
 
     assert(optionsInit(NET_USERNAME_SIZE, NET_UNHASHED_PASSWORD_SIZE, &fetchHostId));
     this->adminMode = optionsIsAdmin();
@@ -201,7 +203,13 @@ static void onDisconnected(void) {
     renderShowDisconnectedError();
 }
 
-static void onUsersFetched(NetUserInfo** infos, unsigned size) {
+static void fetchMissingMessagesFromUser(unsigned id) {
+    assert(this && this->databaseInitialized);
+    this->missingMessagesFetchers++;
+    netFetchMessages(true, id, databaseGetMostRecentMessageTimestamp(id));
+}
+
+static void onUsersFetched(NetUserInfo** infos, unsigned size) { // TODO: do this in AsyncActionsThread (currently gets called in NetListenThread)
     assert(this && this->databaseInitialized);
     listClear(this->usersList);
 
@@ -218,15 +226,27 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) {
                 databaseConversationExists(id),
                 netUserInfoConnected(info)
             ));
+
+            fetchMissingMessagesFromUser(id);
         } else {
             SDL_memcpy(this->currentUserName, netUserInfoName(info), NET_USERNAME_SIZE);
             renderSetWindowTitle(this->currentUserName);
         }
     }
 
-    renderHideInfiniteProgressBar();
-    renderSetControlsBlocking(false);
     renderShowUsersList(this->currentUserName);
+}
+
+static void onNextMessageFetched(unsigned from, unsigned long timestamp, unsigned size, const byte* message, bool last) {
+    assert(this);
+
+    onMessageReceived(timestamp, from, message, size);
+    assert(!this->missingMessagesFetchers);
+    this->missingMessagesFetchers--;
+
+    if (!last || this->missingMessagesFetchers) return;
+    renderSetControlsBlocking(false);
+    renderHideInfiniteProgressBar();
 }
 
 static void tryLoadPreviousMessages(unsigned id) {
@@ -525,15 +545,6 @@ static void nextFileChunkReceiver(unsigned fromId, unsigned index, unsigned file
 
     assert(!SDL_RWclose(this->rwops));
     this->rwops = NULL;
-}
-
-static void onNextMessageFetched(unsigned from, unsigned long timestamp, unsigned size, const byte* message, bool last) {
-    onMessageReceived(timestamp, from, message, size);
-    if (!last) return;
-
-    renderSetControlsBlocking(false);
-    renderHideInfiniteProgressBar();
-    renderShowMessagesFetching(false);
 }
 
 static void clipboardPaste(void) {
@@ -917,10 +928,6 @@ void logicOnSendClicked(const char* text, unsigned size) {
     lifecycleAsync((LifecycleAsyncActionFunction) &sendMessage, params, 0);
 }
 
-static void fetchMissingMessages(void) {
-    
-}
-
 void logicOnUpdateUsersListClicked(void) {
     assert(this);
 
@@ -931,7 +938,6 @@ void logicOnUpdateUsersListClicked(void) {
     renderShowUsersList(this->currentUserName);
 
     lifecycleAsync((LifecycleAsyncActionFunction) &netFetchUsers, NULL, 0);
-    lifecycleAsync((LifecycleAsyncActionFunction) &fetchMissingMessages, NULL, 0);
 }
 
 unsigned logicUnencryptedMessageBodySize(void) { return NET_MESSAGE_BODY_SIZE - cryptoEncryptedSize(0); } // 928 - 17 = 911
