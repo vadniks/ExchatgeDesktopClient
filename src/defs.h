@@ -31,7 +31,7 @@
 #endif
 
 #ifdef __STDC_NO_ATOMICS__
-#   error "Gimme atomics!"
+#   error "Gimme atomics!" // Actually, almost all read-write access to atomic variables are wrapped in mutex-(r|w)lock-(r|w)unlock blocks // TODO: why <--?
 #endif
 
 #define THIS(x) \

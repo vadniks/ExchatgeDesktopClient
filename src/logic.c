@@ -917,6 +917,10 @@ void logicOnSendClicked(const char* text, unsigned size) {
     lifecycleAsync((LifecycleAsyncActionFunction) &sendMessage, params, 0);
 }
 
+static void fetchMissingMessages(void) {
+    
+}
+
 void logicOnUpdateUsersListClicked(void) {
     assert(this);
 
@@ -927,6 +931,7 @@ void logicOnUpdateUsersListClicked(void) {
     renderShowUsersList(this->currentUserName);
 
     lifecycleAsync((LifecycleAsyncActionFunction) &netFetchUsers, NULL, 0);
+    lifecycleAsync((LifecycleAsyncActionFunction) &fetchMissingMessages, NULL, 0);
 }
 
 unsigned logicUnencryptedMessageBodySize(void) { return NET_MESSAGE_BODY_SIZE - cryptoEncryptedSize(0); } // 928 - 17 = 911
