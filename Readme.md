@@ -1,4 +1,6 @@
 
+# _UNSTABLE YET_
+
 # Exchatge - a secured message exchanger (desktop client)
 
 ```
