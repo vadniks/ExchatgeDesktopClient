@@ -210,7 +210,7 @@ static void fetchMissingMessagesFromUser(unsigned id) {
 }
 
 static void onUsersFetched(NetUserInfo** infos, unsigned size) { // TODO: do this in AsyncActionsThread (currently gets called in NetListenThread)
-    assert(this && this->databaseInitialized);
+    assert(this && this->databaseInitialized && !this->missingMessagesFetchers);
     listClear(this->usersList);
 
     NetUserInfo* info;
