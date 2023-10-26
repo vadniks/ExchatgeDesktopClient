@@ -38,13 +38,15 @@
     typedef struct { x } This; \
     static This* this = NULL;
 
+typedef unsigned char byte;
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedMacroInspection"
 
 #define min(x, y) (x < y ? x : y)
 #define max(x, y) (x > y ? x : y)
 #define boolToStr(x) (x ? "true" : "false")
-#define printBinaryArray(x, y) { puts(#x); for (unsigned i = 0; i < (y); printf("%x ", ((const unsigned char*) x)[i++])); puts(""); }
+#define printBinaryArray(x, y) { puts(#x); for (unsigned i = 0; i < (y); printf("%x ", ((const byte*) x)[i++])); puts(""); }
 #define allocateOnStack(x, y) byte x[y];
 #define USED(x) ((void) x)
 #define STUB USED(0)
@@ -79,5 +81,3 @@
 
 #define STATIC_CONST_UNSIGNED static const unsigned
 #define STATIC_CONST_STRING static const char*
-
-typedef unsigned char byte;
