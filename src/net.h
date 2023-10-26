@@ -32,7 +32,6 @@ typedef void (*NetOnFileExchangeInviteReceived)(unsigned fromId, unsigned fileSi
 typedef unsigned (*NetNextFileChunkSupplier)(unsigned index, byte* buffer); // returns (0 < count <= MESSAGE_BODY_SIZE) of written bytes or 0 if no more chunks available (current chunk included), if this is first time this callback is called, the return of 0 is treated as occurrence of error and the operation gets aborted; copies the another chunk's bytes into the buffer; the buffer is deallocated automatically
 typedef void (*NetNextFileChunkReceiver)(unsigned fromId, unsigned index, unsigned fileSize, unsigned receivedBytesCount, const byte* buffer);
 typedef void (*NetOnNextMessageFetched)(unsigned from, unsigned long timestamp, unsigned size, const byte* message, bool last);
-typedef void (*NetOnMessagesDeleted)(bool successful);
 
 struct NetUserInfo_t;
 typedef struct NetUserInfo_t NetUserInfo;
@@ -61,8 +60,7 @@ bool netInit( // blocks the caller thread until secure connection is established
     NetOnFileExchangeInviteReceived onFileExchangeInviteReceived,
     NetNextFileChunkSupplier nextFileChunkSupplier,
     NetNextFileChunkReceiver netNextFileChunkReceiver,
-    NetOnNextMessageFetched onNextMessageFetched,
-    NetOnMessagesDeleted onMessagesDeleted
+    NetOnNextMessageFetched onNextMessageFetched
 ); // returns true on success
 
 void netLogIn(const char* username, const char* password); // in case of failure the server disconnects client
@@ -76,7 +74,6 @@ unsigned netUserInfoId(const NetUserInfo* info);
 bool netUserInfoConnected(const NetUserInfo* info);
 const byte* netUserInfoName(const NetUserInfo* info);
 void netFetchMessages(bool from, unsigned id, unsigned long afterTimestamp);
-void netDeleteMessages(bool from, unsigned id, unsigned long thisAndBeforeTimestamp);
 Crypto* nullable netCreateConversation(unsigned id); // returns the Crypto object associated with newly created conversation on success, expects the id of the user, the current user wanna create conversation with; blocks the caller thread until either a denial received or creation of the conversation succeeds (if an acceptation received) or fails
 Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId); // returns the same as createConversation does, must be called after getting invoked by the onConversationSetUpInviteReceived callback to reply to inviter, returns true on success; blocks the caller thread just like createConversation does
 bool netBeginFileExchange(unsigned toId, unsigned fileSize); // blocks the caller thread; returns true if another user (identified by toId) accepted the invite

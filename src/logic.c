@@ -536,8 +536,6 @@ static void onNextMessageFetched(unsigned from, unsigned long timestamp, unsigne
     renderShowMessagesFetching(false);
 }
 
-static void onMessagesDeleted(__attribute_maybe_unused__ bool successful) {}
-
 static void clipboardPaste(void) {
     if (!SDL_HasClipboardText()) return;
     if (!renderIsConversationShown() && !renderIsFileChooserShown()) return;
@@ -637,8 +635,7 @@ static void processCredentials(void** data) {
         &onFileExchangeInviteReceived,
         &nextFileChunkSupplier,
         &nextFileChunkReceiver,
-        &onNextMessageFetched,
-        &onMessagesDeleted
+        &onNextMessageFetched
     );
 
     if (!this->netInitialized) {

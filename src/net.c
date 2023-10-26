@@ -62,7 +62,6 @@ typedef enum : int {
 
     FLAG_FETCH_USERS = 0x0000000c,
     FLAG_FETCH_MESSAGES = 0x0000000d,
-    FLAG_DELETE_MESSAGES = 0x0000000e,
 
     // firstly current user (A, is treated as a client) invites another user (B, is treated as a server) by sending him an invite; if B declines the invite he replies with a message containing this flag and body size = 0
     FLAG_EXCHANGE_KEYS = 0x000000a0, // if B accepts the invite, he replies with his public key, which A treats as a server key (allowing not to rewrite that part of the crypto api)
@@ -127,7 +126,6 @@ THIS(
     atomic bool fetchedUserInfos;
     atomic bool fetchingMessages;
     NetOnNextMessageFetched onNextMessageFetched;
-    NetOnMessagesDeleted onMessagesDeleted;
 )
 #pragma clang diagnostic pop
 
@@ -216,8 +214,7 @@ bool netInit(
     NetOnFileExchangeInviteReceived onFileExchangeInviteReceived,
     NetNextFileChunkSupplier nextFileChunkSupplier,
     NetNextFileChunkReceiver netNextFileChunkReceiver,
-    NetOnNextMessageFetched onNextMessageFetched,
-    NetOnMessagesDeleted onMessagesDeleted
+    NetOnNextMessageFetched onNextMessageFetched
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
@@ -261,7 +258,6 @@ bool netInit(
     this->fetchedUserInfos = false;
     this->fetchingMessages = false;
     this->onNextMessageFetched = onNextMessageFetched;
-    this->onMessagesDeleted = onMessagesDeleted;
 
     assert(!SDLNet_Init());
 
@@ -304,7 +300,7 @@ static byte* makeCredentials(const char* username, const char* password) {
     return credentials;
 }
 
-void netLogIn(const char* username, const char* password) { // TODO: store both username & password encrypted inside a client
+void netLogIn(const char* username, const char* password) {
     assert(this);
     byte* credentials = makeCredentials(username, password);
     netSend(FLAG_LOG_IN, credentials, NET_USERNAME_SIZE + NET_UNHASHED_PASSWORD_SIZE, TO_SERVER);
@@ -360,9 +356,6 @@ static void processErrors(const Message* message) {
             RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->state = STATE_FINISHED_WITH_ERROR;)
             (*(this->onRegisterResult))(false);
             break;
-        case FLAG_DELETE_MESSAGES:
-            (*(this->onMessagesDeleted))(false);
-            break;
         case FLAG_FETCH_MESSAGES: // TODO
         default:
             (*(this->onErrorReceived))(message->flag);
@@ -399,9 +392,6 @@ static void processMessagesFromServer(const Message* message) {
             break;
         case FLAG_FETCH_MESSAGES:
             onNextMessageFetched(message);
-            break;
-        case FLAG_DELETE_MESSAGES:
-            (*(this->onMessagesDeleted))(true);
             break;
         default:
             assert(false);
@@ -621,9 +611,6 @@ void netFetchMessages(bool from, unsigned id, unsigned long afterTimestamp) {
     RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;)
     makeMessagesRelatedRequest(from, id, afterTimestamp, FLAG_FETCH_MESSAGES);
 }
-
-void netDeleteMessages(bool from, unsigned id, unsigned long thisAndBeforeTimestamp)
-{ makeMessagesRelatedRequest(from, id, thisAndBeforeTimestamp, FLAG_DELETE_MESSAGES); }
 
 static void onNextMessageFetched(const Message* message) {
     assert(this && this->fetchingMessages);
