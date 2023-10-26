@@ -77,9 +77,7 @@
 #   define nullable
 #endif
 
-#define STATIC_CONST_INT static const int
 #define STATIC_CONST_UNSIGNED static const unsigned
 #define STATIC_CONST_STRING static const char*
 
-typedef void* (*Function)(void*);
 typedef unsigned char byte;
