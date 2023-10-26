@@ -929,7 +929,7 @@ void logicOnSendClicked(const char* text, unsigned size) {
 }
 
 void logicOnUpdateUsersListClicked(void) {
-    assert(this);
+    assert(this && this->databaseInitialized && !this->missingMessagesFetchers);
 
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);

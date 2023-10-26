@@ -596,20 +596,17 @@ const byte* netUserInfoName(const NetUserInfo* info) {
     return info->name;
 }
 
-static void makeMessagesRelatedRequest(bool from, unsigned id, unsigned long timestamp, int flag) {
+void netFetchMessages(bool from, unsigned id, unsigned long afterTimestamp) {
     assert(this);
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;)
+
     byte body[NET_MESSAGE_BODY_SIZE] = {0};
 
     body[0] = from ? 1 : 0;
-    *((unsigned long*) &(body[1])) = timestamp;
+    *((unsigned long*) &(body[1])) = afterTimestamp;
     *((unsigned*) &(body[1 + LONG_SIZE])) = id;
 
-    netSend(flag, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
-}
-
-void netFetchMessages(bool from, unsigned id, unsigned long afterTimestamp) {
-    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;)
-    makeMessagesRelatedRequest(from, id, afterTimestamp, FLAG_FETCH_MESSAGES);
+    netSend(FLAG_FETCH_MESSAGES, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
 }
 
 static void onNextMessageFetched(const Message* message) {
