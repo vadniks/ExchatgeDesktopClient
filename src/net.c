@@ -568,6 +568,11 @@ const byte* netUserInfoName(const NetUserInfo* info) {
     return info->name;
 }
 
+static void onUsersInfosListProcessingFinished(void) {
+    assert(this);
+    listClear(this->userInfosList);
+}
+
 static void onNextUsersBundleFetched(const Message* message) { // TODO: block other tasks while forming the users list
     assert(this);
     if (!(message->index)) listClear(this->userInfosList); // TODO: test with large amount of elements & test with sleep()
@@ -576,8 +581,7 @@ static void onNextUsersBundleFetched(const Message* message) { // TODO: block ot
         listAddBack(this->userInfosList, unpackUserInfo(message->body + i * USER_INFO_SIZE));
 
     if (message->index < message->count - 1) return;
-    (*(this->onUsersFetched))(this->userInfosList);
-    listClear(this->userInfosList);
+    (*(this->onUsersFetched))(this->userInfosList, &onUsersInfosListProcessingFinished);
 }
 
 static bool waitForReceiveWithTimeout(void) {

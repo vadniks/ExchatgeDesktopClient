@@ -141,7 +141,7 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     assert(this && this->databaseInitialized);
 
     const User* user = findUser(fromId);
-    if (!user) return;
+    if (!user) return; // TODO: can lose messages here
 
     const unsigned size = encryptedSize - cryptoEncryptedSize(0);
     assert(size > 0 && size <= logicUnencryptedMessageBodySize());
@@ -201,8 +201,13 @@ static void onDisconnected(void) {
     renderShowDisconnectedError();
 }
 
-static void onUsersFetched(List* userInfosList) { // TODO: do this in AsyncActionsThread (currently gets called in NetListenThread)
+static void processFetchedUsers(void** parameters) {
     assert(this && this->databaseInitialized);
+
+    List* userInfosList = parameters[0];
+    void (* const finishNotifier)(void) = (void (*)(void)) parameters[1];
+    SDL_free(parameters);
+
     listClear(this->usersList);
 
     const unsigned size = listSize(userInfosList);
@@ -225,10 +230,19 @@ static void onUsersFetched(List* userInfosList) { // TODO: do this in AsyncActio
             renderSetWindowTitle(this->currentUserName);
         }
     }
+    (*finishNotifier)();
 
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
     renderShowUsersList(this->currentUserName);
+}
+
+static void onUsersFetched(List* userInfosList, void (*finishNotifier)(void)) {
+    void** parameters = SDL_malloc(2 * sizeof(void*));
+    parameters[0] = userInfosList;
+    parameters[1] = (void*) finishNotifier;
+
+    lifecycleAsync((LifecycleAsyncActionFunction) &processFetchedUsers, parameters, 0);
 }
 
 static void tryLoadPreviousMessages(unsigned id) {

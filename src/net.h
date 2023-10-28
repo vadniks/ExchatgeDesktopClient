@@ -36,7 +36,7 @@ typedef void (*NetNextFileChunkReceiver)(unsigned fromId, unsigned index, unsign
 struct NetUserInfo_t;
 typedef struct NetUserInfo_t NetUserInfo;
 
-typedef void (*NetOnUsersFetched)(List* userInfosList); // receives a list of UserInfo objects, which is deallocated automatically (and every item inside it) after this callback returns
+typedef void (*NetOnUsersFetched)(List* userInfosList, void (*finishNotifier)(void)); // receives a list of UserInfo objects, which is deallocated automatically (and every item inside it). After all operations were finished, the finishNotifier callback must be called to clear the list
 
 extern const unsigned NET_USERNAME_SIZE;
 extern const unsigned NET_UNHASHED_PASSWORD_SIZE;
