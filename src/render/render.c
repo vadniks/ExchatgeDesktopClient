@@ -559,12 +559,6 @@ void renderShowInfiniteProgressBar(void) {
     RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->loading = true;)
 }
 
-bool renderIsInfiniteProgressBarShown(void) {
-    assert(this);
-    RW_MUTEX_READ_LOCKED(this->rwMutex, const bool loading = this->loading;)
-    return loading;
-}
-
 void renderHideInfiniteProgressBar(void) {
     assert(this);
     RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->loading = false;)
@@ -1058,6 +1052,8 @@ static void drawErrorIfNeeded(void) {
 }
 
 static void drawPage(void) {
+    rwMutexWriteLock(this->rwMutex);
+
     switch (this->state) {
         case STATE_INITIAL:
             drawSplashPage();
@@ -1082,6 +1078,8 @@ static void drawPage(void) {
 
     if (this->loading) drawInfiniteProgressBar(0.05f);
     drawErrorIfNeeded();
+
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 void renderDraw(void) {
