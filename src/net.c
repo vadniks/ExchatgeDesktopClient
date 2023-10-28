@@ -97,16 +97,16 @@ THIS(
     SDLNet_SocketSet socketSet;
     atomic unsigned state;
     unsigned encryptedMessageSize; // constant
-    NetMessageReceivedCallback onMessageReceived;
+    NetOnMessageReceived onMessageReceived;
     Crypto* connectionCrypto; // client-server level encryption - different for each connection
     byte tokenAnonymous[TOKEN_SIZE]; // constant
     byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // constant, unencrypted but clients don't know how token is generated
     byte token[TOKEN_SIZE];
     unsigned userId;
-    NetNotifierCallback onLogInResult;
-    NetServiceCallback onErrorReceived;
-    NetNotifierCallback onRegisterResult;
-    NetCallback onDisconnected;
+    NetOnLogInResult onLogInResult;
+    NetOnErrorReceived onErrorReceived;
+    NetOnRegisterResult onRegisterResult;
+    NetOnDisconnected onDisconnected;
     NetCurrentTimeMillisGetter currentTimeMillisGetter;
     atomic int lastSentFlag;
     NetOnUsersFetched onUsersFetched;
@@ -201,11 +201,11 @@ bool netInit(
     unsigned port,
     const byte* serverSignPublicKey,
     unsigned serverSignPublicKeySize,
-    NetMessageReceivedCallback onMessageReceived,
-    NetNotifierCallback onLogInResult,
-    NetServiceCallback onErrorReceived,
-    NetNotifierCallback onRegisterResult,
-    NetCallback onDisconnected,
+    NetOnMessageReceived onMessageReceived,
+    NetOnLogInResult onLogInResult,
+    NetOnErrorReceived onErrorReceived,
+    NetOnRegisterResult onRegisterResult,
+    NetOnDisconnected onDisconnected,
     NetCurrentTimeMillisGetter currentTimeMillisGetter,
     NetOnUsersFetched onUsersFetched,
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived,

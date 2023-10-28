@@ -23,10 +23,11 @@
 #include "collections/list.h"
 #include "defs.h"
 
-typedef void (*NetMessageReceivedCallback)(unsigned long/*timestamp*/, unsigned/*fromId*/, const byte*/*message*/, unsigned/*size*/);
-typedef void (*NetNotifierCallback)(bool); // true on success
-typedef void (*NetServiceCallback)(int); // receives message's flag
-typedef void (*NetCallback)(void);
+typedef void (*NetOnMessageReceived)(unsigned long/*timestamp*/, unsigned/*fromId*/, const byte*/*message*/, unsigned/*size*/);
+typedef void (*NetOnLogInResult)(bool); // true on success
+typedef void (*NetOnRegisterResult)(bool); // true on success
+typedef void (*NetOnErrorReceived)(int); // receives message's flag
+typedef void (*NetOnDisconnected)(void);
 typedef unsigned long (*NetCurrentTimeMillisGetter)(void);
 typedef void (*NetOnConversationSetUpInviteReceived)(unsigned/*fromId*/); // must call replyToPendingConversationSetUpInvite() after this
 typedef void (*NetOnFileExchangeInviteReceived)(unsigned fromId, unsigned fileSize); // must then call replyToFileExchangeInvite
@@ -49,11 +50,11 @@ bool netInit( // blocks the caller thread until secure connection is established
     unsigned port,
     const byte* serverSignPublicKey,
     unsigned serverSignPublicKeySize,
-    NetMessageReceivedCallback onMessageReceived,
-    NetNotifierCallback onLogInResult,
-    NetServiceCallback onErrorReceived, // not called on login error & register error as there are separated callback for them
-    NetNotifierCallback onRegisterResult,
-    NetCallback onDisconnected, // cleanup is performed after this callback returns, so module needs to be reinitialized after this callback ends to continue working with this module
+    NetOnMessageReceived onMessageReceived,
+    NetOnLogInResult onLogInResult,
+    NetOnErrorReceived onErrorReceived, // not called on login error & register error as there are separated callback for them
+    NetOnRegisterResult onRegisterResult,
+    NetOnDisconnected onDisconnected, // cleanup is performed after this callback returns, so module needs to be reinitialized after this callback ends to continue working with this module
     NetCurrentTimeMillisGetter currentTimeMillisGetter,
     NetOnUsersFetched onUsersFetched,
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived,
