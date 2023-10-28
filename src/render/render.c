@@ -1052,6 +1052,8 @@ static void drawErrorIfNeeded(void) {
 }
 
 static void drawPage(void) {
+    rwMutexWriteLock(this->rwMutex);
+
     switch (this->state) {
         case STATE_INITIAL:
             drawSplashPage();
@@ -1076,6 +1078,8 @@ static void drawPage(void) {
 
     if (this->loading) drawInfiniteProgressBar(0.05f);
     drawErrorIfNeeded();
+
+    rwMutexWriteUnlock(this->rwMutex);
 }
 
 void renderDraw(void) {
