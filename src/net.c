@@ -390,9 +390,6 @@ static void processMessagesFromServer(const Message* message) {
         case FLAG_ACCESS_DENIED:
             processErrors(message);
             break;
-        case FLAG_FETCH_MESSAGES:
-            onNextMessageFetched(message);
-            break;
         default:
             assert(false);
     }
@@ -451,6 +448,8 @@ static void processMessage(const Message* message) {
                 processFileExchangeRequestMessage(message);
             else if (message->flag == FLAG_PROCEED)
                 (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
+            else if (message->flag == FLAG_FETCH_MESSAGES)
+                onNextMessageFetched(message);
             else
                 STUB;
             break;

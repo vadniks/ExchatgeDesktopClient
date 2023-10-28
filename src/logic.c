@@ -240,7 +240,9 @@ static void onUsersFetched(NetUserInfo** infos, unsigned size) { // TODO: do thi
 static void onNextMessageFetched(unsigned from, unsigned long timestamp, unsigned size, const byte* message, bool last) {
     assert(this);
 
-    onMessageReceived(timestamp, from, message, size);
+    if (size > 0)
+        onMessageReceived(timestamp, from, message, size);
+
     assert(!this->missingMessagesFetchers);
     this->missingMessagesFetchers--;
 
@@ -620,6 +622,7 @@ static void processCredentials(void** data) {
         databaseClean();
         renderShowUnableToDecryptDatabaseError();
         renderHideInfiniteProgressBar();
+        renderSetControlsBlocking(false);
         this->state = STATE_UNAUTHENTICATED;
 
         if (this->autoLoggingIn)
@@ -653,6 +656,7 @@ static void processCredentials(void** data) {
         this->state = STATE_UNAUTHENTICATED;
         renderShowUnableToConnectToTheServerError();
         renderHideInfiniteProgressBar();
+        renderSetControlsBlocking(false);
 
         if (this->autoLoggingIn)
             renderShowLogIn();
@@ -682,6 +686,7 @@ void logicOnCredentialsReceived(
 
     this->state = STATE_AWAITING_AUTHENTICATION;
     renderShowInfiniteProgressBar();
+    renderSetControlsBlocking(true);
 
     void** data = SDL_malloc(3 * sizeof(void*));
     data[0] = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
