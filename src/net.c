@@ -61,7 +61,6 @@ typedef enum : int {
     FLAG_ACCESS_DENIED = 0x0000000b,
 
     FLAG_FETCH_USERS = 0x0000000c,
-    FLAG_FETCH_MESSAGES = 0x0000000d,
 
     // firstly current user (A, is treated as a client) invites another user (B, is treated as a server) by sending him an invite; if B declines the invite he replies with a message containing this flag and body size = 0
     FLAG_EXCHANGE_KEYS = 0x000000a0, // if B accepts the invite, he replies with his public key, which A treats as a server key (allowing not to rewrite that part of the crypto api)
@@ -122,10 +121,6 @@ THIS(
     NetNextFileChunkSupplier nextFileChunkSupplier;
     NetNextFileChunkReceiver netNextFileChunkReceiver;
     atomic bool exchangingFile;
-    atomic bool fetchingUserInfos;
-    atomic bool fetchedUserInfos;
-    atomic bool fetchingMessages;
-    NetOnNextMessageFetched onNextMessageFetched;
 )
 #pragma clang diagnostic pop
 
@@ -213,8 +208,7 @@ bool netInit(
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived,
     NetOnFileExchangeInviteReceived onFileExchangeInviteReceived,
     NetNextFileChunkSupplier nextFileChunkSupplier,
-    NetNextFileChunkReceiver netNextFileChunkReceiver,
-    NetOnNextMessageFetched onNextMessageFetched
+    NetNextFileChunkReceiver netNextFileChunkReceiver
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
@@ -254,10 +248,6 @@ bool netInit(
     this->nextFileChunkSupplier = nextFileChunkSupplier;
     this->netNextFileChunkReceiver = netNextFileChunkReceiver;
     this->exchangingFile = false;
-    this->fetchingUserInfos = false;
-    this->fetchedUserInfos = false;
-    this->fetchingMessages = false;
-    this->onNextMessageFetched = onNextMessageFetched;
 
     assert(!SDLNet_Init());
 
@@ -356,7 +346,6 @@ static void processErrors(const Message* message) {
             RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->state = STATE_FINISHED_WITH_ERROR;)
             (*(this->onRegisterResult))(false);
             break;
-        case FLAG_FETCH_MESSAGES: // TODO
         default:
             (*(this->onErrorReceived))(message->flag);
             break;
@@ -364,7 +353,6 @@ static void processErrors(const Message* message) {
 }
 
 static void onNextUsersBundleFetched(const Message* message);
-static void onNextMessageFetched(const Message* message);
 
 static void processMessagesFromServer(const Message* message) {
     const bool cst = checkServerToken(message->token);
@@ -436,8 +424,6 @@ static void processMessage(const Message* message) {
         return;
     }
 
-    if (this->fetchingMessages) return;
-
     switch (this->state) {
         case STATE_SECURE_CONNECTION_ESTABLISHED:
             break;
@@ -448,8 +434,6 @@ static void processMessage(const Message* message) {
                 processFileExchangeRequestMessage(message);
             else if (message->flag == FLAG_PROCEED)
                 (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
-            else if (message->flag == FLAG_FETCH_MESSAGES)
-                onNextMessageFetched(message);
             else
                 STUB;
             break;
@@ -503,15 +487,6 @@ static void readReceivedMessage(void) {
 
 void netListen(void) {
     assert(this);
-    RW_MUTEX_READ_LOCKED(this->rwMutex,
-        const bool canReceive = this->fetchingUserInfos
-            || this->fetchedUserInfos
-            || this->settingUpConversation
-            || this->exchangingFile;
-    )
-
-    if (!canReceive) return; // disallow scheduled messages receiving while doing long tasks, which can discard regular messages from other users, the lost messages can then be re-fetched later
-
     while (this && checkSocket()) // read all messages that were sent during the past update frame and not only one message per update frame
         readReceivedMessage(); // checking 'this' for nullability every time despite the assertion before is needed as the module can be re-initialized during the cycle which then will cause SIGSEGV 'cause the address inside 'this' will become invalid - re-initializing after registration is the example
 }
@@ -595,26 +570,6 @@ const byte* netUserInfoName(const NetUserInfo* info) {
     return info->name;
 }
 
-void netFetchMessages(bool from, unsigned id, unsigned long afterTimestamp) {
-    assert(this);
-    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;)
-
-    byte body[NET_MESSAGE_BODY_SIZE] = {0};
-
-    body[0] = from ? 1 : 0;
-    *((unsigned long*) &(body[1])) = afterTimestamp;
-    *((unsigned*) &(body[1 + LONG_SIZE])) = id;
-
-    netSend(FLAG_FETCH_MESSAGES, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
-}
-
-static void onNextMessageFetched(const Message* message) {
-    assert(this && this->fetchingMessages);
-    const bool last = message->index == message->count - 1;
-    (*(this->onNextMessageFetched))(message->from, message->timestamp, message->size, message->body, last);
-    if (last) { RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;) }
-}
-
 static void resetUserInfos(void) { // TODO: test users list updates with large amount of items
     RW_MUTEX_WRITE_LOCKED(this->rwMutex,
         SDL_free(this->userInfos);
@@ -624,11 +579,8 @@ static void resetUserInfos(void) { // TODO: test users list updates with large a
 }
 
 static void onNextUsersBundleFetched(const Message* message) { // TODO: block other tasks while forming the users list
-    assert(this); // TODO: test with large amount of elements & test with sleep()
-    if (!(message->index)) {
-        RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingUserInfos = true;)
-        resetUserInfos();
-    }
+    assert(this);
+    if (!(message->index)) resetUserInfos(); // TODO: test with large amount of elements & test with sleep()
     rwMutexWriteLock(this->rwMutex);
 
     this->userInfosSize += message->size;
@@ -648,11 +600,6 @@ static void onNextUsersBundleFetched(const Message* message) { // TODO: block ot
 
     rwMutexWriteUnlock(this->rwMutex);
     resetUserInfos();
-
-    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
-        this->fetchingUserInfos = false;
-        this->fetchedUserInfos = true;
-    )
 }
 
 static bool waitForReceiveWithTimeout(void) {
@@ -690,7 +637,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
         return NULL;
     }
 
-    if (!(message = receive()) // might lose regular messages from other users here - they can be re-fetched later
+    if (!(message = receive()) // TODO: might lose regular messages from other users here
         || message->flag != FLAG_EXCHANGE_KEYS
         || message->size != CRYPTO_KEY_SIZE)
     {
@@ -800,7 +747,7 @@ Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned 
     }
 
     Message* message = NULL;
-    if (!(message = receive()) // might lose regular messages from other users here - they can be re-fetched later
+    if (!(message = receive())
         || message->flag != FLAG_EXCHANGE_KEYS_DONE
         || message->size != CRYPTO_KEY_SIZE)
     {
@@ -890,7 +837,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     }
 
     Message* message = NULL;
-    if (!(message = receive()) // might lose regular messages from other users here - they can be re-fetched later
+    if (!(message = receive())
         || message->flag != FLAG_FILE_ASK
         || *((unsigned*) message->body) != fileSize)
     {
@@ -943,8 +890,9 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
         if (message->flag == FLAG_FILE && message->size > 0)
             lastReceivedChunkMillis = (*(this->currentTimeMillisGetter))();
         else {
-            SDL_free(message); // might lose regular messages from other users here - they can be re-fetched later
-            message = NULL;
+            processMessage(message); // TODO: send the other messages processing to the net listen thread
+            SDL_free(message);
+            message = NULL; // TODO: add queue for incoming messages
             continue;
         }
 
