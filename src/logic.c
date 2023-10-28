@@ -140,9 +140,8 @@ static const User* nullable findUser(unsigned id)
 static void processReceivedMessage(void** parameters) {
     assert(this && this->databaseInitialized);
 
-    unsigned long timestamp = *((unsigned long*) parameters[0]);
-    unsigned fromId = *((unsigned*) parameters[1]);
-    unsigned encryptedSize = *((unsigned*) parameters[3]);
+    const unsigned long timestamp = *((unsigned long*) parameters[0]);
+    const unsigned fromId = *((unsigned*) parameters[1]), encryptedSize = *((unsigned*) parameters[3]);
 
     byte encryptedMessage[encryptedSize];
     SDL_memcpy(encryptedMessage, parameters[2], encryptedSize);
