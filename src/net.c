@@ -153,6 +153,8 @@ STATIC_CONST_UNSIGNED USER_INFO_SIZE = INT_SIZE + sizeof(bool) + NET_USERNAME_SI
 
 staticAssert(sizeof(bool) == 1 && sizeof(NetUserInfo) == 21);
 
+static bool waitForReceiveWithTimeout(void);
+
 static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned serverSignPublicKeySize) {
     this->connectionCrypto = cryptoInit();
     assert(this->connectionCrypto);
@@ -162,8 +164,9 @@ static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned 
     byte serverSignedPublicKey[signedPublicKeySize];
     const byte* serverKeyStart = serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE;
 
-     // TODO: add timeout, wait for a constant millis count and then if no response received drop connection; add timeout to server too
-    assert(SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize) == (int) signedPublicKeySize);
+    // TODO: add timeout to server too
+    if (!waitForReceiveWithTimeout()) return;
+    if (SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize) != (int) signedPublicKeySize) return;
     assert(cryptoCheckServerSignedBytes(serverSignedPublicKey, serverKeyStart, CRYPTO_KEY_SIZE));
 
     if (!SDL_memcmp(serverKeyStart, this->serverKeyStub, CRYPTO_KEY_SIZE)) return; // denial of service
@@ -172,21 +175,22 @@ static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned 
     if (!cryptoExchangeKeys(this->connectionCrypto, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE)) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
-    assert(SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE) == (int) CRYPTO_KEY_SIZE);
+    if (SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE) != (int) CRYPTO_KEY_SIZE) return;
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
 
     const unsigned serverSignedCoderHeaderSize = CRYPTO_SIGNATURE_SIZE + CRYPTO_HEADER_SIZE;
     byte serverSignedCoderHeader[serverSignedCoderHeaderSize];
     const byte* serverCoderHeaderStart = serverSignedCoderHeader + CRYPTO_SIGNATURE_SIZE;
 
-    assert(SDLNet_TCP_Recv(this->socket, serverSignedCoderHeader, (int) serverSignedCoderHeaderSize) == (int) serverSignedCoderHeaderSize);
+    if (!waitForReceiveWithTimeout()) return;
+    if (SDLNet_TCP_Recv(this->socket, serverSignedCoderHeader, (int) serverSignedCoderHeaderSize) != (int) serverSignedCoderHeaderSize) return;
     assert(cryptoCheckServerSignedBytes(serverSignedCoderHeader, serverCoderHeaderStart, CRYPTO_HEADER_SIZE));
     this->state = STATE_SERVER_CODER_HEADER_RECEIVED;
 
     byte* clientCoderHeader = cryptoInitializeCoderStreams(this->connectionCrypto, serverCoderHeaderStart);
     if (clientCoderHeader) {
-        assert(SDLNet_TCP_Send(this->socket, clientCoderHeader, (int) CRYPTO_HEADER_SIZE) == (int) CRYPTO_HEADER_SIZE);
-        this->state = STATE_CLIENT_CODER_HEADER_SENT;
+        if (SDLNet_TCP_Send(this->socket, clientCoderHeader, (int) CRYPTO_HEADER_SIZE) == (int) CRYPTO_HEADER_SIZE)
+            this->state = STATE_CLIENT_CODER_HEADER_SENT;
     }
 
     SDL_free(clientCoderHeader);
