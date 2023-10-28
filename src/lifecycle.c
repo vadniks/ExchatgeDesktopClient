@@ -125,9 +125,7 @@ bool lifecycleInit(void) {
 void lifecycleSleep(unsigned long delayMillis) {
     assert(delayMillis > 0 && delayMillis <= 10000);
     const ldiv_t dv = ldiv((long) delayMillis, (long) 1e3f);
-
-    const struct timespec timespec = {dv.quot, dv.rem * (long) 1e6f};
-    nanosleep(&timespec, NULL);
+    nanosleep(&((struct timespec) {dv.quot, dv.rem * (long) 1e6f}), NULL);
 }
 
 static bool processEvents(void) {
