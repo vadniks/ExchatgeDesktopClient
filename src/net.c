@@ -573,7 +573,7 @@ static void onUsersInfosListProcessingFinished(void) {
     listClear(this->userInfosList);
 }
 
-static void onNextUsersBundleFetched(const Message* message) { // TODO: block other tasks while forming the users list
+static void onNextUsersBundleFetched(const Message* message) {
     assert(this);
     if (!(message->index)) listClear(this->userInfosList); // TODO: test with large amount of elements & test with sleep()
 
