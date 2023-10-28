@@ -137,8 +137,18 @@ static int findUserComparator(const unsigned* xId, const User* const* user)
 static const User* nullable findUser(unsigned id)
 { return listBinarySearch(this->usersList, &id, (ListComparator) &findUserComparator); } // TODO: add mutex to Crypto objects
 
-static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* encryptedMessage, unsigned encryptedSize) {
+static void processReceivedMessage(void** parameters) {
     assert(this && this->databaseInitialized);
+
+    unsigned long timestamp = *((unsigned long*) parameters[0]);
+    unsigned fromId = *((unsigned*) parameters[1]);
+    unsigned encryptedSize = *((unsigned*) parameters[3]);
+
+    byte encryptedMessage[encryptedSize];
+    SDL_memcpy(encryptedMessage, parameters[2], encryptedSize);
+
+    for (byte i = 0; i < 4; SDL_free(parameters[i++]));
+    SDL_free(parameters);
 
     const User* user = findUser(fromId);
     if (!user) return; // TODO: can lose messages here
@@ -160,6 +170,24 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     if (fromId == this->toUserId)
         listAddFront(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
     SDL_free(message); // TODO: limit the messages count per conversation as the encryption is safe only for $(int32.MAX) (> 2147000000) messages
+}
+
+static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* encryptedMessage, unsigned encryptedSize) {
+    void** parameters = SDL_malloc(4 * sizeof(void*));
+
+    parameters[0] = SDL_malloc(sizeof(long));
+    *((unsigned long*) parameters[0]) = timestamp;
+
+    parameters[1] = SDL_malloc(sizeof(int));
+    *((unsigned*) parameters[1]) = fromId;
+
+    parameters[2] = SDL_malloc(encryptedSize);
+    SDL_memcpy(parameters[2], encryptedMessage, encryptedSize);
+
+    parameters[3] = SDL_malloc(sizeof(int));
+    *((unsigned*) parameters[3]) = encryptedSize;
+
+    lifecycleAsync((LifecycleAsyncActionFunction) &processReceivedMessage, parameters, 0);
 }
 
 static void onLogInResult(bool successful) { // TODO: add broadcasting to all users feature for admin
