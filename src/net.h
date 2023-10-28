@@ -20,6 +20,7 @@
 
 #include <stdbool.h>
 #include "crypto.h"
+#include "collections/list.h"
 #include "defs.h"
 
 typedef void (*NetMessageReceivedCallback)(unsigned long/*timestamp*/, unsigned/*fromId*/, const byte*/*message*/, unsigned/*size*/);
@@ -35,7 +36,7 @@ typedef void (*NetNextFileChunkReceiver)(unsigned fromId, unsigned index, unsign
 struct NetUserInfo_t;
 typedef struct NetUserInfo_t NetUserInfo;
 
-typedef void (*NetOnUsersFetched)(NetUserInfo** infos, unsigned size); // receives an array with length of 'size', which is deallocated automatically (and every item inside it) after this callback returns
+typedef void (*NetOnUsersFetched)(List* userInfosList); // receives a list of UserInfo objects, which is deallocated automatically (and every item inside it) after this callback returns
 
 extern const unsigned NET_USERNAME_SIZE;
 extern const unsigned NET_UNHASHED_PASSWORD_SIZE;

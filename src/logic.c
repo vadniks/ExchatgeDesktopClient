@@ -201,13 +201,15 @@ static void onDisconnected(void) {
     renderShowDisconnectedError();
 }
 
-static void onUsersFetched(NetUserInfo** infos, unsigned size) { // TODO: do this in AsyncActionsThread (currently gets called in NetListenThread)
+static void onUsersFetched(List* userInfosList) { // TODO: do this in AsyncActionsThread (currently gets called in NetListenThread)
     assert(this && this->databaseInitialized);
     listClear(this->usersList);
 
-    NetUserInfo* info;
+    const unsigned size = listSize(userInfosList);
+    const NetUserInfo* info;
+
     for (unsigned i = 0, id; i < size; i++) {
-        info = infos[i];
+        info = listGet(userInfosList, i);
         id = netUserInfoId(info);
 
         if (id != netCurrentUserId()) {

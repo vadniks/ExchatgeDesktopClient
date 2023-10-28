@@ -95,7 +95,7 @@ THIS(
     unsigned port;
     TCPsocket socket;
     SDLNet_SocketSet socketSet;
-    unsigned state;
+    atomic unsigned state;
     unsigned encryptedMessageSize; // constant
     NetMessageReceivedCallback onMessageReceived;
     Crypto* connectionCrypto; // client-server level encryption - different for each connection
@@ -110,8 +110,7 @@ THIS(
     NetCurrentTimeMillisGetter currentTimeMillisGetter;
     atomic int lastSentFlag;
     NetOnUsersFetched onUsersFetched;
-    NetUserInfo** userInfos;
-    unsigned userInfosSize;
+    List* userInfosList;
     byte* serverKeyStub;
     atomic bool settingUpConversation;
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived;
@@ -237,8 +236,7 @@ bool netInit(
     this->currentTimeMillisGetter = currentTimeMillisGetter;
     this->onUsersFetched = onUsersFetched;
     this->lastSentFlag = 0;
-    this->userInfos = NULL;
-    this->userInfosSize = 0;
+    this->userInfosList = listInit(&SDL_free);
     this->serverKeyStub = SDL_calloc(CRYPTO_KEY_SIZE, sizeof(byte));
     this->settingUpConversation = false;
     this->onConversationSetUpInviteReceived = onConversationSetUpInviteReceived;
@@ -339,11 +337,11 @@ static byte* packMessage(const Message* msg) {
 static void processErrors(const Message* message) {
     switch ((int) this->lastSentFlag) {
         case FLAG_LOG_IN:
-            RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->state = STATE_FINISHED_WITH_ERROR;)
+            this->state = STATE_FINISHED_WITH_ERROR;
             (*(this->onLogInResult))(false);
             break;
         case FLAG_REGISTER:
-            RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->state = STATE_FINISHED_WITH_ERROR;)
+            this->state = STATE_FINISHED_WITH_ERROR;
             (*(this->onRegisterResult))(false);
             break;
         default:
@@ -360,11 +358,13 @@ static void processMessagesFromServer(const Message* message) {
 
     switch (message->flag) {
         case FLAG_LOGGED_IN:
+            this->state = STATE_AUTHENTICATED;
+
             RW_MUTEX_WRITE_LOCKED(this->rwMutex,
-                this->state = STATE_AUTHENTICATED;
                 this->userId = message->to;
                 SDL_memcpy(this->token, message->body, TOKEN_SIZE);
             )
+
             (*(this->onLogInResult))(true);
             break;
         case FLAG_REGISTERED:
@@ -386,15 +386,11 @@ static void processMessagesFromServer(const Message* message) {
 static void processConversationSetUpMessage(const Message* message) {
     assert(message->flag == FLAG_EXCHANGE_KEYS && message->size == INVITE_ASK);
 
-    rwMutexWriteLock(this->rwMutex);
-    if (this->settingUpConversation || this->exchangingFile) {
-        rwMutexWriteUnlock(this->rwMutex);
+    if (this->settingUpConversation || this->exchangingFile)
         return;
-    } // TODO: throw error if the mutex is being attempted to lock in write mode before it was unlocked in read mode and vice versa
 
     this->settingUpConversation = true;
     this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
-    rwMutexWriteUnlock(this->rwMutex);
 
     (*(this->onConversationSetUpInviteReceived))(message->from);
 }
@@ -402,15 +398,11 @@ static void processConversationSetUpMessage(const Message* message) {
 static void processFileExchangeRequestMessage(const Message* message) {
     assert(message->flag == FLAG_FILE_ASK && message->size == INT_SIZE);
 
-    rwMutexWriteLock(this->rwMutex);
-    if (this->settingUpConversation || this->exchangingFile) {
-        rwMutexWriteUnlock(this->rwMutex);
+    if (this->settingUpConversation || this->exchangingFile)
         return;
-    }
 
     this->exchangingFile = true;
     this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
-    rwMutexWriteUnlock(this->rwMutex);
 
     const unsigned fileSize = *((unsigned*) message->body);
     assert(fileSize);
@@ -424,18 +416,20 @@ static void processMessage(const Message* message) {
         return;
     }
 
-    switch (this->state) {
-        case STATE_SECURE_CONNECTION_ESTABLISHED:
-            break;
-        case STATE_AUTHENTICATED:
-            if (message->flag == FLAG_EXCHANGE_KEYS && message->size == INVITE_ASK)
+    assert(this->state == STATE_AUTHENTICATED);
+    switch (message->flag) {
+        case FLAG_EXCHANGE_KEYS:
+            if (message->size == INVITE_ASK)
                 processConversationSetUpMessage(message);
-            if (message->flag == FLAG_FILE_ASK && message->size == INT_SIZE)
+            break;
+        case FLAG_FILE_ASK:
+            if (message->size == INT_SIZE)
                 processFileExchangeRequestMessage(message);
-            else if (message->flag == FLAG_PROCEED)
-                (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
-            else
-                STUB;
+            break;
+        case FLAG_PROCEED:
+            (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
+            break;
+        default:
             break;
     }
 }
@@ -521,8 +515,8 @@ bool netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
 
     if (!encryptedMessage) return false;
 
+    this->lastSentFlag = flag;
     RW_MUTEX_WRITE_LOCKED(this->rwMutex,
-        this->lastSentFlag = flag;
         const int bytesSent = SDLNet_TCP_Send(this->socket, encryptedMessage, (int) this->encryptedMessageSize);
     )
 
@@ -570,36 +564,18 @@ const byte* netUserInfoName(const NetUserInfo* info) {
     return info->name;
 }
 
-static void resetUserInfos(void) { // TODO: test users list updates with large amount of items
-    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
-        SDL_free(this->userInfos);
-        this->userInfos = NULL;
-        this->userInfosSize = 0;
-    )
-}
-
 static void onNextUsersBundleFetched(const Message* message) { // TODO: block other tasks while forming the users list
     assert(this);
-    if (!(message->index)) resetUserInfos(); // TODO: test with large amount of elements & test with sleep()
-    rwMutexWriteLock(this->rwMutex);
+    if (!(message->index)) goto cleanup; // TODO: test with large amount of elements & test with sleep()
 
-    this->userInfosSize += message->size;
-    assert(this->userInfosSize);
-    this->userInfos = SDL_realloc(this->userInfos, this->userInfosSize * sizeof(NetUserInfo*));
+    for (unsigned i = 0; i < message->size; i++)
+        listAddBack(this->userInfosList, unpackUserInfo(message->body + i * USER_INFO_SIZE));
 
-    for (unsigned i = 0, j = this->userInfosSize - message->size; i < message->size; i++, j++)
-        (this->userInfos)[j] = unpackUserInfo(message->body + i * USER_INFO_SIZE);
+    if (message->index < message->count - 1) return;
+    (*(this->onUsersFetched))(this->userInfosList);
 
-    if (message->index < message->count - 1) {
-        rwMutexWriteUnlock(this->rwMutex);
-        return;
-    }
-
-    (*(this->onUsersFetched))(this->userInfos, this->userInfosSize);
-    for (unsigned i = 0; i < this->userInfosSize; SDL_free((this->userInfos)[i++]));
-
-    rwMutexWriteUnlock(this->rwMutex);
-    resetUserInfos();
+    cleanup:
+    listClear(this->userInfosList);
 }
 
 static bool waitForReceiveWithTimeout(void) {
@@ -611,29 +587,24 @@ static bool waitForReceiveWithTimeout(void) {
     return false;
 }
 
-static void finishSettingUpConversation(void)
-{ RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->settingUpConversation = false;) }
-
 Crypto* nullable netCreateConversation(unsigned id) {
     assert(this);
 
-    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
-        assert(!this->settingUpConversation && !this->exchangingFile);
-        this->settingUpConversation = true;
-    )
+    assert(!this->settingUpConversation && !this->exchangingFile);
+    this->settingUpConversation = true;
 
     byte body[NET_MESSAGE_BODY_SIZE];
 
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, INVITE_ASK, id)) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         return NULL;
     }
 
     Message* message;
 
     if (!waitForReceiveWithTimeout()) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         return NULL;
     }
 
@@ -641,7 +612,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
         || message->flag != FLAG_EXCHANGE_KEYS
         || message->size != CRYPTO_KEY_SIZE)
     {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         SDL_free(message);
         return NULL;
     }
@@ -653,7 +624,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
     Crypto* crypto = cryptoInit();
 
     if (!cryptoExchangeKeys(crypto, akaServerPublicKey)) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -661,13 +632,13 @@ Crypto* nullable netCreateConversation(unsigned id) {
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, cryptoClientPublicKey(crypto), CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS_DONE, body, CRYPTO_KEY_SIZE, id)) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
 
     if (!waitForReceiveWithTimeout()) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -676,7 +647,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
         || message->flag != FLAG_EXCHANGE_HEADERS
         || message->size != CRYPTO_HEADER_SIZE)
     {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         SDL_free(message);
         cryptoDestroy(crypto);
         return NULL;
@@ -688,7 +659,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
 
     byte* akaClientStreamHeader = cryptoInitializeCoderStreams(crypto, akaServerStreamHeader);
     if (!akaClientStreamHeader) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -697,7 +668,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
     SDL_memcpy(body, akaClientStreamHeader, CRYPTO_HEADER_SIZE);
     SDL_free(akaClientStreamHeader);
 
-    finishSettingUpConversation();
+    this->settingUpConversation = false;
     if (!netSend(FLAG_EXCHANGE_HEADERS_DONE, body, CRYPTO_HEADER_SIZE, id)) {
         cryptoDestroy(crypto);
         return NULL;
@@ -706,25 +677,23 @@ Crypto* nullable netCreateConversation(unsigned id) {
     return crypto;
 }
 
-static bool inviteProcessingTimeoutExceeded(void) {
-    RW_MUTEX_READ_LOCKED(this->rwMutex, const unsigned long start = this->inviteProcessingStartMillis;)
-    return (*(this->currentTimeMillisGetter))() - start > TIMEOUT;
-}
+static inline bool inviteProcessingTimeoutExceeded(void)
+{ return (*(this->currentTimeMillisGetter))() - this->inviteProcessingStartMillis > TIMEOUT; }
 
 Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) { // TODO: create a dashboard page with some analysis for admin
     assert(this);
-    RW_MUTEX_READ_LOCKED(this->rwMutex, assert(this->settingUpConversation && !this->exchangingFile);)
+    assert(this->settingUpConversation && !this->exchangingFile);
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
     if (inviteProcessingTimeoutExceeded()) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         return NULL;
     }
 
     if (!accept) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         netSend(FLAG_EXCHANGE_KEYS, body, INVITE_DENY, fromId);
         return NULL;
     }
@@ -735,13 +704,13 @@ Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned 
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, CRYPTO_KEY_SIZE, fromId)) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
 
     if (!waitForReceiveWithTimeout()) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -751,7 +720,7 @@ Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned 
         || message->flag != FLAG_EXCHANGE_KEYS_DONE
         || message->size != CRYPTO_KEY_SIZE)
     {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         SDL_free(message);
         return NULL;
@@ -761,14 +730,14 @@ Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned 
     SDL_memcpy(akaClientPublicKey, message->body, CRYPTO_KEY_SIZE);
     SDL_free(message);
     if (!cryptoExchangeKeysAsServer(crypto, akaClientPublicKey)) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
 
     byte* akaServerStreamHeader = cryptoCreateEncoderAsServer(crypto);
     if (!akaServerStreamHeader) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -777,13 +746,13 @@ Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned 
     SDL_free(akaServerStreamHeader);
 
     if (!netSend(FLAG_EXCHANGE_HEADERS, body, CRYPTO_HEADER_SIZE, fromId)) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
 
     if (!waitForReceiveWithTimeout()) {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -792,7 +761,7 @@ Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned 
         || message->flag != FLAG_EXCHANGE_HEADERS_DONE
         || message->size != CRYPTO_HEADER_SIZE)
     {
-        finishSettingUpConversation();
+        this->settingUpConversation = false;
         SDL_free(message);
         cryptoDestroy(crypto);
         return NULL;
@@ -802,7 +771,7 @@ Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned 
     SDL_memcpy(akaClientStreamHeader, message->body, CRYPTO_HEADER_SIZE);
     SDL_free(message);
 
-    finishSettingUpConversation();
+    this->settingUpConversation = false;
     if (!cryptoCreateDecoderStreamAsServer(crypto, akaClientStreamHeader)) {
         cryptoDestroy(crypto);
         return NULL;
@@ -811,28 +780,23 @@ Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned 
     return crypto;
 }
 
-static void finishFileExchange(void)
-{ RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->exchangingFile = false;) }
-
 bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     assert(fileSize);
 
-    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
-        assert(!this->settingUpConversation && !this->exchangingFile);
-        this->exchangingFile = true;
-    )
+    assert(!this->settingUpConversation && !this->exchangingFile);
+    this->exchangingFile = true;
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     *((unsigned*) body) = fileSize;
 
     if (!netSend(FLAG_FILE_ASK, body, INT_SIZE, toId)) {
-        finishFileExchange();
+        this->exchangingFile = false;
         return false;
     }
 
     if (!waitForReceiveWithTimeout()) {
-        finishFileExchange();
+        this->exchangingFile = false;
         return false;
     }
 
@@ -841,7 +805,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
         || message->flag != FLAG_FILE_ASK
         || *((unsigned*) message->body) != fileSize)
     {
-        finishFileExchange();
+        this->exchangingFile = false;
         SDL_free(message);
         return false;
     }
@@ -850,21 +814,21 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     unsigned index = 0, bytesWritten;
     while ((bytesWritten = (*(this->nextFileChunkSupplier))(index++, body))) {
         if (!netSend(FLAG_FILE, body, bytesWritten, toId)) {
-            finishFileExchange();
+            this->exchangingFile = false;
             return false;
         }
     }
 
-    finishFileExchange();
+    this->exchangingFile = false;
     return true;
 }
 
 bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accept) {
     assert(this);
-    RW_MUTEX_READ_LOCKED(this->rwMutex, assert(!this->settingUpConversation && this->exchangingFile);)
+    assert(!this->settingUpConversation && this->exchangingFile);
 
     if (inviteProcessingTimeoutExceeded()) {
-        finishFileExchange();
+        this->exchangingFile = false;
         return false;
     }
 
@@ -873,12 +837,12 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     if (accept) *((unsigned*) body) = fileSize;
 
     if (!netSend(FLAG_FILE_ASK, body, INT_SIZE, fromId)) {
-        finishFileExchange();
+        this->exchangingFile = false;
         return false;
     }
 
     if (!accept) {
-        finishFileExchange();
+        this->exchangingFile = false;
         return false;
     }
 
@@ -907,7 +871,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     }
     SDL_free(message);
 
-    finishFileExchange();
+    this->exchangingFile = false;
     return true;
 }
 
@@ -916,7 +880,7 @@ void netClean(void) {
     rwMutexWriteLock(this->rwMutex);
 
     SDL_free(this->serverKeyStub);
-    SDL_free(this->userInfos);
+    listDestroy(this->userInfosList);
 
     if (this->connectionCrypto) cryptoDestroy(this->connectionCrypto);
 
