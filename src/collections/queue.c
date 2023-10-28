@@ -43,11 +43,9 @@ Queue* queueInit(QueueDeallocator nullable deallocator) {
 }
 
 void queuePush(Queue* queue, const void* value) {
-    assert(queue && !queue->destroyed);
+    assert(queue && !queue->destroyed && queue->size < 0xfffffffe);
 
     RW_MUTEX_WRITE_LOCKED(queue->rwMutex,
-        assert(queue->size < 0xfffffffe);
-
         queue->values = SDL_realloc(queue->values, ++(queue->size) * VOID_PTR_SIZE);
         queue->values[queue->size - 1] = (void*) value;
     )
@@ -82,9 +80,7 @@ void* queuePop(Queue* queue) {
 
 unsigned queueSize(const Queue* queue) {
     assert(queue && !queue->destroyed);
-
-    RW_MUTEX_READ_LOCKED(queue->rwMutex, const unsigned size = queue->size;)
-    return size;
+    return queue->size;
 }
 
 static void destroyValuesIfNotEmpty(Queue* queue) {

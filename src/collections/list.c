@@ -43,22 +43,18 @@ List* listInit(ListDeallocator nullable deallocator) {
 }
 
 void listAddBack(List* list, const void* value) {
-    assert(list && !list->destroyed);
+    assert(list && !list->destroyed && list->size < MAX_SIZE);
 
     RW_MUTEX_WRITE_LOCKED(list->rwMutex,
-        assert(list->size < MAX_SIZE);
-
         list->values = SDL_realloc(list->values, ++(list->size) * VOID_PTR_SIZE);
         list->values[list->size - 1] = (void*) value;
     )
 }
 
 void listAddFront(List* list, const void* value) {
-    assert(list && !list->destroyed);
+    assert(list && !list->destroyed && list->size < MAX_SIZE);
 
     RW_MUTEX_WRITE_LOCKED(list->rwMutex,
-        assert(list->size < MAX_SIZE);
-
         void** temp = SDL_malloc(++(list->size) * VOID_PTR_SIZE);
         temp[0] = (void*) value;
         for (unsigned i = 1; i < list->size; temp[i] = (list->values)[i - 1], i++);
@@ -69,10 +65,10 @@ void listAddFront(List* list, const void* value) {
 }
 
 const void* listGet(List* list, unsigned index) {
-    assert(list && !list->destroyed);
+    assert(list && !list->destroyed && list->size > 0 && list->size < MAX_SIZE && index < MAX_SIZE);
 
     RW_MUTEX_READ_LOCKED(list->rwMutex,
-        assert(list->values && list->size > 0 && list->size < MAX_SIZE && index < MAX_SIZE);
+        assert(list->values);
         const void* value = list->values[index];
     )
     return value;
@@ -80,16 +76,14 @@ const void* listGet(List* list, unsigned index) {
 
 unsigned listSize(const List* list) {
     assert(list && !list->destroyed);
-
-    RW_MUTEX_READ_LOCKED(list->rwMutex, const unsigned size = list->size;)
-    return size;
+    return list->size;
 }
 
 const void* nullable listBinarySearch(List* list, const void* key, ListComparator comparator) {
-    assert(list && !list->destroyed);
+    assert(list && !list->destroyed && list->size > 0);
 
     RW_MUTEX_READ_LOCKED(list->rwMutex,
-        assert(list->values && list->size > 0);
+        assert(list->values);
 
         const unsigned long index =
             (void**) SDL_bsearch(key, list->values, list->size, VOID_PTR_SIZE, comparator) - list->values;
