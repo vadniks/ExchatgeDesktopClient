@@ -566,15 +566,13 @@ const byte* netUserInfoName(const NetUserInfo* info) {
 
 static void onNextUsersBundleFetched(const Message* message) { // TODO: block other tasks while forming the users list
     assert(this);
-    if (!(message->index)) goto cleanup; // TODO: test with large amount of elements & test with sleep()
+    if (!(message->index)) listClear(this->userInfosList); // TODO: test with large amount of elements & test with sleep()
 
     for (unsigned i = 0; i < message->size; i++)
         listAddBack(this->userInfosList, unpackUserInfo(message->body + i * USER_INFO_SIZE));
 
     if (message->index < message->count - 1) return;
     (*(this->onUsersFetched))(this->userInfosList);
-
-    cleanup:
     listClear(this->userInfosList);
 }
 
