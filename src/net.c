@@ -678,7 +678,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
 static inline bool inviteProcessingTimeoutExceeded(void)
 { return (*(this->currentTimeMillisGetter))() - this->inviteProcessingStartMillis > TIMEOUT; }
 
-Crypto* nullable netReplyToPendingConversationSetUpInvite(bool accept, unsigned fromId) { // TODO: create a dashboard page with some analysis for admin
+Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId) { // TODO: create a dashboard page with some analysis for admin
     assert(this);
     assert(this->settingUpConversation && !this->exchangingFile);
 

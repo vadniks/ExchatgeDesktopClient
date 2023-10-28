@@ -273,7 +273,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     const User* user = findUser(xFromId);
     if (!user) goto releaseLocks; // if local users list hasn't been synchronized yet
 
-    Crypto* crypto = netReplyToPendingConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
+    Crypto* crypto = netReplyToConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
     if (crypto)
         this->toUserId = xFromId, // not only in python there's indentation based scoping, here's an emulation though
         this->state = STATE_EXCHANGING_MESSAGES,
