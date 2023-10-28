@@ -38,32 +38,32 @@ RWMutex* rwMutexInit(void) {
 }
 
 void rwMutexReadLock(RWMutex* rwMutex) {
+    assert(rwMutex);
     if (++(rwMutex->counter) == 1)
         assert(!SDL_LockMutex(rwMutex->mutex));
 }
 
 void rwMutexReadUnlock(RWMutex* rwMutex) {
-    assert(rwMutex->counter);
+    assert(rwMutex && rwMutex->counter);
 
     if (--(rwMutex->counter) == 0)
         assert(!SDL_UnlockMutex(rwMutex->mutex));
 }
 
 void rwMutexWriteLock(RWMutex* rwMutex) {
-    assert(!rwMutex->counter); // TODO: remove redundant assertions like this one
-
+    assert(rwMutex && !rwMutex->counter); // TODO: remove redundant assertions like this one
     assert(!SDL_LockMutex(rwMutex->mutex));
     rwMutex->writeLocked = true;
 }
 
 void rwMutexWriteUnlock(RWMutex* rwMutex) {
-    assert(!rwMutex->counter && rwMutex->writeLocked);
-
+    assert(rwMutex && !rwMutex->counter && rwMutex->writeLocked);
     rwMutex->writeLocked = false;
     assert(!SDL_UnlockMutex(rwMutex->mutex));
 }
 
 void rwMutexDestroy(RWMutex* rwMutex) {
+    assert(rwMutex);
     SDL_DestroyMutex(rwMutex->mutex);
     SDL_free(rwMutex);
 }
