@@ -25,6 +25,7 @@ extern const unsigned CRYPTO_KEY_SIZE;
 extern const unsigned CRYPTO_HEADER_SIZE;
 extern const unsigned CRYPTO_SIGNATURE_SIZE;
 extern const unsigned CRYPTO_STREAMS_STATES_SIZE;
+extern const unsigned CRYPTO_HASH_SIZE;
 
 struct Crypto_t;
 typedef struct Crypto_t Crypto;
@@ -61,4 +62,5 @@ byte* nullable cryptoEncryptSingle(const byte* key, const byte* bytes, unsigned 
 byte* nullable cryptoDecryptSingle(const byte* key, const byte* bytes, unsigned bytesSize); // used to decrypt a single message, consumes what is returned by encrypt
 char* cryptoBase64Encode(const byte* bytes, unsigned bytesSize); // returns newly allocated null-terminated string
 byte* nullable cryptoBase64Decode(const char* encoded, unsigned encodedSize, unsigned* xDecodedSize); // also accepts pointer to a variable in which the size of the decoded bytes will be stored
+void* nullable cryptoHashMultipart(void* nullable previous, const byte* nullable bytes, unsigned size); // init - (null, null, any) - returns heap-allocated state, update - (state, bytes, sizeof(bytes)) - returns null, finish - (state, null, any) - frees the state and returns heap-allocated hash (cast to byte*)
 void cryptoDestroy(Crypto* crypto);

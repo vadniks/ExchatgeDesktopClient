@@ -38,6 +38,7 @@ const unsigned CRYPTO_KEY_SIZE = crypto_secretstream_xchacha20poly1305_KEYBYTES;
 const unsigned CRYPTO_HEADER_SIZE = crypto_secretstream_xchacha20poly1305_HEADERBYTES; // 24
 const unsigned CRYPTO_SIGNATURE_SIZE = crypto_sign_BYTES; // 64
 const unsigned CRYPTO_STREAMS_STATES_SIZE = sizeof(StreamState) * 2; // 104
+const unsigned CRYPTO_HASH_SIZE = crypto_generichash_BYTES; // 32
 STATIC_CONST_UNSIGNED SERVER_SIGN_PUBLIC_KEY_SIZE = CRYPTO_KEY_SIZE;
 STATIC_CONST_UNSIGNED ENCRYPTED_ADDITIONAL_BYTES_SIZE = crypto_secretstream_xchacha20poly1305_ABYTES; // 17
 STATIC_CONST_UNSIGNED MAC_SIZE = crypto_secretbox_MACBYTES; // 16
@@ -365,6 +366,30 @@ byte* nullable cryptoBase64Decode(const char* encoded, unsigned encodedSize, uns
     decoded = SDL_realloc(decoded, actualDecodedSize);
     *xDecodedSize = (unsigned) actualDecodedSize;
     return decoded;
+}
+
+void* nullable cryptoHashMultipart(void* nullable previous, const byte* nullable bytes, unsigned size) {
+    if (!previous && !bytes) {
+        previous = SDL_malloc(sizeof(crypto_generichash_state));
+        assert(!crypto_generichash_init((crypto_generichash_state*) previous, NULL, 0, CRYPTO_HASH_SIZE));
+        return previous;
+    } else if (previous && bytes) {
+        assert(!crypto_generichash_update((crypto_generichash_state*) previous, bytes, size));
+        return NULL;
+
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "ConstantConditionsOC"
+
+    } else if (previous && !bytes) {
+
+#pragma clang diagnostic pop
+
+        byte* hash = SDL_malloc(CRYPTO_HASH_SIZE);
+        assert(!crypto_generichash_final((crypto_generichash_state*) previous, hash, CRYPTO_HASH_SIZE));
+        SDL_free(previous);
+        return hash;
+    } else
+        assert(false);
 }
 
 void cryptoDestroy(Crypto* crypto) {
