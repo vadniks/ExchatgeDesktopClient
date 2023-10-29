@@ -48,7 +48,7 @@ int main(void) {
     const int allocations = SDL_GetNumAllocations();
 
     if (allocations) // TODO: debug only
-        fprintf(stderr, "allocations %d\n", allocations); // Cannout use SDL_Log() here 'cause it will allocate smth internally and the cleanup has been performed before
+        fprintf(stderr, "allocations %d\n", allocations); // Cannot use SDL_Log() here 'cause it will allocate smth internally and the cleanup has been performed before
 
     assert(!allocations || untested && allocations == 1);
     // unknown bug occurs on 2.28.1: SDL_GetNumAllocations() returns 1 everytime only SDL_Init() was called with SDL_INIT_VIDEO constant (after SDL_Quit() was called). on 2.26.5 it returns 0 as expected
