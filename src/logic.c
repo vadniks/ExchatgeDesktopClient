@@ -348,6 +348,30 @@ void logicOnFileChooserRequested(void) {
     renderShowFileChooser();
 }
 
+static byte* nullable calculateOpenedFileChecksum(void) { // TODO
+    assert(this->rwops);
+
+    byte buffer[NET_MESSAGE_BODY_SIZE];
+    SDL_memset(buffer, 0, NET_MESSAGE_BODY_SIZE);
+
+    void* state = cryptoHashMultipart(NULL, NULL, 0);
+    bool read = false;
+
+    while (SDL_RWread(this->rwops, buffer, 1, NET_MESSAGE_BODY_SIZE) > 0) {
+        read = true;
+        cryptoHashMultipart(state, buffer, NET_MESSAGE_BODY_SIZE);
+        SDL_memset(buffer, 0, NET_MESSAGE_BODY_SIZE);
+    }
+
+    byte* hash = NULL;
+    if (!read)
+        SDL_free(state);
+    else
+        hash = cryptoHashMultipart(state, NULL, 0);
+
+    return hash;
+}
+
 static void beginFileExchange(unsigned* fileSize) {
     assert(this);
     this->fileBytesCounter = 0;

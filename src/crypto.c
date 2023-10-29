@@ -60,7 +60,7 @@ struct Crypto_t {
 };
 
 Crypto* nullable cryptoInit(void) {
-    if (!sodiumInitialized && sodium_init() < 0) return NULL;
+    if (!sodiumInitialized && sodium_init() < 0) return NULL; // TODO: move sodium_init call to separate function
     else sodiumInitialized = true;
 
     return (Crypto*) SDL_malloc(sizeof(Crypto));
