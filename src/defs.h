@@ -38,19 +38,6 @@
     typedef struct { x } This; \
     static This* this = NULL;
 
-typedef unsigned char byte;
-
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "OCUnusedMacroInspection"
-#   define min(x, y) (x < y ? x : y)
-#   define max(x, y) (x > y ? x : y)
-#   define boolToStr(x) (x ? "true" : "false")
-#   define printBinaryArray(x, y) { puts(#x); for (unsigned i = 0; i < (y); printf("%x ", ((const byte*) x)[i++])); puts(""); }
-#   define xAlloca(x) ((byte[x]) {})
-#   define USED(x) ((void) x)
-#   define STUB USED(0)
-#pragma clang diagnostic pop
-
 #define staticAssert(x) _Static_assert(x, "")
 
 #define atomic _Atomic
@@ -63,7 +50,7 @@ typedef unsigned char byte;
 #   error "Project uses glibc"
 #endif
 
-#ifndef __LINUX__
+#ifndef __linux__
 #   error "Project targets linux systems"
 #endif
 
@@ -76,6 +63,21 @@ typedef unsigned char byte;
 #else
 #   define nullable
 #endif
+
+typedef unsigned char byte;
+
+unsigned stackLimit(void);
+
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedMacroInspection"
+#   define min(x, y) (x < y ? x : y)
+#   define max(x, y) (x > y ? x : y)
+#   define boolToStr(x) (x ? "true" : "false")
+#   define printBinaryArray(x, y) { puts(#x); for (unsigned i = 0; i < (y); printf("%x ", ((const byte*) x)[i++])); puts(""); }
+#   define xAlloca(x) ((void* nullable) (x <= (unsigned) ((float) stackLimit() * 0.85f) ? ((byte[x]) {}) : NULL))
+#   define USED(x) ((void) x)
+#   define STUB USED(0)
+#pragma clang diagnostic pop
 
 #define STATIC_CONST_UNSIGNED static const unsigned
 #define STATIC_CONST_STRING static const char*
