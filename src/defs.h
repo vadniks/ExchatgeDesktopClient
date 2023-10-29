@@ -66,6 +66,7 @@
 
 typedef unsigned char byte;
 
+void xPrintBinaryArray(const char* name, const void* array, unsigned size);
 unsigned stackLimit(void);
 
 #pragma clang diagnostic push
@@ -73,7 +74,7 @@ unsigned stackLimit(void);
 #   define min(x, y) (x < y ? x : y)
 #   define max(x, y) (x > y ? x : y)
 #   define boolToStr(x) (x ? "true" : "false")
-#   define printBinaryArray(x, y) { puts(#x); for (unsigned i = 0; i < (y); printf("%x ", ((const byte*) x)[i++])); puts(""); }
+#   define printBinaryArray(x, y) xPrintBinaryArray(#x, x, y)
 #   define xAlloca(x) ((void* nullable) (x <= (unsigned) ((float) stackLimit() * 0.85f) ? ((byte[x]) {}) : NULL))
 #   define USED(x) ((void) x)
 #   define STUB USED(0)

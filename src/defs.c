@@ -17,7 +17,14 @@
  */
 
 #include <sys/resource.h>
+#include <stdio.h>
 #include "defs.h"
+
+void xPrintBinaryArray(const char* name, const void* array, unsigned size) {
+    printf("%s: ", name);
+    for (unsigned i = 0; i < size; printf("%x ", ((const byte*) array)[i++]));
+    printf("\n");
+}
 
 unsigned stackLimit(void) {
     struct rlimit rlimit;
