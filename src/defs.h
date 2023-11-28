@@ -54,8 +54,8 @@
 #   error "Project targets linux systems"
 #endif
 
-#ifndef __x86_64__
-#   error "Project targets x86_64 systems"
+#if __SIZEOF_POINTER__ != 8
+#   error "Project targets 64 bits sized pointers"
 #endif
 
 #ifdef __clang__
