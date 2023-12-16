@@ -366,6 +366,8 @@ static byte* nullable calculateOpenedFileChecksum(void) {
         SDL_memset(buffer, 0, bufferSize);
     }
 
+    SDL_RWseek(this->rwops, 0, RW_SEEK_SET);
+
     byte* hash = NULL;
     if (!read)
         SDL_free(state);
@@ -528,7 +530,6 @@ static void replyToFileExchangeRequest(void** parameters) {
     bool hashesEqual = false;
     if (this->fileHashState) {
         byte* hash = cryptoHashMultipart(this->fileHashState, NULL, 0);
-        SDL_free(this->fileHashState);
         this->fileHashState = NULL;
 
         hashesEqual = !SDL_memcmp(originalHash, hash, CRYPTO_HASH_SIZE);
