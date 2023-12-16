@@ -218,14 +218,18 @@ static void onRegisterResult(bool successful) {
     renderHideInfiniteProgressBar();
 }
 
+static void finishLoading(void) {
+    renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
+}
+
 static void onDisconnected(void) {
     assert(this);
 
     this->netInitialized = false;
     this->state = STATE_UNAUTHENTICATED;
 
-    renderHideInfiniteProgressBar();
-    renderSetControlsBlocking(false);
+    finishLoading();
     renderShowLogIn();
     renderShowDisconnectedError();
 }
@@ -261,8 +265,7 @@ static void processFetchedUsers(void** parameters) {
     }
     (*finishNotifier)();
 
-    renderHideInfiniteProgressBar();
-    renderSetControlsBlocking(false);
+    finishLoading();
     renderShowUsersList(this->currentUserName);
 }
 
@@ -396,8 +399,7 @@ static void beginFileExchange(unsigned* fileSize) {
     SDL_free(fileSize);
     SDL_free(hash);
 
-    renderHideInfiniteProgressBar();
-    renderSetControlsBlocking(false);
+    finishLoading();
 }
 
 void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) {
@@ -411,26 +413,19 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     assert(user);
 
     if (!filePath) {
-        renderHideInfiniteProgressBar();
-        renderSetControlsBlocking(false);
-
+        finishLoading();
         renderShowConversation(user->name);
         return;
     }
 
     if (!user->online) {
-        renderHideInfiniteProgressBar();
-        renderSetControlsBlocking(false);
-
+        finishLoading();
         renderShowUserIsOfflineError();
-
         return;
     }
 
     if (!size) {
-        renderHideInfiniteProgressBar();
-        renderSetControlsBlocking(false);
-
+        finishLoading();
         renderShowEmptyFilePathError();
         return;
     }
@@ -439,9 +434,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     this->rwops = SDL_RWFromFile(filePath, "rb");
 
     if (!this->rwops) {
-        renderHideInfiniteProgressBar();
-        renderSetControlsBlocking(false);
-
+        finishLoading();
         renderShowCannotOpenFileError();
         return;
     }
@@ -452,20 +445,16 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
         assert(!SDL_RWclose(this->rwops));
         this->rwops = NULL;
 
-        renderHideInfiniteProgressBar();
-        renderSetControlsBlocking(false);
-
+        finishLoading();
         renderShowFileIsEmptyError();
         return;
     }
 
     if (fileSize > MAX_FILE_SIZE) {
-        assert(!SDL_RWclose(this->rwops)); // TODO: code duplicates
+        assert(!SDL_RWclose(this->rwops));
         this->rwops = NULL;
 
-        renderHideInfiniteProgressBar();
-        renderSetControlsBlocking(false);
-
+        finishLoading();
         renderShowFileIsTooBig();
         return;
     }
@@ -492,10 +481,7 @@ static void replyToFileExchangeRequest(void** parameters) {
 
     if (!accepted) {
         assert(!netReplyToFileExchangeInvite(fromId, fileSize, false)); // blocks the thread again
-
-        renderHideInfiniteProgressBar();
-        renderSetControlsBlocking(false);
-
+        finishLoading();
         return;
     }
 
@@ -516,10 +502,7 @@ static void replyToFileExchangeRequest(void** parameters) {
 
     if (!this->rwops) {
         assert(!netReplyToFileExchangeInvite(fromId, fileSize, false)); // blocks the thread again
-
-        renderHideInfiniteProgressBar();
-        renderSetControlsBlocking(false);
-
+        finishLoading();
         renderShowUnableToTransmitFileError();
         return;
     }
@@ -544,8 +527,7 @@ static void replyToFileExchangeRequest(void** parameters) {
         renderShowFileTransmittedSystemMessage();
 
     assert(!this->rwops);
-    renderHideInfiniteProgressBar();
-    renderSetControlsBlocking(false);
+    finishLoading();
 }
 
 static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize, const byte* originalHash) {
@@ -595,7 +577,6 @@ static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) { /
 static void nextFileChunkReceiver(
     unsigned fromId,
     unsigned index,
-    __attribute_maybe_unused__ unsigned fileSize,
     unsigned receivedBytesCount,
     const byte* encryptedBuffer
 ) {
@@ -733,8 +714,7 @@ static void processCredentials(void** data) {
     if (!this->netInitialized) {
         this->state = STATE_UNAUTHENTICATED;
         renderShowUnableToConnectToTheServerError();
-        renderHideInfiniteProgressBar();
-        renderSetControlsBlocking(false);
+        finishLoading();
 
         if (this->autoLoggingIn)
             renderShowLogIn();
@@ -811,8 +791,7 @@ static void startConversation(void** parameters) {
     SDL_free(id);
     SDL_free(parameters);
 
-    renderHideInfiniteProgressBar();
-    renderSetControlsBlocking(false);
+    finishLoading();
 }
 
 static void continueConversation(void** parameters) {
@@ -830,8 +809,7 @@ static void continueConversation(void** parameters) {
     SDL_free(id);
     SDL_free(parameters);
 
-    renderHideInfiniteProgressBar();
-    renderSetControlsBlocking(false);
+    finishLoading();
 }
 
 static void createOrLoadConversation(unsigned id, bool create) {
@@ -864,8 +842,7 @@ static void deleteConversation(unsigned* id) {
 
     SDL_free(id);
 
-    renderHideInfiniteProgressBar();
-    renderSetControlsBlocking(false);
+    finishLoading();
     logicOnUpdateUsersListClicked();
 }
 
@@ -1026,7 +1003,7 @@ void logicOnUpdateUsersListClicked(void) {
 unsigned logicUnencryptedMessageBodySize(void) { return NET_MESSAGE_BODY_SIZE - cryptoEncryptedSize(0); } // 928 - 17 = 911
 
 static long fetchHostId(void) {
-    const long dummy = (long) 0xfffffffffffffffful;
+    const long dummy = (long) 0xfffffffffffffffFULL; // unsigned long long (= unsigned long)
 
     SDL_RWops* rwOps = SDL_RWFromFile("/etc/machine-id", "rb");
     if (!rwOps) return dummy;
