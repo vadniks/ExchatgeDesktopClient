@@ -480,6 +480,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     }
 
     const char* filename = xBasename(filePath);
+    assert(filename);
     const unsigned long filenameSize = SDL_strlen(filename);
 
     void** parameters = SDL_malloc(3 * sizeof(void*));
