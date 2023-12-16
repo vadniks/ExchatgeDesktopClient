@@ -634,7 +634,7 @@ static void nextFileChunkReceiver(
     assert(crypto);
 
     byte* decrypted = cryptoDecrypt(crypto, encryptedBuffer, receivedBytesCount, false);
-    assert(decrypted); // TODO: transfer file name with file's hash
+    assert(decrypted);
 
     assert(SDL_RWwrite(this->rwops, decrypted, 1, decryptedSize) == decryptedSize);
 
@@ -693,7 +693,7 @@ void logicProcessEvent(SDL_Event* event) {
             : keyCode == SDLK_c
                 ? clipboardCopy()
                 : STUB;
-} // TODO: when exchanging file add support for file names and perform checksum
+}
 
 // TODO: add possibility for admin to remove users from database; to disable/enable registration; to ban/unban users; to kick connected users
 
