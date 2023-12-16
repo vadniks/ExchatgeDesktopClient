@@ -88,6 +88,8 @@ STATIC_CONST_UNSIGNED FROM_SERVER = 0x7fffffff;
 STATIC_CONST_UNSIGNED INVITE_ASK = 1;
 STATIC_CONST_UNSIGNED INVITE_DENY = 2;
 
+const unsigned NET_MAX_FILENAME_SIZE = 0xff;
+
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
 THIS(
@@ -399,7 +401,8 @@ static void processConversationSetUpMessage(const Message* message) {
     (*(this->onConversationSetUpInviteReceived))(message->from);
 }
 
-static inline unsigned fileExchangeRequestInitialSize(void) { return INT_SIZE + CRYPTO_HASH_SIZE; }
+static inline unsigned fileExchangeRequestInitialSize(void)
+{ return INT_SIZE + CRYPTO_HASH_SIZE + INT_SIZE + NET_MAX_FILENAME_SIZE; }
 
 static void processFileExchangeRequestMessage(const Message* message) {
     assert(message->flag == FLAG_FILE_ASK && message->size == fileExchangeRequestInitialSize());
@@ -416,7 +419,11 @@ static void processFileExchangeRequestMessage(const Message* message) {
     byte hash[CRYPTO_HASH_SIZE];
     SDL_memcpy(hash, message->body + INT_SIZE, CRYPTO_HASH_SIZE);
 
-    (*(this->onFileExchangeInviteReceived))(message->from, fileSize, hash);
+    const unsigned filenameSize = *((unsigned*) message->body + INT_SIZE + CRYPTO_HASH_SIZE);
+    char filename[filenameSize];
+    SDL_memcpy(filename, message->body + INT_SIZE + CRYPTO_HASH_SIZE + INT_SIZE, filenameSize);
+
+    (*(this->onFileExchangeInviteReceived))(message->from, fileSize, hash, filename, filenameSize);
 }
 
 static void processMessage(const Message* message) {
@@ -791,16 +798,20 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     return crypto;
 }
 
-bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash) {
+bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, const char* filename, unsigned filenameSize) {
     assert(fileSize);
+    assert(filenameSize <= NET_MAX_FILENAME_SIZE);
 
     assert(!this->settingUpConversation && !this->exchangingFile);
     this->exchangingFile = true;
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+
     *((unsigned*) body) = fileSize;
     SDL_memcpy(body + INT_SIZE, hash, CRYPTO_HASH_SIZE);
+    *((unsigned*) body + INT_SIZE + CRYPTO_HASH_SIZE) = filenameSize;
+    SDL_memcpy(body + INT_SIZE + CRYPTO_HASH_SIZE + INT_SIZE, filename, filenameSize);
 
     if (!netSend(FLAG_FILE_ASK, body, fileExchangeRequestInitialSize(), toId)) {
         this->exchangingFile = false;

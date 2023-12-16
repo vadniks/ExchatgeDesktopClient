@@ -386,25 +386,23 @@ static void beginFileExchange(void** parameters) {
     this->fileBytesCounter = 0;
 
     const unsigned fileSize = (long) parameters[0];
-    const unsigned filenameSize = (long) parameters[1];
-
-    char filename[filenameSize];
-    SDL_memcpy(filename, parameters[2], filenameSize);
-
-    SDL_free(parameters[2]);
-    SDL_free(parameters);
-
-    SDL_Log("!! %u %u %s", fileSize, filenameSize, filename); // TODO: debug
-
-    // TODO
 
     byte* hash = calculateOpenedFileChecksum();
     assert(hash);
 
-    if (!netBeginFileExchange(this->toUserId, fileSize, hash) || this->fileBytesCounter != fileSize) // blocks the thread until file is fully transmitted or error occurred or receiver declined the exchanging
+    if (!netBeginFileExchange(
+        this->toUserId,
+        fileSize,
+        hash,
+        parameters[2],
+        (long) parameters[1]
+    ) || this->fileBytesCounter != fileSize) // blocks the thread until file is fully transmitted or error occurred or receiver declined the exchanging
         renderShowUnableToTransmitFileError();
     else
         renderShowFileTransmittedSystemMessage();
+
+    SDL_free(parameters[2]);
+    SDL_free(parameters);
 
     assert(!SDL_RWclose(this->rwops));
     this->rwops = NULL;
@@ -484,12 +482,11 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     const char* filename = xBasename(filePath);
     const unsigned long filenameSize = SDL_strlen(filename);
 
-    SDL_Log("! %u %u %s", (unsigned) fileSize, (unsigned) filenameSize, filename); // TODO: debug
-
     void** parameters = SDL_malloc(3 * sizeof(void*));
     parameters[0] = (void*) fileSize;
     parameters[1] = (void*) filenameSize;
     (parameters[2] = SDL_malloc(filenameSize)) && SDL_memcpy(parameters[2], filename, filenameSize);
+
     lifecycleAsync((LifecycleAsyncActionFunction) &beginFileExchange, parameters, 0);
 }
 
@@ -497,10 +494,19 @@ static void replyToFileExchangeRequest(void** parameters) {
     assert(this);
     this->fileBytesCounter = 0;
 
-    const unsigned fromId = *((unsigned*) parameters[0]), fileSize = *((unsigned*) parameters[1]);
+    const unsigned
+        fromId = *((unsigned*) parameters[0]),
+        fileSize = *((unsigned*) parameters[1]),
+        filenameSize = *((unsigned*) parameters[3]);
+
     byte originalHash[CRYPTO_HASH_SIZE];
-    SDL_memcpy(originalHash, parameters[2], CRYPTO_HASH_SIZE);
-    SDL_free(parameters[0]), SDL_free(parameters[1]), SDL_free(parameters[2]), SDL_free(parameters);
+    SDL_memcpy(originalHash, parameters[2], CRYPTO_HASH_SIZE); // TODO: excessive copy operations
+
+    char filename[filenameSize];
+    SDL_memcpy(filename, parameters[4], filenameSize);
+
+    for (byte i = 0; i < 5; SDL_free(parameters[i++]));
+    SDL_free(parameters);
 
     const User* user = findUser(fromId);
     assert(user);
@@ -520,9 +526,10 @@ static void replyToFileExchangeRequest(void** parameters) {
     char filePath[LOGIC_MAX_FILE_PATH_SIZE];
     const unsigned written = SDL_snprintf(
         filePath, LOGIC_MAX_FILE_PATH_SIZE,
-        "%s/%lu",
+        "%s/%lu_%s",
         currentPath,
-        logicCurrentTimeMillis()
+        logicCurrentTimeMillis(),
+        filename
     );
     assert(written > 0 && written <= LOGIC_MAX_FILE_PATH_SIZE);
 
@@ -559,16 +566,24 @@ static void replyToFileExchangeRequest(void** parameters) {
     finishLoading();
 }
 
-static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize, const byte* originalHash) {
+static void onFileExchangeInviteReceived(
+    unsigned fromId,
+    unsigned fileSize,
+    const byte* originalHash,
+    const char* filename,
+    unsigned filenameSize
+) {
     assert(this);
 
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);
 
-    void** parameters = SDL_malloc(2 * sizeof(void*));
+    void** parameters = SDL_malloc(5 * sizeof(void*));
     (parameters[0] = SDL_malloc(sizeof(int))) && (*((unsigned*) parameters[0]) = fromId);
     (parameters[1] = SDL_malloc(sizeof(int))) && (*((unsigned*) parameters[1]) = fileSize);
     (parameters[2] = SDL_malloc(CRYPTO_HASH_SIZE)) && SDL_memcpy(parameters[2], originalHash, CRYPTO_HASH_SIZE);
+    (parameters[3] = SDL_malloc(sizeof(int))) && (*((unsigned*) parameters[3]) = filenameSize);
+    (parameters[4] = SDL_malloc(filenameSize)) && SDL_memcpy(parameters[4], filename, filenameSize);
 
     lifecycleAsync((LifecycleAsyncActionFunction) &replyToFileExchangeRequest, parameters, 0);
 }

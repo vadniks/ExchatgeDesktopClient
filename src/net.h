@@ -30,7 +30,7 @@ typedef void (*NetOnErrorReceived)(int); // receives message's flag
 typedef void (*NetOnDisconnected)(void);
 typedef unsigned long (*NetCurrentTimeMillisGetter)(void);
 typedef void (*NetOnConversationSetUpInviteReceived)(unsigned/*fromId*/); // must call replyToPendingConversationSetUpInvite() after this
-typedef void (*NetOnFileExchangeInviteReceived)(unsigned fromId, unsigned fileSize, const byte* hash); // must then call replyToFileExchangeInvite
+typedef void (*NetOnFileExchangeInviteReceived)(unsigned fromId, unsigned fileSize, const byte* hash, const char* filename, unsigned filenameSize); // must then call replyToFileExchangeInvite
 typedef unsigned (*NetNextFileChunkSupplier)(unsigned index, byte* buffer); // returns (0 < count <= MESSAGE_BODY_SIZE) of written bytes or 0 if no more chunks available (current chunk included), if this is first time this callback is called, the return of 0 is treated as occurrence of error and the operation gets aborted; copies the another chunk's bytes into the buffer; the buffer is deallocated automatically
 typedef void (*NetNextFileChunkReceiver)(unsigned fromId, unsigned index, unsigned receivedBytesCount, const byte* buffer);
 
@@ -44,6 +44,8 @@ extern const unsigned NET_UNHASHED_PASSWORD_SIZE;
 extern const unsigned NET_MESSAGE_BODY_SIZE;
 
 extern const int NET_FLAG_PROCEED; // just send message to another user
+
+extern const unsigned NET_MAX_FILENAME_SIZE;
 
 bool netInit( // blocks the caller thread until secure connection is established
     const char* host,
@@ -75,6 +77,6 @@ bool netUserInfoConnected(const NetUserInfo* info);
 const byte* netUserInfoName(const NetUserInfo* info);
 Crypto* nullable netCreateConversation(unsigned id); // returns the Crypto object associated with newly created conversation on success, expects the id of the user, the current user wanna create conversation with; blocks the caller thread until either a denial received or creation of the conversation succeeds (if an acceptation received) or fails
 Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId); // returns the same as createConversation does, must be called after getting invoked by the onConversationSetUpInviteReceived callback to reply to inviter, returns true on success; blocks the caller thread just like createConversation does
-bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash); // blocks the caller thread; returns true if another user (identified by toId) accepted the invite
+bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, const char* filename, unsigned filenameSize); // blocks the caller thread; returns true if another user (identified by toId) accepted the invite
 bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accept); // blocks the caller thread; returns true on success; must be called only after an invite from this user received & processed
 void netClean(void);
