@@ -381,14 +381,27 @@ static byte* nullable calculateOpenedFileChecksum(void) {
     return hash;
 }
 
-static void beginFileExchange(unsigned* fileSize) {
+static void beginFileExchange(void** parameters) {
     assert(this);
     this->fileBytesCounter = 0;
+
+    const unsigned fileSize = (long) parameters[0];
+    const unsigned filenameSize = (long) parameters[1];
+
+    char filename[filenameSize];
+    SDL_memcpy(filename, parameters[2], filenameSize);
+
+    SDL_free(parameters[2]);
+    SDL_free(parameters);
+
+    SDL_Log("!! %u %u %s", fileSize, filenameSize, filename); // TODO: debug
+
+    // TODO
 
     byte* hash = calculateOpenedFileChecksum();
     assert(hash);
 
-    if (!netBeginFileExchange(this->toUserId, *fileSize, hash) || this->fileBytesCounter != *fileSize) // blocks the thread until file is fully transmitted or error occurred or receiver declined the exchanging
+    if (!netBeginFileExchange(this->toUserId, fileSize, hash) || this->fileBytesCounter != fileSize) // blocks the thread until file is fully transmitted or error occurred or receiver declined the exchanging
         renderShowUnableToTransmitFileError();
     else
         renderShowFileTransmittedSystemMessage();
@@ -396,10 +409,19 @@ static void beginFileExchange(unsigned* fileSize) {
     assert(!SDL_RWclose(this->rwops));
     this->rwops = NULL;
 
-    SDL_free(fileSize);
     SDL_free(hash);
 
     finishLoading();
+}
+
+static const char* nullable xBasename(const char* path) {
+    const char* lastDelimiter = path;
+    while (*(path++) != 0)
+        if (*path == '/')
+            lastDelimiter = path;
+
+    const char* lastSliceStart = lastDelimiter + 1;
+    return lastSliceStart < path && *lastSliceStart != 0 ? lastSliceStart : NULL;
 }
 
 void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) {
@@ -459,9 +481,16 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
         return;
     }
 
-    unsigned* xFileSize = SDL_malloc(sizeof(int));
-    *xFileSize = (unsigned) fileSize;
-    lifecycleAsync((LifecycleAsyncActionFunction) &beginFileExchange, xFileSize, 0);
+    const char* filename = xBasename(filePath);
+    const unsigned long filenameSize = SDL_strlen(filename);
+
+    SDL_Log("! %u %u %s", (unsigned) fileSize, (unsigned) filenameSize, filename); // TODO: debug
+
+    void** parameters = SDL_malloc(3 * sizeof(void*));
+    parameters[0] = (void*) fileSize;
+    parameters[1] = (void*) filenameSize;
+    (parameters[2] = SDL_malloc(filenameSize)) && SDL_memcpy(parameters[2], filename, filenameSize);
+    lifecycleAsync((LifecycleAsyncActionFunction) &beginFileExchange, parameters, 0);
 }
 
 static void replyToFileExchangeRequest(void** parameters) {
