@@ -399,8 +399,10 @@ static void processConversationSetUpMessage(const Message* message) {
     (*(this->onConversationSetUpInviteReceived))(message->from);
 }
 
+static inline unsigned fileExchangeRequestInitialSize(void) { return INT_SIZE + CRYPTO_HASH_SIZE; }
+
 static void processFileExchangeRequestMessage(const Message* message) {
-    assert(message->flag == FLAG_FILE_ASK && message->size == INT_SIZE);
+    assert(message->flag == FLAG_FILE_ASK && message->size == fileExchangeRequestInitialSize());
 
     if (this->settingUpConversation || this->exchangingFile)
         return;
@@ -430,7 +432,7 @@ static void processMessage(const Message* message) {
                 processConversationSetUpMessage(message);
             break;
         case FLAG_FILE_ASK:
-            if (message->size == INT_SIZE)
+            if (message->size == fileExchangeRequestInitialSize())
                 processFileExchangeRequestMessage(message);
             break;
         case FLAG_PROCEED:
@@ -800,7 +802,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash) {
     *((unsigned*) body) = fileSize;
     SDL_memcpy(body + INT_SIZE, hash, CRYPTO_HASH_SIZE);
 
-    if (!netSend(FLAG_FILE_ASK, body, INT_SIZE, toId)) {
+    if (!netSend(FLAG_FILE_ASK, body, fileExchangeRequestInitialSize(), toId)) {
         this->exchangingFile = false;
         return false;
     }

@@ -359,10 +359,12 @@ static byte* nullable calculateOpenedFileChecksum(void) {
 
     void* state = cryptoHashMultipart(NULL, NULL, 0);
     bool read = false;
+    unsigned count;
 
-    while (SDL_RWread(this->rwops, buffer, 1, bufferSize) > 0) {
+    while ((count = SDL_RWread(this->rwops, buffer, 1, bufferSize)) > 0) {
         read = true;
-        cryptoHashMultipart(state, buffer, bufferSize);
+        cryptoHashMultipart(state, buffer, count);
+        SDL_Log("|%.*s|", count, buffer); // TODO: debug
         SDL_memset(buffer, 0, bufferSize);
     }
 
@@ -373,6 +375,8 @@ static byte* nullable calculateOpenedFileChecksum(void) {
         SDL_free(state);
     else
         hash = cryptoHashMultipart(state, NULL, 0);
+
+    printBinaryArray(hash, CRYPTO_HASH_SIZE); // TODO: debug
 
     return hash;
 }
@@ -523,6 +527,7 @@ static void replyToFileExchangeRequest(void** parameters) {
         return;
     }
 
+    assert(!this->fileHashState);
     const bool exchangeResult = netReplyToFileExchangeInvite(fromId, fileSize, true); // blocks the thread again
     assert(!SDL_RWclose(this->rwops));
     this->rwops = NULL;
@@ -530,6 +535,8 @@ static void replyToFileExchangeRequest(void** parameters) {
     bool hashesEqual = false;
     if (this->fileHashState) {
         byte* hash = cryptoHashMultipart(this->fileHashState, NULL, 0);
+        printBinaryArray(hash, CRYPTO_HASH_SIZE); // TODO: debug
+        printBinaryArray(originalHash, CRYPTO_HASH_SIZE);
         this->fileHashState = NULL;
 
         hashesEqual = !SDL_memcmp(originalHash, hash, CRYPTO_HASH_SIZE);
@@ -610,13 +617,14 @@ static void nextFileChunkReceiver(
 
     assert(SDL_RWwrite(this->rwops, decrypted, 1, decryptedSize) == decryptedSize);
 
+    SDL_Log("|%.*s|", decryptedSize, decrypted); // TODO: debug
+
     if (!index) {
         assert(!this->fileHashState);
         this->fileHashState = cryptoHashMultipart(NULL, NULL, 0);
-    } else {
+    } else
         assert(this->fileHashState);
-        cryptoHashMultipart(this->fileHashState, decrypted, decryptedSize);
-    }
+    cryptoHashMultipart(this->fileHashState, decrypted, decryptedSize);
 
     SDL_free(decrypted);
 
