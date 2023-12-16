@@ -411,7 +411,10 @@ static void processFileExchangeRequestMessage(const Message* message) {
     const unsigned fileSize = *((unsigned*) message->body);
     assert(fileSize);
 
-    (*(this->onFileExchangeInviteReceived))(message->from, fileSize);
+    byte hash[CRYPTO_HASH_SIZE];
+    SDL_memcpy(hash, message->body + INT_SIZE, CRYPTO_HASH_SIZE);
+
+    (*(this->onFileExchangeInviteReceived))(message->from, fileSize, hash);
 }
 
 static void processMessage(const Message* message) {
@@ -786,7 +789,7 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     return crypto;
 }
 
-bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
+bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash) {
     assert(fileSize);
 
     assert(!this->settingUpConversation && !this->exchangingFile);
@@ -795,6 +798,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize) {
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     *((unsigned*) body) = fileSize;
+    SDL_memcpy(body + INT_SIZE, hash, CRYPTO_HASH_SIZE);
 
     if (!netSend(FLAG_FILE_ASK, body, INT_SIZE, toId)) {
         this->exchangingFile = false;

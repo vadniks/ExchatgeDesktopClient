@@ -55,6 +55,7 @@ THIS(
     SDL_RWops* nullable rwops;
     atomic unsigned fileBytesCounter;
     bool autoLoggingIn;
+    void* fileHashState;
 )
 #pragma clang diagnostic pop
 
@@ -88,6 +89,7 @@ void logicInit(void) {
     this->currentUserName = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
     this->databaseInitialized = false;
     this->rwops = NULL;
+    this->fileHashState = NULL;
 
     assert(optionsInit(NET_USERNAME_SIZE, NET_UNHASHED_PASSWORD_SIZE, &fetchHostId));
     this->adminMode = optionsIsAdmin();
@@ -348,19 +350,20 @@ void logicOnFileChooserRequested(void) {
     renderShowFileChooser();
 }
 
-static byte* nullable calculateOpenedFileChecksum(void) { // TODO
+static byte* nullable calculateOpenedFileChecksum(void) {
     assert(this->rwops);
 
-    byte buffer[NET_MESSAGE_BODY_SIZE];
-    SDL_memset(buffer, 0, NET_MESSAGE_BODY_SIZE);
+    const unsigned bufferSize = logicUnencryptedMessageBodySize();
+    byte buffer[bufferSize];
+    SDL_memset(buffer, 0, bufferSize);
 
     void* state = cryptoHashMultipart(NULL, NULL, 0);
     bool read = false;
 
-    while (SDL_RWread(this->rwops, buffer, 1, NET_MESSAGE_BODY_SIZE) > 0) {
+    while (SDL_RWread(this->rwops, buffer, 1, bufferSize) > 0) {
         read = true;
-        cryptoHashMultipart(state, buffer, NET_MESSAGE_BODY_SIZE);
-        SDL_memset(buffer, 0, NET_MESSAGE_BODY_SIZE);
+        cryptoHashMultipart(state, buffer, bufferSize);
+        SDL_memset(buffer, 0, bufferSize);
     }
 
     byte* hash = NULL;
@@ -376,15 +379,19 @@ static void beginFileExchange(unsigned* fileSize) {
     assert(this);
     this->fileBytesCounter = 0;
 
-    if (!netBeginFileExchange(this->toUserId, *fileSize) || this->fileBytesCounter != *fileSize) { // blocks the thread until file is fully transmitted or error occurred or receiver declined the exchanging
-        assert(!SDL_RWclose(this->rwops));
-        this->rwops = NULL;
+    byte* hash = calculateOpenedFileChecksum();
+    assert(hash);
 
+    if (!netBeginFileExchange(this->toUserId, *fileSize, hash) || this->fileBytesCounter != *fileSize) // blocks the thread until file is fully transmitted or error occurred or receiver declined the exchanging
         renderShowUnableToTransmitFileError();
-    } else
+    else
         renderShowFileTransmittedSystemMessage();
 
+    assert(!SDL_RWclose(this->rwops));
+    this->rwops = NULL;
+
     SDL_free(fileSize);
+    SDL_free(hash);
 
     renderHideInfiniteProgressBar();
     renderSetControlsBlocking(false);
@@ -450,7 +457,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     }
 
     if (fileSize > MAX_FILE_SIZE) {
-        assert(!SDL_RWclose(this->rwops));
+        assert(!SDL_RWclose(this->rwops)); // TODO: code duplicates
         this->rwops = NULL;
 
         renderHideInfiniteProgressBar();
@@ -465,12 +472,14 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     lifecycleAsync((LifecycleAsyncActionFunction) &beginFileExchange, xFileSize, 0);
 }
 
-static void replyToFileExchangeRequest(unsigned** parameters) {
+static void replyToFileExchangeRequest(void** parameters) {
     assert(this);
     this->fileBytesCounter = 0;
 
-    const unsigned fromId = *(parameters[0]), fileSize = *(parameters[1]);
-    SDL_free(parameters[0]), SDL_free(parameters[1]), SDL_free(parameters);
+    const unsigned fromId = *((unsigned*) parameters[0]), fileSize = *((unsigned*) parameters[1]);
+    byte originalHash[CRYPTO_HASH_SIZE];
+    SDL_memcpy(originalHash, parameters[2], CRYPTO_HASH_SIZE);
+    SDL_free(parameters[0]), SDL_free(parameters[1]), SDL_free(parameters[2]), SDL_free(parameters);
 
     const User* user = findUser(fromId);
     assert(user);
@@ -503,7 +512,7 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
     this->rwops = SDL_RWFromFile(filePath, "wb");
 
     if (!this->rwops) {
-        assert(!netReplyToFileExchangeInvite(fromId, fileSize, false));
+        assert(!netReplyToFileExchangeInvite(fromId, fileSize, false)); // blocks the thread again
 
         renderHideInfiniteProgressBar();
         renderSetControlsBlocking(false);
@@ -512,11 +521,23 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
         return;
     }
 
-    if (!netReplyToFileExchangeInvite(fromId, fileSize, true) || this->fileBytesCounter != fileSize) { // blocks the thread again
+    const bool exchangeResult = netReplyToFileExchangeInvite(fromId, fileSize, true); // blocks the thread again
+    assert(!SDL_RWclose(this->rwops));
+    this->rwops = NULL;
+
+    bool hashesEqual = false;
+    if (this->fileHashState) {
+        byte* hash = cryptoHashMultipart(this->fileHashState, NULL, 0);
+        SDL_free(this->fileHashState);
+        this->fileHashState = NULL;
+
+        hashesEqual = !SDL_memcmp(originalHash, hash, CRYPTO_HASH_SIZE);
+        SDL_free(hash);
+    }
+
+    if (!exchangeResult || this->fileBytesCounter != fileSize || !hashesEqual)
         renderShowUnableToTransmitFileError();
-        assert(!SDL_RWclose(this->rwops));
-        this->rwops = NULL;
-    } else
+    else
         renderShowFileTransmittedSystemMessage();
 
     assert(!this->rwops);
@@ -524,15 +545,16 @@ static void replyToFileExchangeRequest(unsigned** parameters) {
     renderSetControlsBlocking(false);
 }
 
-static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize) {
+static void onFileExchangeInviteReceived(unsigned fromId, unsigned fileSize, const byte* originalHash) {
     assert(this);
 
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);
 
-    unsigned** parameters = SDL_malloc(2 * sizeof(void*));
-    (parameters[0] = SDL_malloc(sizeof(int))) && (*(parameters[0]) = fromId);
-    (parameters[1] = SDL_malloc(sizeof(int))) && (*(parameters[1]) = fileSize);
+    void** parameters = SDL_malloc(2 * sizeof(void*));
+    (parameters[0] = SDL_malloc(sizeof(int))) && (*((unsigned*) parameters[0]) = fromId);
+    (parameters[1] = SDL_malloc(sizeof(int))) && (*((unsigned*) parameters[1]) = fileSize);
+    (parameters[2] = SDL_malloc(CRYPTO_HASH_SIZE)) && SDL_memcpy(parameters[2], originalHash, CRYPTO_HASH_SIZE);
 
     lifecycleAsync((LifecycleAsyncActionFunction) &replyToFileExchangeRequest, parameters, 0);
 }
@@ -543,7 +565,7 @@ static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) { /
 
     byte unencryptedBuffer[targetSize];
     const unsigned actualSize = SDL_RWread(this->rwops, unencryptedBuffer, 1, targetSize);
-    if (!actualSize) goto closeFile;
+    if (!actualSize) goto finish;
 
     Crypto* crypto = databaseGetConversation(this->toUserId);
     assert(crypto);
@@ -561,14 +583,19 @@ static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) { /
     this->fileBytesCounter += actualSize;
     return encryptedSize;
 
-    closeFile:
+    finish:
     assert(index);
-    assert(!SDL_RWclose(this->rwops));
-    this->rwops = NULL;
+    // this->rwops is freed elsewhere
     return 0;
 }
 
-static void nextFileChunkReceiver(unsigned fromId, unsigned index, unsigned fileSize, unsigned receivedBytesCount, const byte* encryptedBuffer) {
+static void nextFileChunkReceiver(
+    unsigned fromId,
+    unsigned index,
+    __attribute_maybe_unused__ unsigned fileSize,
+    unsigned receivedBytesCount,
+    const byte* encryptedBuffer
+) {
     assert(this && this->rwops);
 
     const unsigned decryptedSize = receivedBytesCount - cryptoEncryptedSize(0);
@@ -581,6 +608,15 @@ static void nextFileChunkReceiver(unsigned fromId, unsigned index, unsigned file
     assert(decrypted);
 
     assert(SDL_RWwrite(this->rwops, decrypted, 1, decryptedSize) == decryptedSize);
+
+    if (!index) {
+        assert(!this->fileHashState);
+        this->fileHashState = cryptoHashMultipart(NULL, NULL, 0);
+    } else {
+        assert(this->fileHashState);
+        cryptoHashMultipart(this->fileHashState, decrypted, decryptedSize);
+    }
+
     SDL_free(decrypted);
 
     cryptoDestroy(crypto);
@@ -588,10 +624,7 @@ static void nextFileChunkReceiver(unsigned fromId, unsigned index, unsigned file
     if (!index) assert(!this->fileBytesCounter);
     this->fileBytesCounter += decryptedSize;
 
-    if (this->fileBytesCounter < fileSize) return;
-
-    assert(!SDL_RWclose(this->rwops));
-    this->rwops = NULL;
+    // this->fileHashState and this->rwops are freed elsewhere
 }
 
 static void clipboardPaste(void) {
@@ -1012,6 +1045,7 @@ void logicClean(void) {
     assert(this);
 
     assert(!this->rwops);
+    assert(!this->fileHashState);
 
     if (this->databaseInitialized) databaseClean();
 
