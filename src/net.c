@@ -19,6 +19,8 @@
 #include <SDL_net.h>
 #include <assert.h>
 #include <endian.h>
+#include "collections/list.h"
+#include "collections/queue.h"
 #include "utils/rwMutex.h"
 #include "net.h"
 
@@ -122,6 +124,7 @@ THIS(
     NetNextFileChunkSupplier nextFileChunkSupplier;
     NetNextFileChunkReceiver netNextFileChunkReceiver;
     atomic bool exchangingFile;
+    Queue* conversationSetupMessages;
 )
 #pragma clang diagnostic pop
 
@@ -155,7 +158,16 @@ STATIC_CONST_UNSIGNED USER_INFO_SIZE = INT_SIZE + sizeof(bool) + NET_USERNAME_SI
 
 staticAssert(sizeof(bool) == 1 && sizeof(NetUserInfo) == 21);
 
-static bool waitForReceiveWithTimeout(void);
+static bool checkSocket(void);
+
+static bool waitForReceiveWithTimeout(void) {
+    const unsigned long startMillis = (*(this->currentTimeMillisGetter))();
+    while ((*(this->currentTimeMillisGetter))() - startMillis < TIMEOUT) {
+        if (checkSocket())
+            return true;
+    }
+    return false;
+}
 
 static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned serverSignPublicKeySize) {
     this->connectionCrypto = cryptoInit();
@@ -252,6 +264,7 @@ bool netInit(
     this->nextFileChunkSupplier = nextFileChunkSupplier;
     this->netNextFileChunkReceiver = netNextFileChunkReceiver;
     this->exchangingFile = false;
+    this->conversationSetupMessages = queueInitExtra(&SDL_free, currentTimeMillisGetter);
 
     assert(!SDLNet_Init());
 
@@ -426,6 +439,12 @@ static void processFileExchangeRequestMessage(const Message* message) {
     (*(this->onFileExchangeInviteReceived))(message->from, fileSize, hash, filename, filenameSize);
 }
 
+static Message* copyMessage(const Message* message) {
+    Message* new = SDL_malloc(sizeof(Message));
+    SDL_memcpy(new, message, sizeof *new);
+    return new;
+}
+
 static void processMessage(const Message* message) {
     if (message->from == FROM_SERVER) {
         processMessagesFromServer(message);
@@ -437,6 +456,11 @@ static void processMessage(const Message* message) {
         case FLAG_EXCHANGE_KEYS:
             if (message->size == INVITE_ASK)
                 processConversationSetUpMessage(message);
+            break;
+        case FLAG_EXCHANGE_KEYS_DONE:
+        case FLAG_EXCHANGE_HEADERS:
+        case FLAG_EXCHANGE_HEADERS_DONE:
+            queuePush(this->conversationSetupMessages, copyMessage(message));
             break;
         case FLAG_FILE_ASK:
             if (message->size == fileExchangeRequestInitialSize())
@@ -596,20 +620,12 @@ static void onNextUsersBundleFetched(const Message* message) {
     (*(this->onUsersFetched))(this->userInfosList, &onUsersInfosListProcessingFinished);
 }
 
-static bool waitForReceiveWithTimeout(void) {
-    const unsigned long startMillis = (*(this->currentTimeMillisGetter))();
-    while ((*(this->currentTimeMillisGetter))() - startMillis < TIMEOUT) {
-        if (checkSocket())
-            return true;
-    }
-    return false;
-}
-
-Crypto* nullable netCreateConversation(unsigned id) {
+Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving messages from users only after all users were fetched and assert that the sender's id is found locally
     assert(this);
 
     assert(!this->settingUpConversation && !this->exchangingFile);
     this->settingUpConversation = true;
+    queueClear(this->conversationSetupMessages);
 
     byte body[NET_MESSAGE_BODY_SIZE];
 
@@ -621,15 +637,11 @@ Crypto* nullable netCreateConversation(unsigned id) {
 
     Message* message;
 
-    if (!waitForReceiveWithTimeout()) {
-        this->settingUpConversation = false;
-        return NULL;
-    }
-
-    if (!(message = receive()) // TODO: might lose regular messages from other users here
+    if (!(message = queueWaitAndPop(this->conversationSetupMessages, (int) TIMEOUT))
         || message->flag != FLAG_EXCHANGE_KEYS
         || message->size != CRYPTO_KEY_SIZE)
     {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         SDL_free(message);
         return NULL;
@@ -642,6 +654,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
     Crypto* crypto = cryptoInit();
 
     if (!cryptoExchangeKeys(crypto, akaServerPublicKey)) {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
@@ -650,21 +663,17 @@ Crypto* nullable netCreateConversation(unsigned id) {
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, cryptoClientPublicKey(crypto), CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS_DONE, body, CRYPTO_KEY_SIZE, id)) {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
 
-    if (!waitForReceiveWithTimeout()) {
-        this->settingUpConversation = false;
-        cryptoDestroy(crypto);
-        return NULL;
-    }
-
-    if (!(message = receive())
+    if (!(message = queueWaitAndPop(this->conversationSetupMessages, (int) TIMEOUT))
         || message->flag != FLAG_EXCHANGE_HEADERS
         || message->size != CRYPTO_HEADER_SIZE)
     {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         SDL_free(message);
         cryptoDestroy(crypto);
@@ -677,6 +686,7 @@ Crypto* nullable netCreateConversation(unsigned id) {
 
     byte* akaClientStreamHeader = cryptoInitializeCoderStreams(crypto, akaServerStreamHeader);
     if (!akaClientStreamHeader) {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
@@ -688,10 +698,12 @@ Crypto* nullable netCreateConversation(unsigned id) {
 
     this->settingUpConversation = false;
     if (!netSend(FLAG_EXCHANGE_HEADERS_DONE, body, CRYPTO_HEADER_SIZE, id)) {
+        queueClear(this->conversationSetupMessages);
         cryptoDestroy(crypto);
         return NULL;
     }
 
+    queueClear(this->conversationSetupMessages);
     return crypto;
 }
 
@@ -701,16 +713,19 @@ static inline bool inviteProcessingTimeoutExceeded(void)
 Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId) { // TODO: create a dashboard page with some analysis for admin
     assert(this);
     assert(this->settingUpConversation && !this->exchangingFile);
+    queueClear(this->conversationSetupMessages);
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
     if (inviteProcessingTimeoutExceeded()) {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         return NULL;
     }
 
     if (!accept) {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         netSend(FLAG_EXCHANGE_KEYS, body, INVITE_DENY, fromId);
         return NULL;
@@ -722,22 +737,18 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, CRYPTO_KEY_SIZE, fromId)) {
-        this->settingUpConversation = false;
-        cryptoDestroy(crypto);
-        return NULL;
-    }
-
-    if (!waitForReceiveWithTimeout()) {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
 
     Message* message = NULL;
-    if (!(message = receive())
+    if (!(message = queueWaitAndPop(this->conversationSetupMessages, (int) TIMEOUT))
         || message->flag != FLAG_EXCHANGE_KEYS_DONE
         || message->size != CRYPTO_KEY_SIZE)
     {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         cryptoDestroy(crypto);
         SDL_free(message);
@@ -748,6 +759,7 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     SDL_memcpy(akaClientPublicKey, message->body, CRYPTO_KEY_SIZE);
     SDL_free(message);
     if (!cryptoExchangeKeysAsServer(crypto, akaClientPublicKey)) {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
@@ -755,6 +767,7 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
 
     byte* akaServerStreamHeader = cryptoCreateEncoderAsServer(crypto);
     if (!akaServerStreamHeader) {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
@@ -764,21 +777,17 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     SDL_free(akaServerStreamHeader);
 
     if (!netSend(FLAG_EXCHANGE_HEADERS, body, CRYPTO_HEADER_SIZE, fromId)) {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         cryptoDestroy(crypto);
         return NULL;
     }
 
-    if (!waitForReceiveWithTimeout()) {
-        this->settingUpConversation = false;
-        cryptoDestroy(crypto);
-        return NULL;
-    }
-
-    if (!(message = receive())
+    if (!(message = queueWaitAndPop(this->conversationSetupMessages, (int) TIMEOUT))
         || message->flag != FLAG_EXCHANGE_HEADERS_DONE
         || message->size != CRYPTO_HEADER_SIZE)
     {
+        queueClear(this->conversationSetupMessages);
         this->settingUpConversation = false;
         SDL_free(message);
         cryptoDestroy(crypto);
@@ -791,16 +800,23 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
 
     this->settingUpConversation = false;
     if (!cryptoCreateDecoderStreamAsServer(crypto, akaClientStreamHeader)) {
+        queueClear(this->conversationSetupMessages);
         cryptoDestroy(crypto);
         return NULL;
     }
 
+    queueClear(this->conversationSetupMessages);
     return crypto;
 }
+
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "UnreachableCode" // TODO
 
 bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, const char* filename, unsigned filenameSize) {
     assert(fileSize);
     assert(filenameSize <= NET_MAX_FILENAME_SIZE);
+
+    assert(0); // TODO
 
     assert(!this->settingUpConversation && !this->exchangingFile);
     this->exchangingFile = true;
@@ -818,7 +834,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, co
         return false;
     }
 
-    if (!waitForReceiveWithTimeout()) {
+    if (1/*!waitForMessagesQueueWithTimeout()*/) {
         this->exchangingFile = false;
         return false;
     }
@@ -850,6 +866,8 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     assert(this);
     assert(!this->settingUpConversation && this->exchangingFile);
 
+    assert(0); // TODO
+
     if (inviteProcessingTimeoutExceeded()) {
         this->exchangingFile = false;
         return false;
@@ -873,7 +891,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     unsigned index = 0;
 
     unsigned long lastReceivedChunkMillis; // TODO: transfer file name as well and add sum checking
-    while (waitForReceiveWithTimeout() && (message = receive())) { // TODO: add progress bar (not infinite, the real one with %)
+    while (/*waitForMessagesQueueWithTimeout() &&*/ (message = receive())) { // TODO: add progress bar (not infinite, the real one with %)
         if (message->flag == FLAG_FILE && message->size > 0)
             lastReceivedChunkMillis = (*(this->currentTimeMillisGetter))();
         else {
@@ -898,9 +916,13 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     return true;
 }
 
+#pragma clang diagnostic pop
+
 void netClean(void) {
     assert(this);
     rwMutexWriteLock(this->rwMutex);
+
+    queueDestroy(this->conversationSetupMessages);
 
     SDL_free(this->serverKeyStub);
     listDestroy(this->userInfosList);

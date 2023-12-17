@@ -30,15 +30,17 @@ struct Queue_t {
     QueueDeallocator nullable deallocator;
     RWMutex* rwMutex;
     atomic bool destroyed;
+    QueueCurrentTimeMillisGetter nullable currentTimeMillisGetter;
 };
 
-Queue* queueInit(QueueDeallocator nullable deallocator) {
+Queue* queueInitExtra(QueueDeallocator nullable deallocator, QueueCurrentTimeMillisGetter nullable currentTimeMillisGetter) {
     Queue* queue = SDL_malloc(sizeof *queue);
     queue->values = NULL;
     queue->size = 0;
     queue->deallocator = deallocator;
     queue->rwMutex = rwMutexInit();
     queue->destroyed = false;
+    queue->currentTimeMillisGetter = currentTimeMillisGetter;
     return queue;
 }
 
@@ -78,6 +80,33 @@ void* queuePop(Queue* queue) {
     return value;
 }
 
+void* nullable queueWaitAndPop(Queue* queue, int timeout) {
+    assert(queue && !queue->destroyed);
+    if (timeout >= 0) assert(queue->currentTimeMillisGetter);
+
+    const unsigned long startMillis = (*(queue->currentTimeMillisGetter))();
+
+    while (timeout >= 0 ? !queue->destroyed && (*(queue->currentTimeMillisGetter))() - startMillis < (unsigned long) timeout : true)
+        if (queueSize(queue))
+            return queuePop(queue);
+
+    return NULL;
+}
+
+void* nullable queuePeek(Queue* queue) {
+    assert(queue && !queue->destroyed);
+    void* result = NULL;
+
+    RW_MUTEX_READ_LOCKED(queue->rwMutex,
+        if (queue->size)
+            result = queue->values[0];
+    )
+
+    return result;
+}
+
+void queueDropTop(Queue* queue) { (*(queue->deallocator))(queuePop(queue)); }
+
 unsigned queueSize(const Queue* queue) {
     assert(queue && !queue->destroyed);
     return queue->size;
@@ -87,6 +116,18 @@ static void destroyValuesIfNotEmpty(Queue* queue) {
     if (!queue->deallocator) return;
     assert(queue->size && queue->values || !(queue->size) && !(queue->values));
     for (unsigned i = 0; i < queue->size; (*(queue->deallocator))(queue->values[i++]));
+}
+
+void queueClear(Queue* queue) {
+    assert(queue && !queue->destroyed);
+
+    RW_MUTEX_WRITE_LOCKED(queue->rwMutex,
+        destroyValuesIfNotEmpty(queue);
+        queue->size = 0;
+
+        SDL_free(queue->values);
+        queue->values = NULL;
+    )
 }
 
 void queueDestroy(Queue* queue) {

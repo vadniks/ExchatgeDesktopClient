@@ -16,6 +16,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#define DEVELOPMENT_MODE 3 // TODO: debug
+
+#if DEVELOPMENT_MODE == 1 // Altering the architecture, so it won't work properly until altering is done
+
+int main(void) { return 1; }
+
+#elif DEVELOPMENT_MODE == 2 // Designing & testing new feature
+
+int main(void) {
+
+    return 0;
+}
+
+#else
+
 #include <stdlib.h>
 #include <SDL.h>
 #include <assert.h>
@@ -55,3 +70,5 @@ int main(void) {
 
     return EXIT_SUCCESS;
 }
+
+#endif
