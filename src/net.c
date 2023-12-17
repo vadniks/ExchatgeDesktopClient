@@ -454,13 +454,13 @@ static void processMessage(const Message* message) {
     assert(this->state == STATE_AUTHENTICATED);
     switch (message->flag) {
         case FLAG_EXCHANGE_KEYS:
-            if (message->size == INVITE_ASK) processConversationSetUpMessage(message);
-            else goto otherKeysExchangeFlags;
-            break;
+            if (message->size == INVITE_ASK) {
+                processConversationSetUpMessage(message);
+                break;
+            }
         case FLAG_EXCHANGE_KEYS_DONE: // TODO: __attribute__((fallthrough));
         case FLAG_EXCHANGE_HEADERS:
         case FLAG_EXCHANGE_HEADERS_DONE:
-            otherKeysExchangeFlags:
             queuePush(this->conversationSetupMessages, copyMessage(message));
             break;
         case FLAG_FILE_ASK:
