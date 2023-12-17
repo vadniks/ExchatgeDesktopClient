@@ -515,7 +515,7 @@ static void replyToFileExchangeRequest(void** parameters) {
     assert(user);
 
     const bool accepted = renderShowFileExchangeRequestDialog(user->name, fileSize, filename); // blocks the thread
-    assert(this); // TODO: create configurable folder for exchanged files and save them there
+    assert(this);
 
     if (!accepted) {
         assert(!netReplyToFileExchangeInvite(fromId, fileSize, false)); // blocks the thread again
