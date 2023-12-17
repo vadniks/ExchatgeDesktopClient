@@ -515,8 +515,6 @@ static void replyToFileExchangeRequest(void** parameters) {
     const bool accepted = renderShowFileExchangeRequestDialog(user->name, fileSize, filename); // blocks the thread
     assert(this); // TODO: create configurable folder for exchanged files and save them there
 
-    // TODO: delete broken files after their exchanging failed
-
     if (!accepted) {
         assert(!netReplyToFileExchangeInvite(fromId, fileSize, false)); // blocks the thread again
         finishLoading();
@@ -560,9 +558,10 @@ static void replyToFileExchangeRequest(void** parameters) {
         SDL_free(hash);
     }
 
-    if (!exchangeResult || this->fileBytesCounter != fileSize || !hashesEqual)
+    if (!exchangeResult || this->fileBytesCounter != fileSize || !hashesEqual) {
         renderShowUnableToTransmitFileError();
-    else
+        unlink(filePath);
+    } else
         renderShowFileTransmittedSystemMessage();
 
     assert(!this->rwops);
