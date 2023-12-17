@@ -452,6 +452,7 @@ static void processMessage(const Message* message) {
     }
 
     assert(this->state == STATE_AUTHENTICATED);
+
     switch (message->flag) {
         case FLAG_EXCHANGE_KEYS:
             if (message->size == INVITE_ASK) {
@@ -621,6 +622,11 @@ static void onNextUsersBundleFetched(const Message* message) {
     (*(this->onUsersFetched))(this->userInfosList, &onUsersInfosListProcessingFinished);
 }
 
+static void finishSettingUpConversation(void) {
+    queueClear(this->conversationSetupMessages);
+    this->settingUpConversation = false;
+}
+
 Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving messages from users only after all users were fetched and assert that the sender's id is found locally
     assert(this);
 
@@ -632,7 +638,7 @@ Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving m
 
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, INVITE_ASK, id)) {
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         return NULL;
     }
 
@@ -642,8 +648,7 @@ Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving m
         || message->flag != FLAG_EXCHANGE_KEYS
         || message->size != CRYPTO_KEY_SIZE)
     {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         SDL_free(message);
         return NULL;
     }
@@ -655,8 +660,7 @@ Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving m
     Crypto* crypto = cryptoInit();
 
     if (!cryptoExchangeKeys(crypto, akaServerPublicKey)) {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -664,8 +668,7 @@ Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving m
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, cryptoClientPublicKey(crypto), CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS_DONE, body, CRYPTO_KEY_SIZE, id)) {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -674,8 +677,7 @@ Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving m
         || message->flag != FLAG_EXCHANGE_HEADERS
         || message->size != CRYPTO_HEADER_SIZE)
     {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         SDL_free(message);
         cryptoDestroy(crypto);
         return NULL;
@@ -687,8 +689,7 @@ Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving m
 
     byte* akaClientStreamHeader = cryptoInitializeCoderStreams(crypto, akaServerStreamHeader);
     if (!akaClientStreamHeader) {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -697,14 +698,13 @@ Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving m
     SDL_memcpy(body, akaClientStreamHeader, CRYPTO_HEADER_SIZE);
     SDL_free(akaClientStreamHeader);
 
-    this->settingUpConversation = false;
+    finishSettingUpConversation();
+
     if (!netSend(FLAG_EXCHANGE_HEADERS_DONE, body, CRYPTO_HEADER_SIZE, id)) {
-        queueClear(this->conversationSetupMessages);
         cryptoDestroy(crypto);
         return NULL;
     }
 
-    queueClear(this->conversationSetupMessages);
     return crypto;
 }
 
