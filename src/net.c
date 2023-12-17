@@ -74,6 +74,8 @@ typedef enum : int {
     FLAG_FILE_ASK = 0x000000e0, // firstly current user (A) sends file exchanging invite (flag_file_ask) with size == sizeof(file) to another user (B); if B accepts the invitation, he sends back to A flag_file_ask with size == sizeof(file), if he declines size == 0;
     FLAG_FILE = 0x000000f0, // secondly if B accepted the invite, A can proceed: A reads file by net_message_body_size-sized chunks, encapsulates those chunks in messages and sends them to B; B then accepts them, reads & writes those chunks to a newly created file
 
+    // TODO: rename FLAG_FILE to FLAG_FILE_CHUNK
+
     FLAG_SHUTDOWN = 0x7fffffff
 } Flags;
 
@@ -125,6 +127,7 @@ THIS(
     NetNextFileChunkReceiver netNextFileChunkReceiver;
     atomic bool exchangingFile;
     Queue* conversationSetupMessages;
+    Queue* fileExchangeMessages;
 )
 #pragma clang diagnostic pop
 
@@ -143,7 +146,7 @@ typedef struct {
 
 typedef struct {
     MessageHead;
-    byte body[NET_MESSAGE_BODY_SIZE]; // payload
+    byte body[NET_MESSAGE_BODY_SIZE]; // payload // TODO: make Message's body part size-variable
 } Message;
 
 staticAssert(sizeof(MessageHead) == 96 && sizeof(Message) == 1024 && sizeof(Message) - sizeof(MessageHead) == 928);
@@ -265,6 +268,7 @@ bool netInit(
     this->netNextFileChunkReceiver = netNextFileChunkReceiver;
     this->exchangingFile = false;
     this->conversationSetupMessages = queueInitExtra(&SDL_free, currentTimeMillisGetter);
+    this->fileExchangeMessages = queueInitExtra(&SDL_free, currentTimeMillisGetter);
 
     assert(!SDLNet_Init());
 
@@ -392,8 +396,8 @@ static void processMessagesFromServer(const Message* message) {
         case FLAG_FETCH_USERS: // TODO: raise assert if the users list hasn't been fully formed
             onNextUsersBundleFetched(message);
             break;
-        case FLAG_UNAUTHENTICATED:
-        case FLAG_ERROR:
+        case FLAG_UNAUTHENTICATED: fallthrough
+        case FLAG_ERROR: fallthrough
         case FLAG_ACCESS_DENIED:
             processErrors(message);
             break;
@@ -459,14 +463,20 @@ static void processMessage(const Message* message) {
                 processConversationSetUpMessage(message);
                 break;
             }
-        case FLAG_EXCHANGE_KEYS_DONE: // TODO: __attribute__((fallthrough));
-        case FLAG_EXCHANGE_HEADERS:
+            fallthrough
+        case FLAG_EXCHANGE_KEYS_DONE: fallthrough
+        case FLAG_EXCHANGE_HEADERS: fallthrough
         case FLAG_EXCHANGE_HEADERS_DONE:
             queuePush(this->conversationSetupMessages, copyMessage(message));
             break;
         case FLAG_FILE_ASK:
-            if (message->size == fileExchangeRequestInitialSize())
+            if (message->size == fileExchangeRequestInitialSize()) {
                 processFileExchangeRequestMessage(message);
+                break;
+            }
+            fallthrough
+        case FLAG_FILE:
+            queuePush(this->fileExchangeMessages, copyMessage(message));
             break;
         case FLAG_PROCEED:
             (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
@@ -801,17 +811,18 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     return crypto;
 }
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "UnreachableCode" // TODO
+static void finishFileExchanging(void) {
+    queueClear(this->fileExchangeMessages);
+    this->exchangingFile = false;
+}
 
 bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, const char* filename, unsigned filenameSize) {
     assert(fileSize);
     assert(filenameSize <= NET_MAX_FILENAME_SIZE);
 
-    assert(0); // TODO
-
     assert(!this->settingUpConversation && !this->exchangingFile);
     this->exchangingFile = true;
+    queueClear(this->fileExchangeMessages);
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
@@ -822,21 +833,16 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, co
     SDL_memcpy(body + INT_SIZE + CRYPTO_HASH_SIZE + INT_SIZE, filename, filenameSize);
 
     if (!netSend(FLAG_FILE_ASK, body, fileExchangeRequestInitialSize(), toId)) {
-        this->exchangingFile = false;
-        return false;
-    }
-
-    if (1/*!waitForMessagesQueueWithTimeout()*/) {
-        this->exchangingFile = false;
+        finishFileExchanging();
         return false;
     }
 
     Message* message = NULL;
-    if (!(message = receive())
+    if (!(message = queueWaitAndPop(this->fileExchangeMessages, (int) TIMEOUT))
         || message->flag != FLAG_FILE_ASK
         || *((unsigned*) message->body) != fileSize)
     {
-        this->exchangingFile = false;
+        finishFileExchanging();
         SDL_free(message);
         return false;
     }
@@ -845,23 +851,22 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, co
     unsigned index = 0, bytesWritten;
     while ((bytesWritten = (*(this->nextFileChunkSupplier))(index++, body))) {
         if (!netSend(FLAG_FILE, body, bytesWritten, toId)) {
-            this->exchangingFile = false;
+            finishFileExchanging();
             return false;
         }
     }
 
-    this->exchangingFile = false;
+    finishFileExchanging();
     return true;
 }
 
 bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accept) {
     assert(this);
     assert(!this->settingUpConversation && this->exchangingFile);
-
-    assert(0); // TODO
+    queueClear(this->fileExchangeMessages);
 
     if (inviteProcessingTimeoutExceeded()) {
-        this->exchangingFile = false;
+        finishFileExchanging();
         return false;
     }
 
@@ -870,31 +875,30 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     if (accept) *((unsigned*) body) = fileSize;
 
     if (!netSend(FLAG_FILE_ASK, body, INT_SIZE, fromId)) {
-        this->exchangingFile = false;
+        finishFileExchanging();
         return false;
     }
 
     if (!accept) {
-        this->exchangingFile = false;
+        finishFileExchanging();
         return false;
     }
 
     Message* message = NULL; // TODO: add possibility for admin to disable/enable file exchanging and set the maximum/minimum fie size
     unsigned index = 0;
 
-    unsigned long lastReceivedChunkMillis; // TODO: transfer file name as well and add sum checking
-    while (/*waitForMessagesQueueWithTimeout() &&*/ (message = receive())) { // TODO: add progress bar (not infinite, the real one with %)
+    unsigned long lastReceivedChunkMillis = (*(this->currentTimeMillisGetter))();
+    while ((message = queueWaitAndPop(this->fileExchangeMessages, (int) TIMEOUT))) { // TODO: add progress bar (not infinite, the real one with %)
+        if ((*(this->currentTimeMillisGetter))() - lastReceivedChunkMillis >= TIMEOUT)
+            break;
+
         if (message->flag == FLAG_FILE && message->size > 0)
             lastReceivedChunkMillis = (*(this->currentTimeMillisGetter))();
         else {
-            processMessage(message); // TODO: send the other messages processing to the net listen thread
             SDL_free(message);
-            message = NULL; // TODO: add queue for incoming messages
+            message = NULL;
             continue;
         }
-
-        if ((*(this->currentTimeMillisGetter))() - lastReceivedChunkMillis >= TIMEOUT)
-            break;
 
         assert(message->size <= NET_MESSAGE_BODY_SIZE);
         (*(this->netNextFileChunkReceiver))(fromId, index++, message->size, message->body);
@@ -904,17 +908,16 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
     }
     SDL_free(message);
 
-    this->exchangingFile = false;
-    return true;
+    finishFileExchanging();
+    return true; // TODO: check index == __initial_message__->count here and returns check result
 }
-
-#pragma clang diagnostic pop
 
 void netClean(void) {
     assert(this);
     rwMutexWriteLock(this->rwMutex);
 
     queueDestroy(this->conversationSetupMessages);
+    queueDestroy(this->fileExchangeMessages);
 
     SDL_free(this->serverKeyStub);
     listDestroy(this->userInfosList);

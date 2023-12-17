@@ -16,13 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define DEVELOPMENT_MODE 3 // TODO: debug
+#define DEVELOPMENT_MODE 0 // TODO: debug
 
-#if DEVELOPMENT_MODE == 1 // Altering the architecture, so it won't work properly until altering is done
-
-int main(void) { return 1; }
-
-#elif DEVELOPMENT_MODE == 2 // Designing & testing new feature
+#if DEVELOPMENT_MODE == 1 // Designing & testing new feature
 
 int main(void) {
 

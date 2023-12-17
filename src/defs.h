@@ -42,6 +42,8 @@
 
 #define atomic _Atomic
 
+#define fallthrough __attribute__((fallthrough));
+
 #if !defined(__GNUC__) // && !defined(__clang__) as clang defines __GNUC__ too
 #   error "Project uses gcc extensions"
 #endif
