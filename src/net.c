@@ -454,12 +454,17 @@ static void processMessage(const Message* message) {
     assert(this->state == STATE_AUTHENTICATED);
     switch (message->flag) {
         case FLAG_EXCHANGE_KEYS:
+            SDL_Log("fek %u", message->size); // TODO: debug
             if (message->size == INVITE_ASK)
                 processConversationSetUpMessage(message);
+            else
+                goto otherKeysExchangeFlags;
             break;
-        case FLAG_EXCHANGE_KEYS_DONE:
+        case FLAG_EXCHANGE_KEYS_DONE: // TODO: __attribute__((fallthrough));
         case FLAG_EXCHANGE_HEADERS:
         case FLAG_EXCHANGE_HEADERS_DONE:
+            otherKeysExchangeFlags:
+            SDL_Log("fe(kd|h|hd)"); // TODO: debug
             queuePush(this->conversationSetupMessages, copyMessage(message));
             break;
         case FLAG_FILE_ASK:
