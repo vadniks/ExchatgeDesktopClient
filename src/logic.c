@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include "render/render.h"
 #include "crypto.h"
 #include "net.h"
@@ -31,8 +32,9 @@
 #include "logic.h"
 
 const unsigned LOGIC_MAX_FILE_PATH_SIZE = 0x1ff; // 511, (1 << 9) - 1
-
 STATIC_CONST_UNSIGNED MAX_FILE_SIZE = (1 << 20) * 20; // 1024^2 * 20 = 20971520 bytes = 20 mb
+
+STATIC_CONST_STRING FILES_DIR = "files";
 
 typedef enum : unsigned {
     STATE_UNAUTHENTICATED = 0,
@@ -521,14 +523,25 @@ static void replyToFileExchangeRequest(void** parameters) {
         return;
     }
 
-    char currentPath[LOGIC_MAX_FILE_PATH_SIZE];
-    assert(getcwd(currentPath, LOGIC_MAX_FILE_PATH_SIZE));
+    const unsigned filesDirSize = SDL_strlen(FILES_DIR);
+    char filesDir[LOGIC_MAX_FILE_PATH_SIZE];
+    SDL_memset(filesDir, 0, LOGIC_MAX_FILE_PATH_SIZE);
+
+    assert(getcwd(filesDir, LOGIC_MAX_FILE_PATH_SIZE - filesDirSize - 1));
+
+    const unsigned currentPathSize = SDL_strlen(filesDir);
+    filesDir[currentPathSize] = '/';
+    SDL_memcpy(filesDir + currentPathSize + 1, FILES_DIR, filesDirSize);
+
+    struct stat xStat;
+    if (stat(filesDir, &xStat) || !S_ISDIR(xStat.st_mode))
+        assert(!mkdir(filesDir, S_IRWXU));
 
     char filePath[LOGIC_MAX_FILE_PATH_SIZE];
     const unsigned written = SDL_snprintf(
         filePath, LOGIC_MAX_FILE_PATH_SIZE,
         "%s/%lu_%s",
-        currentPath,
+        filesDir,
         logicCurrentTimeMillis(),
         filename
     );
