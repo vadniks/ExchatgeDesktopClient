@@ -88,6 +88,7 @@ STATIC_CONST_STRING UNABLE_TO_TRANSMIT_FILE = "Unable to transmit file";
 STATIC_CONST_STRING FILE_IS_TOO_BIG = "File is too big (> 20 mb)";
 STATIC_CONST_STRING FILE_TRANSMITTED = "File transmitted";
 STATIC_CONST_STRING ENTER_ABSOLUTE_PATH_TO_FILE = "Enter absolute path to the file";
+STATIC_CONST_STRING PASTE_WITH_CTRL_V = "Paste with Ctrl+V";
 STATIC_CONST_STRING AUTO_LOGGING_IN = "Auto logging in";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
@@ -471,7 +472,7 @@ bool renderShowInviteDialog(const char* fromUserName) {
     return !buttonId;
 }
 
-bool renderShowFileExchangeRequestDialog(const char* fromUserName, unsigned fileSize) {
+bool renderShowFileExchangeRequestDialog(const char* fromUserName, unsigned fileSize, const char* filename) {
     assert(this);
 
     const unsigned bufferSize = 0xfff;
@@ -479,12 +480,13 @@ bool renderShowFileExchangeRequestDialog(const char* fromUserName, unsigned file
 
     const unsigned written = SDL_snprintf(
         buffer, bufferSize,
-        "%s %s %s %u %s",
+        "%s %s %s %u %s (%s)",
         FILE_EXCHANGE_REQUESTED_BY_USER,
         fromUserName,
         WITH_SIZE_OF,
         fileSize,
-        BYTES
+        BYTES,
+        filename
     );
     assert(written > 0 && written <= bufferSize);
 
@@ -514,7 +516,7 @@ void renderSetControlsBlocking(bool blocking) {
 }
 
 #pragma clang diagnostic push
-#pragma ide diagnostic ignored "ArrayIndexOutOfBounds" // line 519 & 512 - I know what I'm doing
+#pragma ide diagnostic ignored "ArrayIndexOutOfBounds" // line *1 % *2 - I know what I'm doing
 static void postSystemMessage(const char* text, bool error) { // expects a null-terminated string with length in range (0, SYSTEM_MESSAGE_SIZE_MAX]
     assert(this);
     SystemMessage* message = SDL_malloc(sizeof *message);
@@ -524,9 +526,9 @@ static void postSystemMessage(const char* text, bool error) { // expects a null-
 
     bool foundNullTerminator = false;
     for (unsigned i = 0; i < RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE; i++) {
-        message->text[i] = text[i];
+        message->text[i] = text[i]; // *1
 
-        if (!text[i]) {
+        if (!text[i]) { // *2
             assert(i > 0);
             foundNullTerminator = true;
             break;
@@ -893,7 +895,7 @@ static void onSendClicked(void) {
     this->enteredConversationMessageSize = 0;
 }
 
-static void drawConversation(void) { // TODO: generate & sign messages from users on the client side
+static void drawConversation(void) {
     const float height = currentHeight();
 
     char title[this->conversationNameSize + 1];
@@ -1000,6 +1002,15 @@ static void drawFileChooser(void) {
     nk_label_colored(
         this->context,
         ENTER_ABSOLUTE_PATH_TO_FILE,
+        NK_TEXT_ALIGN_CENTERED,
+        (struct nk_color) {0xff, 0xff, 0xff, 0x88}
+    );
+    nk_spacer(this->context);
+
+    nk_spacer(this->context);
+    nk_label_colored(
+        this->context,
+        PASTE_WITH_CTRL_V,
         NK_TEXT_ALIGN_CENTERED,
         (struct nk_color) {0xff, 0xff, 0xff, 0x88}
     );
