@@ -47,7 +47,6 @@ static const byte TAG_INTERMEDIATE = crypto_secretstream_xchacha20poly1305_TAG_M
 __attribute_maybe_unused__ static const byte TAG_LAST = crypto_secretstream_xchacha20poly1305_TAG_FINAL; // 3
 
 static byte serverSignPublicKey[SERVER_SIGN_PUBLIC_KEY_SIZE] = {0};
-static atomic bool sodiumInitialized = false;
 
 struct Crypto_t {
     byte serverPublicKey[CRYPTO_KEY_SIZE]; // clientPublicKey for *AsServer functions
@@ -59,12 +58,9 @@ struct Crypto_t {
     StreamState clientEncryptionState; // serverEncryptionState for *AsServer functions
 };
 
-Crypto* nullable cryptoInit(void) {
-    if (!sodiumInitialized && sodium_init() < 0) return NULL; // TODO: move sodium_init call to separate function
-    else sodiumInitialized = true;
+void cryptoModuleInit(void) { assert(sodium_init() >= 0); } // there's no sodium_destroy/clean function, allocated objects will be freed at the exit anyway
 
-    return (Crypto*) SDL_malloc(sizeof(Crypto));
-}
+Crypto* nullable cryptoInit(void) { return (Crypto*) SDL_malloc(sizeof(Crypto)); }
 
 void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize) {
     assert(serverSignPublicKeySize == SERVER_SIGN_PUBLIC_KEY_SIZE);

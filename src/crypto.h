@@ -31,7 +31,8 @@ struct Crypto_t;
 typedef struct Crypto_t Crypto;
 
 // shared:
-Crypto* nullable cryptoInit(void);
+void cryptoModuleInit(void); // initialize the module, no need for moduleClean function
+Crypto* nullable cryptoInit(void); // create & init the Crypo object // TODO: rename to cryptoCreate
 
 // as client:
 void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize); // must be called before performing any client side operations

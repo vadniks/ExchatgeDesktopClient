@@ -93,6 +93,8 @@ void logicInit(void) {
     this->rwops = NULL;
     this->fileHashState = NULL;
 
+    cryptoModuleInit();
+
     assert(optionsInit(NET_USERNAME_SIZE, NET_UNHASHED_PASSWORD_SIZE, &fetchHostId));
     this->adminMode = optionsIsAdmin();
     this->autoLoggingIn = optionsCredentials() != NULL;
