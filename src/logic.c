@@ -522,6 +522,7 @@ static void replyToFileExchangeRequest(void** parameters) {
     if (!accepted) {
         assert(!netReplyToFileExchangeInvite(fromId, fileSize, false)); // blocks the thread again
         finishLoading();
+        renderShowUnableToTransmitFileError();
         return;
     }
 
