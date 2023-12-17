@@ -720,14 +720,12 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
 
     if (inviteProcessingTimeoutExceeded()) {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         return NULL;
     }
 
     if (!accept) {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         netSend(FLAG_EXCHANGE_KEYS, body, INVITE_DENY, fromId);
         return NULL;
     }
@@ -738,8 +736,7 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, CRYPTO_KEY_SIZE, fromId)) {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -749,8 +746,7 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
         || message->flag != FLAG_EXCHANGE_KEYS_DONE
         || message->size != CRYPTO_KEY_SIZE)
     {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         SDL_free(message);
         return NULL;
@@ -760,16 +756,14 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     SDL_memcpy(akaClientPublicKey, message->body, CRYPTO_KEY_SIZE);
     SDL_free(message);
     if (!cryptoExchangeKeysAsServer(crypto, akaClientPublicKey)) {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
 
     byte* akaServerStreamHeader = cryptoCreateEncoderAsServer(crypto);
     if (!akaServerStreamHeader) {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -778,8 +772,7 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     SDL_free(akaServerStreamHeader);
 
     if (!netSend(FLAG_EXCHANGE_HEADERS, body, CRYPTO_HEADER_SIZE, fromId)) {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         cryptoDestroy(crypto);
         return NULL;
     }
@@ -788,8 +781,7 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
         || message->flag != FLAG_EXCHANGE_HEADERS_DONE
         || message->size != CRYPTO_HEADER_SIZE)
     {
-        queueClear(this->conversationSetupMessages);
-        this->settingUpConversation = false;
+        finishSettingUpConversation();
         SDL_free(message);
         cryptoDestroy(crypto);
         return NULL;
@@ -799,14 +791,13 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     SDL_memcpy(akaClientStreamHeader, message->body, CRYPTO_HEADER_SIZE);
     SDL_free(message);
 
-    this->settingUpConversation = false;
+    finishSettingUpConversation();
+
     if (!cryptoCreateDecoderStreamAsServer(crypto, akaClientStreamHeader)) {
-        queueClear(this->conversationSetupMessages);
         cryptoDestroy(crypto);
         return NULL;
     }
 
-    queueClear(this->conversationSetupMessages);
     return crypto;
 }
 
