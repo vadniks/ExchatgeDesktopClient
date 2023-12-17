@@ -915,7 +915,7 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
     listClear(this->messagesList);
 
     switch (chooseVariant) {
-        case RENDER_START_CONVERSATION:
+        case RENDER_START_CONVERSATION: fallthrough
         case RENDER_CONTINUE_CONVERSATION:
             createOrLoadConversation(id, chooseVariant == RENDER_START_CONVERSATION);
             break;
