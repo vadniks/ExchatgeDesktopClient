@@ -199,7 +199,7 @@ static void onLogInResult(bool successful) { // TODO: add broadcasting to all us
     assert(this);
     if (successful) {
         this->state = STATE_AUTHENTICATED;
-        netFetchUsers();
+        lifecycleAsync((LifecycleAsyncActionFunction) &netFetchUsers, NULL, 0);
     } else {
         this->state = STATE_UNAUTHENTICATED;
         renderShowLogIn();

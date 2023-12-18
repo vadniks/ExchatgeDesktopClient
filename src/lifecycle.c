@@ -147,6 +147,7 @@ inline static void stopApp(void) { this->running = false; }
 void lifecycleLoop(void) {
     unsigned long startMillis, differenceMillis;
     while (this->running) {
+        startMillis = logicCurrentTimeMillis();
 
         if (processEvents()) {
             stopApp();
@@ -154,12 +155,13 @@ void lifecycleLoop(void) {
             break;
         }
 
-        startMillis = logicCurrentTimeMillis();
         renderDraw();
 
-        differenceMillis = logicCurrentTimeMillis() - startMillis - 5;
+        differenceMillis = logicCurrentTimeMillis() - startMillis;
         if ((unsigned long) UI_UPDATE_PERIOD > differenceMillis)
             lifecycleSleep((unsigned long) UI_UPDATE_PERIOD - differenceMillis);
+
+        // SDL_Log("fps: %u", (unsigned) (1000.0f / (float) (logicCurrentTimeMillis() - startMillis)));
     }
 }
 
