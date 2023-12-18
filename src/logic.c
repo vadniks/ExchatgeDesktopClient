@@ -337,8 +337,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
         renderShowUnableToCreateConversation();
 
     releaseLocks:
-    renderSetControlsBlocking(false);
-    renderHideInfiniteProgressBar();
+    finishLoading();
 }
 
 static void onConversationSetUpInviteReceived(unsigned fromId) {
@@ -514,7 +513,10 @@ static void replyToFileExchangeRequest(void** parameters) {
     SDL_free(parameters);
 
     const User* user = findUser(fromId);
-    assert(user);
+    if (!user) {
+        finishLoading();
+        return;
+    }
 
     const bool accepted = renderShowFileExchangeRequestDialog(user->name, fileSize, filename); // blocks the thread
     assert(this);

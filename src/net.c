@@ -128,6 +128,9 @@ THIS(
     atomic bool exchangingFile;
     Queue* conversationSetupMessages;
     Queue* fileExchangeMessages;
+    atomic bool fetchingUsers;
+    Queue* yetUnprocessedMessages; // messages from other users that await updating local users information to be processed rather than ignored due to yet unknown sender id
+    atomic bool processingYetUnprocessedMessages;
 )
 #pragma clang diagnostic pop
 
@@ -269,6 +272,9 @@ bool netInit(
     this->exchangingFile = false;
     this->conversationSetupMessages = queueInitExtra(&SDL_free, currentTimeMillisGetter);
     this->fileExchangeMessages = queueInitExtra(&SDL_free, currentTimeMillisGetter);
+    this->fetchingUsers = false;
+    this->yetUnprocessedMessages = queueInit(&SDL_free);
+    this->processingYetUnprocessedMessages = false;
 
     assert(!SDLNet_Init());
 
@@ -479,7 +485,10 @@ static void processMessage(const Message* message) {
             queuePush(this->fileExchangeMessages, copyMessage(message));
             break;
         case FLAG_PROCEED:
-            (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
+            if (this->fetchingUsers) // needed only here as losing invite messages is not so critical as losing usual messages as only they contain information
+                queuePush(this->yetUnprocessedMessages, copyMessage(message));
+            else
+                (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
             break;
         default:
             break;
@@ -596,8 +605,12 @@ static NetUserInfo* unpackUserInfo(const byte* bytes) {
 
 void netFetchUsers(void) {
     assert(this);
+    while (this && this->processingYetUnprocessedMessages); // fetch users requesting (and waiting for processing to finish) and processing yet unprocessed messages are performed in the same thread (asyncActions) - deadlock might occur as the thread can begin waiting for itself, but 'cause they're in the same thead they are performed sequentially, so deadlock occurrence is unlikely - testing needed
+
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+
+    this->fetchingUsers = true;
     netSend(FLAG_FETCH_USERS, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
 }
 
@@ -619,6 +632,15 @@ const byte* netUserInfoName(const NetUserInfo* info) {
 static void onUsersInfosListProcessingFinished(void) {
     assert(this);
     listClear(this->userInfosList);
+    this->fetchingUsers = false;
+
+    this->processingYetUnprocessedMessages = true;
+    while (queueSize(this->yetUnprocessedMessages)) {
+        Message* message = queuePop(this->yetUnprocessedMessages);
+        (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
+        SDL_free(message);
+    }
+    this->processingYetUnprocessedMessages = false;
 }
 
 static void onNextUsersBundleFetched(const Message* message) {
@@ -916,6 +938,7 @@ void netClean(void) {
     assert(this);
     rwMutexWriteLock(this->rwMutex);
 
+    queueDestroy(this->yetUnprocessedMessages);
     queueDestroy(this->conversationSetupMessages);
     queueDestroy(this->fileExchangeMessages);
 
