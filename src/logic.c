@@ -768,7 +768,7 @@ static void processCredentials(void** data) {
     )) { // password that's used to sign in also used to encrypt messages & other stuff in the database
         databaseClean();
         renderShowUnableToDecryptDatabaseError();
-        renderHideInfiniteProgressBar();
+        finishLoading();
         this->state = STATE_UNAUTHENTICATED;
 
         if (this->autoLoggingIn)

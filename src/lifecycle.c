@@ -57,8 +57,6 @@ void lifecycleAsync(LifecycleAsyncActionFunction function, void* nullable parame
     queuePush(this->asyncActionsQueue, action);
 }
 
-static void asyncActionDeallocator(AsyncAction* action) { SDL_free(action); }
-
 static void asyncActionsThreadLooper(void) {
     while (this->running) {
         if (!queueSize(this->asyncActionsQueue)) {
@@ -71,7 +69,7 @@ static void asyncActionsThreadLooper(void) {
         if (action->delayMillis > 0) lifecycleSleep(action->delayMillis);
         (*(action->function))(action->parameter);
 
-        asyncActionDeallocator(action);
+        SDL_free(action);
     }
 }
 
@@ -86,7 +84,7 @@ static unsigned netUpdateLopper(void) { // TODO: add groups and broadcast
 bool lifecycleInit(void) {
     this = SDL_malloc(sizeof *this);
     this->running = true;
-    this->asyncActionsQueue = queueInit((QueueDeallocator) &asyncActionDeallocator);
+    this->asyncActionsQueue = queueInit((QueueDeallocator) &SDL_free);
     this->asyncActionsThread = SDL_CreateThread((SDL_ThreadFunction) &asyncActionsThreadLooper, "asyncActionsThread", NULL);
 
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "1"); // TODO: optimize ui for highDpi displays
