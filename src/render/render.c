@@ -338,7 +338,7 @@ void renderInputBegan(void) {
 void renderProcessEvent(SDL_Event* event) {
     assert(this);
 
-    bool inputEvent = event->type == SDL_KEYDOWN
+    const bool inputEvent = event->type == SDL_KEYDOWN
         || event->type == SDL_KEYUP
         || event->type == SDL_TEXTEDITING
         || event->type == SDL_TEXTINPUT
