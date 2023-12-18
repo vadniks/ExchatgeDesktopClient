@@ -58,6 +58,7 @@ THIS(
     atomic unsigned fileBytesCounter;
     bool autoLoggingIn;
     void* fileHashState;
+    atomic unsigned missingMessagesFetchers;
 )
 #pragma clang diagnostic pop
 
@@ -92,6 +93,7 @@ void logicInit(void) {
     this->databaseInitialized = false;
     this->rwops = NULL;
     this->fileHashState = NULL;
+    this->missingMessagesFetchers = 0;
 
     cryptoModuleInit();
 
@@ -238,8 +240,14 @@ static void onDisconnected(void) {
     renderShowDisconnectedError();
 }
 
-static void processFetchedUsers(void** parameters) {
+static void fetchMissingMessagesFromUser(unsigned id) {
     assert(this && this->databaseInitialized);
+    this->missingMessagesFetchers++;
+    netFetchMessages(true, id, databaseGetMostRecentMessageTimestamp(id));
+}
+
+static void processFetchedUsers(void** parameters) {
+    assert(this && this->databaseInitialized && !this->missingMessagesFetchers);
 
     List* userInfosList = parameters[0];
     void (* const finishNotifier)(void) = (void (*)(void)) parameters[1];
@@ -262,6 +270,8 @@ static void processFetchedUsers(void** parameters) {
                 databaseConversationExists(id),
                 netUserInfoConnected(info)
             ));
+
+            fetchMissingMessagesFromUser(id);
         } else {
             SDL_memcpy(this->currentUserName, netUserInfoName(info), NET_USERNAME_SIZE);
             renderSetWindowTitle(this->currentUserName);
@@ -279,6 +289,20 @@ static void onUsersFetched(List* userInfosList, void (*finishNotifier)(void)) {
     parameters[1] = (void*) finishNotifier;
 
     lifecycleAsync((LifecycleAsyncActionFunction) &processFetchedUsers, parameters, 0);
+}
+
+static void onNextMessageFetched(unsigned from, unsigned long timestamp, unsigned size, const byte* message, bool last) {
+    assert(this);
+
+    if (size > 0)
+        onMessageReceived(timestamp, from, message, size);
+
+    assert(!this->missingMessagesFetchers);
+    this->missingMessagesFetchers--;
+
+    if (!last || this->missingMessagesFetchers) return;
+    renderSetControlsBlocking(false);
+    renderHideInfiniteProgressBar();
 }
 
 static void tryLoadPreviousMessages(unsigned id) {
@@ -772,7 +796,8 @@ static void processCredentials(void** data) {
         &onConversationSetUpInviteReceived,
         &onFileExchangeInviteReceived,
         &nextFileChunkSupplier,
-        &nextFileChunkReceiver
+        &nextFileChunkReceiver,
+        &onNextMessageFetched
     );
 
     if (!this->netInitialized) {
@@ -1053,7 +1078,7 @@ void logicOnSendClicked(const char* text, unsigned size) {
 }
 
 void logicOnUpdateUsersListClicked(void) {
-    assert(this && this->databaseInitialized);
+    assert(this && this->databaseInitialized && !this->missingMessagesFetchers);
 
     renderShowInfiniteProgressBar();
     renderSetControlsBlocking(true);

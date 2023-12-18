@@ -63,6 +63,7 @@ typedef enum : int {
     FLAG_ACCESS_DENIED = 0x0000000b,
 
     FLAG_FETCH_USERS = 0x0000000c,
+    FLAG_FETCH_MESSAGES = 0x0000000d,
 
     // firstly current user (A, is treated as a client) invites another user (B, is treated as a server) by sending him an invite; if B declines the invite he replies with a message containing this flag and body size = 0
     FLAG_EXCHANGE_KEYS = 0x000000a0, // if B accepts the invite, he replies with his public key, which A treats as a server key (allowing not to rewrite that part of the crypto api)
@@ -131,6 +132,8 @@ THIS(
     atomic bool fetchingUsers;
     Queue* yetUnprocessedMessages; // messages from other users that await updating local users information to be processed rather than ignored due to yet unknown sender id
     atomic bool processingYetUnprocessedMessages;
+    atomic bool fetchingMessages;
+    NetOnNextMessageFetched onNextMessageFetched;
 )
 #pragma clang diagnostic pop
 
@@ -231,7 +234,8 @@ bool netInit(
     NetOnConversationSetUpInviteReceived onConversationSetUpInviteReceived,
     NetOnFileExchangeInviteReceived onFileExchangeInviteReceived,
     NetNextFileChunkSupplier nextFileChunkSupplier,
-    NetNextFileChunkReceiver netNextFileChunkReceiver
+    NetNextFileChunkReceiver netNextFileChunkReceiver,
+    NetOnNextMessageFetched onNextMessageFetched
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
@@ -275,6 +279,8 @@ bool netInit(
     this->fetchingUsers = false;
     this->yetUnprocessedMessages = queueInit(&SDL_free);
     this->processingYetUnprocessedMessages = false;
+    this->fetchingMessages = false;
+    this->onNextMessageFetched = onNextMessageFetched;
 
     assert(!SDLNet_Init());
 
@@ -373,6 +379,9 @@ static void processErrors(const Message* message) {
             this->state = STATE_FINISHED_WITH_ERROR;
             (*(this->onRegisterResult))(false);
             break;
+        case FLAG_FETCH_MESSAGES:
+            // TODO
+            break;
         default:
             (*(this->onErrorReceived))(message->flag);
             break;
@@ -380,6 +389,7 @@ static void processErrors(const Message* message) {
 }
 
 static void onNextUsersBundleFetched(const Message* message);
+static void onNextMessageFetched(const Message* message);
 
 static void processMessagesFromServer(const Message* message) {
     const bool cst = checkServerToken(message->token);
@@ -399,7 +409,7 @@ static void processMessagesFromServer(const Message* message) {
         case FLAG_REGISTERED:
             (*(this->onRegisterResult))(true);
             break;
-        case FLAG_FETCH_USERS: // TODO: raise assert if the users list hasn't been fully formed
+        case FLAG_FETCH_USERS: // TODO: raise assert if the users list hasn't been fully formed or add timeout
             onNextUsersBundleFetched(message);
             break;
         case FLAG_UNAUTHENTICATED: fallthrough
@@ -489,6 +499,9 @@ static void processMessage(const Message* message) {
                 queuePush(this->yetUnprocessedMessages, copyMessage(message));
             else
                 (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
+            break;
+        case FLAG_FETCH_MESSAGES:
+            onNextMessageFetched(message);
             break;
         default:
             break;
@@ -627,6 +640,26 @@ bool netUserInfoConnected(const NetUserInfo* info) {
 const byte* netUserInfoName(const NetUserInfo* info) {
     assert(info);
     return info->name;
+}
+
+void netFetchMessages(bool from, unsigned id, unsigned long afterTimestamp) {
+    assert(this);
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;)
+
+    byte body[NET_MESSAGE_BODY_SIZE] = {0};
+
+    body[0] = from ? 1 : 0;
+    *((unsigned long*) &(body[1])) = afterTimestamp;
+    *((unsigned*) &(body[1 + LONG_SIZE])) = id;
+
+    netSend(FLAG_FETCH_MESSAGES, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
+}
+
+static void onNextMessageFetched(const Message* message) {
+    assert(this && this->fetchingMessages);
+    const bool last = message->index == message->count - 1;
+    (*(this->onNextMessageFetched))(message->from, message->timestamp, message->size, message->body, last);
+    if (last) { RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;) }
 }
 
 static void onUsersInfosListProcessingFinished(void) {

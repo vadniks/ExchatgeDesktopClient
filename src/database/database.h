@@ -51,4 +51,5 @@ void databaseRemoveConversation(unsigned userId); // check for existence first
 bool databaseAddMessage(const DatabaseMessage* message); // check for existence first; from (user id) inside the message may be null if the message came from the current user
 List* nullable databaseGetMessages(unsigned conversation); // consumes a conversationId (userId), returns an array of messages <DatabaseMessage*> (which is expected to be deallocated by the caller) on success; inside each message there's fromId unsigned int in bytes (sizeof 4)
 void databaseRemoveMessages(unsigned conversation); // check for existence first
+unsigned long databaseGetMostRecentMessageTimestamp(unsigned conversation);
 void databaseClean(void);
