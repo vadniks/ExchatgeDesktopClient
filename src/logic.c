@@ -156,7 +156,7 @@ static void processReceivedMessage(void** parameters) {
     SDL_free(parameters);
 
     const User* user = findUser(fromId);
-    if (!user) return; // TODO: can lose messages here
+    if (!user) return; // thanks to caching messages while users information is synchronizing, losing messages here is unlikely to happen, but theoretically it is still possible - it would be an error though as the sender is required to instantiate a conversation with the recipient first and the recipient's logic won't let to do that as it would drop/ignore conversation creation requests/invites from the sender - TODO: assert(user found)?
 
     const unsigned size = encryptedSize - cryptoEncryptedSize(0);
     assert(size > 0 && size <= logicUnencryptedMessageBodySize());
