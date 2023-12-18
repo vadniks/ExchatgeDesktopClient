@@ -29,7 +29,8 @@ Client side is written entirely in C (C11).
 
 Build is performed via [GNU Make](https://www.gnu.org/software/make) 
 or via [Ninja](https://ninja-build.org/) 
-with help of [CMake](https://cmake.org) build system generator.
+with help of [CMake](https://cmake.org) build system generator. 
+Compilation is performed via [CLang](https://clang.llvm.org/).
 
 Client side uses the following libraries: 
 * [SDL2](https://github.com/libsdl-org/SDL); 
