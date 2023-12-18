@@ -210,10 +210,14 @@ static void onLogInResult(bool successful) { // TODO: add broadcasting to all us
     }
 }
 
+static void finishLoading(void) {
+    renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
+}
+
 static void onErrorReceived(__attribute_maybe_unused__ int flag) {
     assert(this);
-    renderHideInfiniteProgressBar(); // TODO: apply these only for logging in/registration
-    renderSetControlsBlocking(false);
+    finishLoading(); // TODO: apply these only for logging in/registration
     renderShowSystemError();
 }
 
@@ -222,11 +226,6 @@ static void onRegisterResult(bool successful) {
     this->state = STATE_UNAUTHENTICATED;
     successful ? renderShowRegistrationSucceededSystemMessage() : renderShowSystemError();
     renderHideInfiniteProgressBar();
-}
-
-static void finishLoading(void) {
-    renderHideInfiniteProgressBar();
-    renderSetControlsBlocking(false);
 }
 
 static void onDisconnected(void) {
@@ -301,8 +300,7 @@ static void onNextMessageFetched(unsigned from, unsigned long timestamp, unsigne
     this->missingMessagesFetchers--;
 
     if (!last || this->missingMessagesFetchers) return;
-    renderSetControlsBlocking(false);
-    renderHideInfiniteProgressBar();
+    finishLoading();
 }
 
 static void tryLoadPreviousMessages(unsigned id) {
