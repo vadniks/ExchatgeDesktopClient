@@ -45,7 +45,7 @@
 #define staticAssert(x) _Static_assert(x, "")
 #define atomic _Atomic
 #define fallthrough __attribute__((fallthrough));
-#define type_of(x) __typeof__(x)
+#define type_of(x) __typeof__(x) // IDE shows error if plain typeof is used, so fallback should be used instead
 #define auto_type __auto_type
 
 #pragma clang deprecated(type_of, "")
