@@ -31,7 +31,7 @@
 #endif
 
 #if !defined(__GNUC__) // && !defined(__clang__) as clang defines __GNUC__ too
-#   error "Project uses gcc extensions"
+#   error "Project uses gnu extensions"
 #endif
 
 #ifdef __STDC_NO_ATOMICS__
