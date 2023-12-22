@@ -30,6 +30,10 @@
 #   error "New C features are used"
 #endif
 
+#if !defined(__GNUC__) // && !defined(__clang__) as clang defines __GNUC__ too
+#   error "Project uses gcc extensions"
+#endif
+
 #ifdef __STDC_NO_ATOMICS__
 #   error "Gimme atomics!"
 #endif
@@ -39,14 +43,10 @@
     static This* this = NULL;
 
 #define staticAssert(x) _Static_assert(x, "")
-
 #define atomic _Atomic
-
 #define fallthrough __attribute__((fallthrough));
-
-#if !defined(__GNUC__) // && !defined(__clang__) as clang defines __GNUC__ too
-#   error "Project uses gcc extensions"
-#endif
+#define type_of(x) __typeof__(x)
+#define auto_type __auto_type
 
 #ifndef __GLIBC__
 #   error "Project uses glibc"
