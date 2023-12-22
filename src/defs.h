@@ -48,6 +48,9 @@
 #define type_of(x) __typeof__(x)
 #define auto_type __auto_type
 
+#pragma clang deprecated(type_of, "")
+#pragma clang deprecated(auto_type, "")
+
 #ifndef __GLIBC__
 #   error "Project uses glibc"
 #endif
