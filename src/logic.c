@@ -259,21 +259,25 @@ static void processFetchedUsers(void** parameters) {
 
     const unsigned size = listSize(userInfosList);
     const NetUserInfo* info;
+    bool conversationExists;
 
     for (unsigned i = 0, id; i < size; i++) {
         info = listGet(userInfosList, i);
         id = netUserInfoId(info);
 
         if (id != netCurrentUserId()) {
+            conversationExists = databaseConversationExists(id);
+
             listAddBack(this->usersList, userCreate(
                 id,
                 (const char*) netUserInfoName(info),
                 NET_USERNAME_SIZE,
-                databaseConversationExists(id),
+                conversationExists,
                 netUserInfoConnected(info)
             ));
 
-            fetchMissingMessagesFromUser(id);
+            if (conversationExists)
+                fetchMissingMessagesFromUser(id);
         } else {
             SDL_memcpy(this->currentUserName, netUserInfoName(info), NET_USERNAME_SIZE);
             renderSetWindowTitle(this->currentUserName);
@@ -281,7 +285,6 @@ static void processFetchedUsers(void** parameters) {
     }
     (*finishNotifier)();
 
-//    finishLoading();
     renderShowUsersList(this->currentUserName);
 }
 
