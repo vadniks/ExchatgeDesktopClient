@@ -73,7 +73,7 @@ typedef unsigned char byte;
 
 void xPrintBinaryArray(const char* name, const void* array, unsigned size);
 unsigned stackLimit(void);
-void printStackTrace(void);
+__attribute_maybe_unused__ void printStackTrace(void);
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedMacroInspection"
