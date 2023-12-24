@@ -40,11 +40,9 @@ void printStackTrace(void) {
 
     int actualSize = backtrace(array, size);
     char** strings = backtrace_symbols(array, actualSize);
+    if (!strings) return;
 
-    if (strings) {
-        for (int i = 0; i < actualSize; i ? puts(strings[i++]) : i++);
-        puts("");
-    }
-
+    for (int i = 0; i < actualSize; i ? puts(strings[i++]) : i++);
+    puts("");
     free(strings);
 }
