@@ -277,7 +277,7 @@ static void processFetchedUsers(void** parameters) {
             ));
 
             if (conversationExists) {
-                fetchMissingMessagesFromUser(id);
+                fetchMissingMessagesFromUser(id); // TODO: add finishNotifier as a parameter, related to --*--
                 atLeastOneConversationExists = true;
             }
         } else {
@@ -285,12 +285,14 @@ static void processFetchedUsers(void** parameters) {
             renderSetWindowTitle(this->currentUserName);
         }
     }
-    (*finishNotifier)();
+    (*finishNotifier)(); // TODO: move this to --*--
 
     renderShowUsersList(this->currentUserName);
 
-    if (!atLeastOneConversationExists)
+    if (!atLeastOneConversationExists) {
         finishLoading(); // if at least one conversation exists, then begin outdated/missing messages fetching, otherwise do nothing and release lock
+        // TODO: --*--
+    }
 }
 
 static void onUsersFetched(List* userInfosList, void (*finishNotifier)(void)) {
