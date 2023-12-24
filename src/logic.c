@@ -172,6 +172,8 @@ static void processReceivedMessage(void** parameters) {
     assert(message);
     cryptoDestroy(crypto);
 
+    SDL_Log("--- prm %lu %u", timestamp, fromId); // TODO: debug
+
     DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, (byte*) message, size);
     assert(databaseAddMessage(dbMessage));
     databaseMessageDestroy(dbMessage);
