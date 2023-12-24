@@ -293,7 +293,13 @@ static void onUsersFetched(List* userInfosList, void (*finishNotifier)(void)) {
     lifecycleAsync((LifecycleAsyncActionFunction) &processFetchedUsers, parameters, 0);
 }
 
-static void onNextMessageFetched(unsigned from, unsigned long timestamp, unsigned size, const byte* nullable message, bool last) {
+static void onNextMessageFetched(
+    unsigned from,
+    unsigned long timestamp,
+    unsigned size,
+    const byte* nullable message,
+    bool last
+) {
     assert(this);
     assert(size && message || !size && !message);
 
