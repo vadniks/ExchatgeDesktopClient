@@ -29,6 +29,6 @@ const char* optionsHost(void);
 unsigned optionsPort(void);
 const byte* optionsServerSignPublicKey(void);
 unsigned optionsServerSignPublicKeySize(void);
-const char* nullable optionsCredentials(void);
+const char* nullable optionsCredentials(void); // TODO: move to database
 void optionsSetCredentials(const char* nullable credentials); // if null - removes the option's payload from file
 void optionsClear(void); // buffer in which the credentials are stored gets overwritten with random data at module's cleanup
