@@ -644,8 +644,13 @@ static void getMostRecentMessageTimestampBinder(const unsigned* conversation, sq
 { assert(!sqlite3_bind_int(statement, 1, (int) *conversation)); }
 
 static void getMostRecentMessageTimestampResultHandler(unsigned long* timestamp, sqlite3_stmt* statement) {
-    assert(sqlite3_step(statement) == SQLITE_ROW);
-    *timestamp = (unsigned long) sqlite3_column_int64(statement, 0);
+    const int result = sqlite3_step(statement);
+    if (result == SQLITE_ROW)
+        *timestamp = (unsigned long) sqlite3_column_int64(statement, 0);
+    else if (result == SQLITE_DONE)
+        *timestamp = 0;
+    else
+        assert(false);
 }
 
 unsigned long databaseGetMostRecentMessageTimestamp(unsigned conversation) {
@@ -657,8 +662,8 @@ unsigned long databaseGetMostRecentMessageTimestamp(unsigned conversation) {
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
-        "select %s from %s order by %s desc limit 1",
-        CONVERSATION_COLUMN, MESSAGES_TABLE, TIMESTAMP_COLUMN
+        "select %s from %s where %s = ? order by %s desc limit 1",
+        TIMESTAMP_COLUMN, MESSAGES_TABLE, CONVERSATION_COLUMN, TIMESTAMP_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 

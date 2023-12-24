@@ -242,7 +242,10 @@ static void onDisconnected(void) {
 static void fetchMissingMessagesFromUser(unsigned id) {
     assert(this && this->databaseInitialized);
     this->missingMessagesFetchers++;
-    netFetchMessages(true, id, databaseGetMostRecentMessageTimestamp(id));
+
+    const unsigned long timestamp = databaseGetMostRecentMessageTimestamp(id);
+    assert(timestamp < logicCurrentTimeMillis());
+    netFetchMessages(true, id, timestamp);
 }
 
 static void processFetchedUsers(void** parameters) {
