@@ -167,7 +167,7 @@ static void processReceivedMessage(void** parameters) {
     if (!crypto) return; // TODO: assert
 
     byte* message = cryptoDecrypt(crypto, encryptedMessage, encryptedSize, false);
-    assert(message);
+    assert(message); // TODO: what if a new message is received while fetching missing messages is in progress? Decryption will fail (probably)! New messages are needed to be placed in a queue and then on fetching missing messages finish check that queue
     cryptoDestroy(crypto);
 
     DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, (byte*) message, size);
