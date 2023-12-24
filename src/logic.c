@@ -166,13 +166,9 @@ static void processReceivedMessage(void** parameters) {
     Crypto* crypto = databaseGetConversation(fromId);
     if (!crypto) return; // TODO: assert
 
-    SDL_Log("prm %lu %u", timestamp, fromId); // TODO: debug
-
     byte* message = cryptoDecrypt(crypto, encryptedMessage, encryptedSize, false);
     assert(message);
     cryptoDestroy(crypto);
-
-    SDL_Log("--- prm %lu %u", timestamp, fromId); // TODO: debug
 
     DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, (byte*) message, size);
     assert(databaseAddMessage(dbMessage));
@@ -249,7 +245,6 @@ static void fetchMissingMessagesFromUser(unsigned id) {
 
     const unsigned long timestamp = databaseGetMostRecentMessageTimestamp(id);
     assert(timestamp < logicCurrentTimeMillis());
-    SDL_Log("fmmfu %lu", timestamp); // TODO: debug
     netFetchMessages(id, timestamp);
 }
 
@@ -315,8 +310,6 @@ static void onNextMessageFetched(
 ) {
     assert(this);
     assert(size && message || !size && !message);
-
-    SDL_Log("onmf %u %u %lu %c", from, size, timestamp, message != NULL ? 't' : 'f'); // TODO: debug
 
     if (size > 0)
         onMessageReceived(timestamp, from, message, size);
