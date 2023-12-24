@@ -33,7 +33,7 @@ typedef void (*NetOnConversationSetUpInviteReceived)(unsigned/*fromId*/); // mus
 typedef void (*NetOnFileExchangeInviteReceived)(unsigned fromId, unsigned fileSize, const byte* hash, const char* filename, unsigned filenameSize); // must then call replyToFileExchangeInvite
 typedef unsigned (*NetNextFileChunkSupplier)(unsigned index, byte* buffer); // returns (0 < count <= MESSAGE_BODY_SIZE) of written bytes or 0 if no more chunks available (current chunk included), if this is first time this callback is called, the return of 0 is treated as occurrence of error and the operation gets aborted; copies the another chunk's bytes into the buffer; the buffer is deallocated automatically
 typedef void (*NetNextFileChunkReceiver)(unsigned fromId, unsigned index, unsigned receivedBytesCount, const byte* buffer);
-typedef void (*NetOnNextMessageFetched)(unsigned from, unsigned long timestamp, unsigned size, const byte* nullable message, bool last); // message is null (and last is true too) when there are no messages from the given user
+typedef void (*NetOnNextMessageFetched)(unsigned from, unsigned long timestamp, unsigned size, const byte* nullable message, bool last); // message is null (and last is true too) when there are no messages from the given user and from is equal to fromServer
 
 struct NetUserInfo_t;
 typedef struct NetUserInfo_t NetUserInfo;
