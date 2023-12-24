@@ -381,7 +381,7 @@ static void processErrors(const Message* message) {
             (*(this->onRegisterResult))(false);
             break;
         case FLAG_FETCH_MESSAGES:
-            SDL_Log("pr fm"); // TODO
+            SDL_Log("pr fm"); // TODO <----------------------------------------------------------------------------
             break;
         default:
             (*(this->onErrorReceived))(message->flag);
