@@ -392,7 +392,7 @@ bool databaseConversationExists(unsigned userId) {
 static void addConversationBinder(const void* const* parameters, sqlite3_stmt* statement) {
     assert(!sqlite3_bind_int(statement, 1, (int) *((const unsigned*) parameters[0])));
     assert(!sqlite3_bind_blob(statement, 2, (const byte*) parameters[1], cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE), SQLITE_STATIC));
-    assert(!sqlite3_bind_int64(statement, 2, (long) *((const unsigned long*) parameters[2])));
+    assert(!sqlite3_bind_int64(statement, 3, (long) *((const unsigned long*) parameters[2])));
 }
 
 bool databaseAddConversation(unsigned userId, const Crypto* crypto, unsigned long timestamp) {
