@@ -17,7 +17,9 @@
  */
 
 #include <sys/resource.h>
-#include <stdio.h>
+#include <stdio.h> // not SDL_log to avoid depending on SDL as it needs to be (de)initialized
+#include <execinfo.h>
+#include <stdlib.h>
 #include "defs.h"
 
 void xPrintBinaryArray(const char* name, const void* array, unsigned size) {
@@ -30,4 +32,19 @@ unsigned stackLimit(void) {
     struct rlimit rlimit;
     getrlimit(RLIMIT_STACK, &rlimit);
     return (unsigned) rlimit.rlim_cur;
+}
+
+void printStackTrace(void) {
+    const int size = 0xf;
+    void* array[size];
+
+    int actualSize = backtrace(array, size);
+    char** strings = backtrace_symbols(array, actualSize);
+
+    if (strings) {
+        for (int i = 0; i < actualSize; i ? puts(strings[i++]) : i++);
+        puts("");
+    }
+
+    free(strings);
 }

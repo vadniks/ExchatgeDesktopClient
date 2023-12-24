@@ -26,6 +26,8 @@ add_compile_options("-std=gnu11")
 add_compile_options("-Ofast") # -O3
 add_link_options("-s")
 
+add_link_options("-rdynamic") # TODO: debug only for use with backtrace_symbols()
+
 file(GLOB sources CONFIGURE_DEPENDS "src/*.c" "src/*.h")
 add_executable(${PROJECT_NAME} ${sources})
 

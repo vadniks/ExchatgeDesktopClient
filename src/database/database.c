@@ -157,7 +157,7 @@ static void createConversationsTableIfNotExists(void) {
         "create table if not exists %s (" // conversations
             "%s unsigned int not null unique, " // user (id)
             "%s blob(%u) not null, " // streamsStates
-            "%s, unsigned bigint not null" // timestamp
+            "%s unsigned bigint not null, " // timestamp
             "primary key (%s)" // user
         ")",
         CONVERSATIONS_TABLE, USER_COLUMN, STREAMS_STATES_COLUMN,
