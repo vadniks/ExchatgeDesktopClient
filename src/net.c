@@ -380,7 +380,7 @@ static void processErrors(const Message* message) {
             (*(this->onRegisterResult))(false);
             break;
         case FLAG_FETCH_MESSAGES:
-            // TODO
+            SDL_Log("pr fm"); // TODO
             break;
         default:
             (*(this->onErrorReceived))(message->flag);
@@ -390,6 +390,7 @@ static void processErrors(const Message* message) {
 
 static void onNextUsersBundleFetched(const Message* message);
 static void onNextMessageFetched(const Message* message);
+static void onEmptyMessagesFetchReplyReceived(const Message* message);
 
 static void processMessagesFromServer(const Message* message) {
     const bool cst = checkServerToken(message->token);
@@ -416,6 +417,9 @@ static void processMessagesFromServer(const Message* message) {
         case FLAG_ERROR: fallthrough
         case FLAG_ACCESS_DENIED:
             processErrors(message);
+            break;
+        case FLAG_FETCH_MESSAGES:
+            onEmptyMessagesFetchReplyReceived(message);
             break;
         default:
             assert(false);
@@ -642,13 +646,13 @@ const byte* netUserInfoName(const NetUserInfo* info) {
     return info->name;
 }
 
-void netFetchMessages(bool from, unsigned id, unsigned long afterTimestamp) {
+void netFetchMessages(unsigned id, unsigned long afterTimestamp) {
     assert(this);
     RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;)
 
     byte body[NET_MESSAGE_BODY_SIZE] = {0};
 
-    body[0] = from ? 1 : 0;
+    body[0] = 1;
     *((unsigned long*) &(body[1])) = afterTimestamp;
     *((unsigned*) &(body[1 + LONG_SIZE])) = id;
 
@@ -660,6 +664,12 @@ static void onNextMessageFetched(const Message* message) {
     const bool last = message->index == message->count - 1;
     (*(this->onNextMessageFetched))(message->from, message->timestamp, message->size, message->body, last);
     if (last) { RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;) }
+}
+
+static void onEmptyMessagesFetchReplyReceived(const Message* message) {
+    assert(this);
+    assert(!message->size && message->count == 1);
+    (*(this->onNextMessageFetched))(*(unsigned*) (message->body + 1), message->timestamp, 0, NULL, true);
 }
 
 static void onUsersInfosListProcessingFinished(void) {

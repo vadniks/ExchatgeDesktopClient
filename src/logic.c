@@ -164,7 +164,7 @@ static void processReceivedMessage(void** parameters) {
     assert(size > 0 && size <= logicUnencryptedMessageBodySize());
 
     Crypto* crypto = databaseGetConversation(fromId);
-    if (!crypto) return;
+    if (!crypto) return; // TODO: assert
 
     byte* message = cryptoDecrypt(crypto, encryptedMessage, encryptedSize, false);
     assert(message);
@@ -245,7 +245,7 @@ static void fetchMissingMessagesFromUser(unsigned id) {
 
     const unsigned long timestamp = databaseGetMostRecentMessageTimestamp(id);
     assert(timestamp < logicCurrentTimeMillis());
-    netFetchMessages(true, id, timestamp);
+    netFetchMessages(id, timestamp);
 }
 
 static void processFetchedUsers(void** parameters) {
@@ -281,7 +281,7 @@ static void processFetchedUsers(void** parameters) {
     }
     (*finishNotifier)();
 
-    finishLoading();
+//    finishLoading();
     renderShowUsersList(this->currentUserName);
 }
 
@@ -293,14 +293,16 @@ static void onUsersFetched(List* userInfosList, void (*finishNotifier)(void)) {
     lifecycleAsync((LifecycleAsyncActionFunction) &processFetchedUsers, parameters, 0);
 }
 
-static void onNextMessageFetched(unsigned from, unsigned long timestamp, unsigned size, const byte* message, bool last) {
+static void onNextMessageFetched(unsigned from, unsigned long timestamp, unsigned size, const byte* nullable message, bool last) {
     assert(this);
+    assert(size && message || !size && !message);
 
     if (size > 0)
         onMessageReceived(timestamp, from, message, size);
 
-    assert(!this->missingMessagesFetchers);
+    assert(this->missingMessagesFetchers);
     this->missingMessagesFetchers--;
+    assert(this->missingMessagesFetchers < 0u - 1u);
 
     if (!last || this->missingMessagesFetchers) return;
     finishLoading();
