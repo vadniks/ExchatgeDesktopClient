@@ -259,7 +259,7 @@ static void processFetchedUsers(void** parameters) {
 
     const unsigned size = listSize(userInfosList);
     const NetUserInfo* info;
-    bool conversationExists;
+    bool conversationExists, atLeastOneConversationExists = false;
 
     for (unsigned i = 0, id; i < size; i++) {
         info = listGet(userInfosList, i);
@@ -276,8 +276,10 @@ static void processFetchedUsers(void** parameters) {
                 netUserInfoConnected(info)
             ));
 
-            if (conversationExists)
+            if (conversationExists) {
                 fetchMissingMessagesFromUser(id);
+                atLeastOneConversationExists = true;
+            }
         } else {
             SDL_memcpy(this->currentUserName, netUserInfoName(info), NET_USERNAME_SIZE);
             renderSetWindowTitle(this->currentUserName);
@@ -286,6 +288,9 @@ static void processFetchedUsers(void** parameters) {
     (*finishNotifier)();
 
     renderShowUsersList(this->currentUserName);
+
+    if (!atLeastOneConversationExists)
+        finishLoading(); // if at least one conversation exists, then begin outdated/missing messages fetching, otherwise do nothing and release lock
 }
 
 static void onUsersFetched(List* userInfosList, void (*finishNotifier)(void)) {
