@@ -889,7 +889,14 @@ static void drawConversationMessage(
     nk_group_end(this->context);
 }
 
+static void replaceNewLineWithSpaceInConversationMessage(void) {
+    for (unsigned i = 0; i < this->enteredConversationMessageSize; i++)
+        if (this->conversationMessage[i] == '\n')
+            this->conversationMessage[i] = ' ';
+}
+
 static void onSendClicked(void) {
+    replaceNewLineWithSpaceInConversationMessage(); // 'cause Nuklear cannot split one line into several based on the '\n' sign, even in the wrap_text widget, or I just didn't find how to do that 'cause documentation doesn't mention this at all
     (*(this->onSendClicked))(this->conversationMessage, this->enteredConversationMessageSize);
     SDL_memset(this->conversationMessage, 0, this->maxMessageSize);
     this->enteredConversationMessageSize = 0;
