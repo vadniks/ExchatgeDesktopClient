@@ -170,9 +170,9 @@ static void processReceivedMessage(void** parameters) {
     Crypto* crypto = databaseGetConversation(fromId);
     if (!crypto) return; // TODO: assert
 
-    byte* message = cryptoDecrypt(crypto, encryptedMessage, encryptedSize, false); // TODO: ----------------------------\/
-    assert(message); // TODO: situation: user1 updating users list & fetching messages, meanwhile user2 sends a message, so we have the following: user1 updated all needed info and didn't receive the new message from user2, user1 doesn't know that there's a new missing message on a server, then without updating messages on user1's side, user2 sends him a new message, what will happen next? - user1 receives the second new message from user2 and tries to decrypt it - it may fail due to 'ratchet' mechanism in the stream cipher. Besides, if user1 after receiving the second message will try to re-fetch messages, he won't receive the first missing message - only those after the second message
-    cryptoDestroy(crypto);
+    byte* message = cryptoDecrypt(crypto, encryptedMessage, encryptedSize, false);
+    assert(message); // situation: user1 updating users list & fetching messages, meanwhile user2 sends a message, so we have the following: user1 updated all needed info and didn't receive the new message from user2, user1 doesn't know that there's a new missing message on a server, then without updating messages on user1's side, user2 sends him a new message, what will happen next? - user1 receives the second new message from user2 and tries to decrypt it - it may fail due to 'ratchet' mechanism in the stream cipher. Besides, if user1 after receiving the second message will try to re-fetch messages, he won't receive the first missing message - only those after the second message
+    cryptoDestroy(crypto); // tested this situation ----/\ and everything works fine
 
     DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, (byte*) message, size);
     assert(databaseAddMessage(dbMessage));
