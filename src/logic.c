@@ -248,13 +248,8 @@ static void fetchMissingMessagesFromUser(unsigned id) {
     netFetchMessages(id, timestamp);
 }
 
-static void processFetchedUsers(void** parameters) {
+static void processFetchedUsers(List* userInfosList) {
     assert(this && this->databaseInitialized && !this->missingMessagesFetchers);
-
-    List* userInfosList = parameters[0];
-    void (* const finishNotifier)(void) = (void (*)(void)) parameters[1];
-    SDL_free(parameters);
-
     listClear(this->usersList);
 
     const unsigned size = listSize(userInfosList);
@@ -277,7 +272,7 @@ static void processFetchedUsers(void** parameters) {
             ));
 
             if (conversationExists) {
-                fetchMissingMessagesFromUser(id); // TODO: add finishNotifier as a parameter, related to --*--
+                fetchMissingMessagesFromUser(id);
                 atLeastOneConversationExists = true;
             }
         } else {
@@ -285,23 +280,15 @@ static void processFetchedUsers(void** parameters) {
             renderSetWindowTitle(this->currentUserName);
         }
     }
-    (*finishNotifier)(); // TODO: move this to --*--
 
     renderShowUsersList(this->currentUserName);
 
-    if (!atLeastOneConversationExists) {
+    if (!atLeastOneConversationExists)
         finishLoading(); // if at least one conversation exists, then begin outdated/missing messages fetching, otherwise do nothing and release lock
-        // TODO: --*--
-    }
 }
 
-static void onUsersFetched(List* userInfosList, void (*finishNotifier)(void)) {
-    void** parameters = SDL_malloc(2 * sizeof(void*));
-    parameters[0] = userInfosList;
-    parameters[1] = (void*) finishNotifier;
-
-    lifecycleAsync((LifecycleAsyncActionFunction) &processFetchedUsers, parameters, 0);
-}
+static void onUsersFetched(List* userInfosList)
+{ lifecycleAsync((LifecycleAsyncActionFunction) &processFetchedUsers, userInfosList, 0); }
 
 static void onNextMessageFetched(
     unsigned from,

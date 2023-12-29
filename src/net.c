@@ -116,7 +116,7 @@ THIS(
     NetOnRegisterResult onRegisterResult;
     NetOnDisconnected onDisconnected;
     NetCurrentTimeMillisGetter currentTimeMillisGetter;
-    atomic int lastSentFlag;
+    /*__attribute_deprecated__*/ atomic int lastSentFlag; // TODO: remove, redesign the mechanism of error handling
     NetOnUsersFetched onUsersFetched;
     List* userInfosList;
     byte* serverKeyStub;
@@ -131,8 +131,6 @@ THIS(
     Queue* conversationSetupMessages;
     Queue* fileExchangeMessages;
     atomic bool fetchingUsers;
-    Queue* yetUnprocessedMessages; // messages from other users that await updating local users information to be processed rather than ignored due to yet unknown sender id
-    atomic bool processingYetUnprocessedMessages;
     atomic bool fetchingMessages;
     NetOnNextMessageFetched onNextMessageFetched;
 )
@@ -278,8 +276,6 @@ bool netInit(
     this->conversationSetupMessages = queueInitExtra(&SDL_free, currentTimeMillisGetter);
     this->fileExchangeMessages = queueInitExtra(&SDL_free, currentTimeMillisGetter);
     this->fetchingUsers = false;
-    this->yetUnprocessedMessages = queueInit(&SDL_free);
-    this->processingYetUnprocessedMessages = false;
     this->fetchingMessages = false;
     this->onNextMessageFetched = onNextMessageFetched;
 
@@ -370,7 +366,7 @@ static byte* packMessage(const Message* msg) {
     return buffer;
 }
 
-static void processErrors(const Message* message) {
+static void processErrors(const Message* message) { // TODO: send operation flag in error message's payload instead of remembering the last operation's flag
     switch ((int) this->lastSentFlag) {
         case FLAG_LOG_IN:
             this->state = STATE_FINISHED_WITH_ERROR;
@@ -499,10 +495,8 @@ static void processMessage(const Message* message) {
         case FLAG_FILE:
             queuePush(this->fileExchangeMessages, copyMessage(message));
             break;
-        case FLAG_PROCEED:
-            if (this->fetchingUsers) // needed only here as losing invite messages is not so critical as losing usual messages as only they contain information
-                queuePush(this->yetUnprocessedMessages, copyMessage(message));
-            else
+        case FLAG_PROCEED: // and if !this->fetchingMessages as messages of that kind are coming from server and thus aren't processed here at all
+            if (!this->fetchingUsers) // messages from other users can be lost here, but as we now have a re-fetching messages mechanism, this is no longer a problem
                 (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
             break;
         case FLAG_FETCH_MESSAGES:
@@ -623,7 +617,6 @@ static NetUserInfo* unpackUserInfo(const byte* bytes) {
 
 void netFetchUsers(void) {
     assert(this);
-    while (this && this->processingYetUnprocessedMessages); // fetch users requesting (and waiting for processing to finish) and processing yet unprocessed messages are performed in the same thread (asyncActions) - deadlock might occur as the thread can begin waiting for itself, but 'cause they're in the same thead they are performed sequentially, so deadlock occurrence is unlikely - testing needed
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
@@ -648,7 +641,7 @@ const byte* netUserInfoName(const NetUserInfo* info) {
 }
 
 void netFetchMessages(unsigned id, unsigned long afterTimestamp) {
-    assert(this);
+    assert(this && this->fetchingMessages);
     RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;)
 
     byte body[NET_MESSAGE_BODY_SIZE] = {0};
@@ -673,20 +666,6 @@ static void onEmptyMessagesFetchReplyReceived(const Message* message) {
     (*(this->onNextMessageFetched))(*(unsigned*) (message->body + 1), message->timestamp, 0, NULL, true);
 }
 
-static void onUsersInfosListProcessingFinished(void) {
-    assert(this);
-    listClear(this->userInfosList);
-    this->fetchingUsers = false;
-
-    this->processingYetUnprocessedMessages = true;
-    while (queueSize(this->yetUnprocessedMessages)) {
-        Message* message = queuePop(this->yetUnprocessedMessages);
-        (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
-        SDL_free(message);
-    }
-    this->processingYetUnprocessedMessages = false;
-}
-
 static void onNextUsersBundleFetched(const Message* message) {
     assert(this);
     if (!(message->index)) listClear(this->userInfosList); // TODO: test with large amount of elements & test with sleep()
@@ -695,7 +674,10 @@ static void onNextUsersBundleFetched(const Message* message) {
         listAddBack(this->userInfosList, unpackUserInfo(message->body + i * USER_INFO_SIZE));
 
     if (message->index < message->count - 1) return;
-    (*(this->onUsersFetched))(this->userInfosList, &onUsersInfosListProcessingFinished);
+
+    (*(this->onUsersFetched))(this->userInfosList);
+    listClear(this->userInfosList);
+    this->fetchingUsers = false;
 }
 
 static void finishSettingUpConversation(void) {
@@ -982,7 +964,6 @@ void netClean(void) {
     assert(this);
     rwMutexWriteLock(this->rwMutex);
 
-    queueDestroy(this->yetUnprocessedMessages);
     queueDestroy(this->conversationSetupMessages);
     queueDestroy(this->fileExchangeMessages);
 

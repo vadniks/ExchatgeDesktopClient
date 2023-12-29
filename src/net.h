@@ -34,11 +34,10 @@ typedef void (*NetOnFileExchangeInviteReceived)(unsigned fromId, unsigned fileSi
 typedef unsigned (*NetNextFileChunkSupplier)(unsigned index, byte* buffer); // returns (0 < count <= MESSAGE_BODY_SIZE) of written bytes or 0 if no more chunks available (current chunk included), if this is first time this callback is called, the return of 0 is treated as occurrence of error and the operation gets aborted; copies the another chunk's bytes into the buffer; the buffer is deallocated automatically
 typedef void (*NetNextFileChunkReceiver)(unsigned fromId, unsigned index, unsigned receivedBytesCount, const byte* buffer);
 typedef void (*NetOnNextMessageFetched)(unsigned from, unsigned long timestamp, unsigned size, const byte* nullable message, bool last); // message is null (and last is true too) when there are no messages from the given user and from is equal to fromServer
+typedef void (*NetOnUsersFetched)(List* userInfosList); // receives a list of UserInfo objects, which is deallocated automatically (and every item inside it) after the callback returns
 
 struct NetUserInfo_t;
 typedef struct NetUserInfo_t NetUserInfo;
-
-typedef void (*NetOnUsersFetched)(List* userInfosList, void (*finishNotifier)(void)); // receives a list of UserInfo objects, which is deallocated automatically (and every item inside it). After all operations were finished, the finishNotifier callback must be called to clear the list
 
 extern const unsigned NET_USERNAME_SIZE;
 extern const unsigned NET_UNHASHED_PASSWORD_SIZE;
