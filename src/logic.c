@@ -248,14 +248,7 @@ static void onDisconnected(void) {
     renderShowDisconnectedError();
 }
 
-static void fetchMissingMessagesFromUser(unsigned id) {
-    assert(this && this->databaseInitialized);
-    this->missingMessagesFetchers++;
-
-    const unsigned long timestamp = databaseGetMostRecentMessageTimestamp(id);
-    assert(timestamp < logicCurrentTimeMillis());
-    netFetchMessages(id, timestamp);
-}
+static void fetchMissingMessagesFromUser(unsigned id);
 
 static void processFetchedUsers(List* userInfosList) {
     assert(this && this->databaseInitialized && !this->missingMessagesFetchers);
@@ -306,6 +299,12 @@ static void onUsersFetched(List* userInfosList) {
     lifecycleAsync((LifecycleAsyncActionFunction) &processFetchedUsers, xUserInfosList, 0);
 }
 
+static void fetchMissingMessagesFromUserWrapper(const void* id)
+{ fetchMissingMessagesFromUser((unsigned) (long) id); }
+
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "misc-no-recursion" // chain recursion is under control
+
 static void onNextMessageFetched(
     unsigned from,
     unsigned long timestamp,
@@ -316,7 +315,7 @@ static void onNextMessageFetched(
     assert(this);
     assert(size && message || !size && !message);
 
-    if (size > 0 && timestamp > databaseGetConversationTimestamp(from))
+    if (size > 0/* && timestamp > databaseGetConversationTimestamp(from)*/) // the last one isn't needed
         onMessageReceived(timestamp, from, message, size);
 
     assert(this->missingMessagesFetchers);
@@ -327,7 +326,10 @@ static void onNextMessageFetched(
     assert(this->missingMessagesFetchers < 0u - 1u); // check overflow
 
     if (queueSize(this->userIdsToFetchMessagesFrom))
-        fetchMissingMessagesFromUser((unsigned) (long) queuePop(this->userIdsToFetchMessagesFrom));
+        lifecycleAsync(
+            (LifecycleAsyncActionFunction) &fetchMissingMessagesFromUserWrapper,
+            queuePop(this->userIdsToFetchMessagesFrom), 0
+        );
 
     assert(this->missingMessagesFetchers == queueSize(this->userIdsToFetchMessagesFrom));
 
@@ -336,6 +338,21 @@ static void onNextMessageFetched(
     netSetIgnoreUsualMessages(false);
     finishLoading();
 }
+
+static void fetchMissingMessagesFromUser(unsigned id) {
+    assert(this && this->databaseInitialized);
+    this->missingMessagesFetchers++;
+
+    const unsigned long timestamp = databaseGetMostRecentMessageTimestamp(id);
+    assert(timestamp < logicCurrentTimeMillis());
+
+    if (timestamp <= databaseGetConversationTimestamp(id))
+        onNextMessageFetched(id, timestamp, 0, NULL, true); // transitive recursive call is needed to properly stop messages re-fetching, it won't cause infinite recursion
+    else
+        netFetchMessages(id, timestamp);
+}
+
+#pragma clang diagnostic pop
 
 static void tryLoadPreviousMessages(unsigned id) {
     assert(this && this->databaseInitialized);
