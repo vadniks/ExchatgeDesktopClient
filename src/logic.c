@@ -308,6 +308,9 @@ static void onUsersFetched(List* userInfosList) {
     lifecycleAsync((LifecycleAsyncActionFunction) &processFetchedUsers, xUserInfosList, 0);
 }
 
+static void fetchMissingMessagesFromUserWrapper(const void* id)
+{ fetchMissingMessagesFromUser((unsigned) (long) id); }
+
 static void onNextMessageFetched(
     unsigned from,
     unsigned long timestamp,
@@ -328,7 +331,7 @@ static void onNextMessageFetched(
     assert(this->missingMessagesFetchers < 0u - 1u); // check overflow
 
     if (queueSize(this->userIdsToFetchMessagesFrom))
-        fetchMissingMessagesFromUser((unsigned) (long) queuePop(this->userIdsToFetchMessagesFrom));
+        lifecycleAsync((LifecycleAsyncActionFunction) &fetchMissingMessagesFromUserWrapper, queuePop(this->userIdsToFetchMessagesFrom), 0);
 
     assert(this->missingMessagesFetchers == queueSize(this->userIdsToFetchMessagesFrom));
 
