@@ -157,10 +157,12 @@ static void createConversationsTableIfNotExists(void) {
         "create table if not exists %s (" // conversations
             "%s unsigned int not null unique, " // user (id)
             "%s blob(%u) not null, " // streamsStates
+            "%s unsigned bigint not null, " // timestamp
             "primary key (%s)" // user
         ")",
         CONVERSATIONS_TABLE, USER_COLUMN, STREAMS_STATES_COLUMN,
-        cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE), USER_COLUMN
+        cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE),
+        TIMESTAMP_COLUMN, USER_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
@@ -391,9 +393,10 @@ bool databaseConversationExists(unsigned userId) {
 static void addConversationBinder(const void* const* parameters, sqlite3_stmt* statement) {
     assert(!sqlite3_bind_int(statement, 1, (int) *((const unsigned*) parameters[0])));
     assert(!sqlite3_bind_blob(statement, 2, (const byte*) parameters[1], cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE), SQLITE_STATIC));
+    assert(!sqlite3_bind_int64(statement, 3, (long) *((const unsigned long*) parameters[2])));
 }
 
-bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
+bool databaseAddConversation(unsigned userId, const Crypto* crypto, unsigned long timestamp) {
     assert(this);
     rwMutexWriteLock(this->rwMutex);
 
@@ -407,15 +410,15 @@ bool databaseAddConversation(unsigned userId, const Crypto* crypto) {
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
-        "insert into %s (%s, %s) values (?, ?)",
-        CONVERSATIONS_TABLE, USER_COLUMN, STREAMS_STATES_COLUMN
+        "insert into %s (%s, %s, %s) values (?, ?, ?)",
+        CONVERSATIONS_TABLE, USER_COLUMN, STREAMS_STATES_COLUMN, TIMESTAMP_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
     executeSingle(
         sql, sqlSize,
         (StatementProcessor) &addConversationBinder,
-        (void*) (const void*[2]) {&userId, encryptedStreamsStates},
+        (void*) (const void*[3]) {&userId, encryptedStreamsStates, &timestamp},
         NULL, NULL
     );
 
@@ -482,6 +485,40 @@ Crypto* nullable databaseGetConversation(unsigned userId) {
 
     rwMutexReadUnlock(this->rwMutex);
     return crypto;
+}
+
+static void getConversationTimestampBinder(const unsigned* userId, sqlite3_stmt* statement)
+{ assert(!sqlite3_bind_int(statement, 1, (int) *userId)); }
+
+static void getConversationTimestampResultHandler(unsigned long* result, sqlite3_stmt* statement) {
+    assert(sqlite3_step(statement) == SQLITE_ROW);
+    *result = sqlite3_column_int64(statement, 0);
+}
+
+unsigned long databaseGetConversationTimestamp(unsigned userId) {
+    assert(this);
+    rwMutexReadLock(this->rwMutex);
+
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "select %s from %s where %s = ?",
+        TIMESTAMP_COLUMN, CONVERSATIONS_TABLE, USER_COLUMN
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    unsigned long timestamp = 0;
+
+    executeSingle(
+        sql, sqlSize,
+        (StatementProcessor) &getConversationTimestampBinder, &userId,
+        (StatementProcessor) &getConversationTimestampResultHandler, &timestamp
+    );
+
+    rwMutexReadUnlock(this->rwMutex);
+    return timestamp;
 }
 
 static void removeConversationBinder(const unsigned* userId, sqlite3_stmt* statement)

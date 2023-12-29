@@ -316,7 +316,7 @@ static void onNextMessageFetched(
     assert(this);
     assert(size && message || !size && !message);
 
-    if (size > 0)
+    if (size > 0 && timestamp > databaseGetConversationTimestamp(from))
         onMessageReceived(timestamp, from, message, size);
 
     assert(this->missingMessagesFetchers);
@@ -384,7 +384,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
         this->toUserId = xFromId, // not only in python there's indentation based scoping, here's an emulation though
         this->state = STATE_EXCHANGING_MESSAGES,
 
-        assert(databaseAddConversation(xFromId, crypto)),
+        assert(databaseAddConversation(xFromId, crypto, logicCurrentTimeMillis())),
         cryptoDestroy(crypto),
 
         tryLoadPreviousMessages(xFromId),
@@ -895,7 +895,7 @@ static void startConversation(void** parameters) {
     else {
         Crypto* crypto = NULL;
         if ((crypto = netCreateConversation(*id))) // blocks the thread until either an error has happened or the conversation has been created
-            assert(databaseAddConversation(*id, crypto)),
+            assert(databaseAddConversation(*id, crypto, logicCurrentTimeMillis())),
             cryptoDestroy(crypto),
 
             tryLoadPreviousMessages(*id),
