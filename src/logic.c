@@ -318,8 +318,7 @@ static void onNextMessageFetched(
     assert(this);
     assert(size && message || !size && !message);
 
-    if (size > 0/* && timestamp > databaseGetConversationTimestamp(from)*/)
-        onMessageReceived(timestamp, from, message, size);
+    if (size > 0) onMessageReceived(timestamp, from, message, size);
 
     assert(this->missingMessagesFetchers);
     assert(this->missingMessagesFetchers == queueSize(this->userIdsToFetchMessagesFrom) + 1);
