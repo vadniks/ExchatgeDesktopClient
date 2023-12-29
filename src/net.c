@@ -133,6 +133,7 @@ THIS(
     atomic bool fetchingUsers;
     atomic bool fetchingMessages;
     NetOnNextMessageFetched onNextMessageFetched;
+    atomic bool ignoreUsualMessages; // ignore usual messages from other users (with flag proceed) while updating user infos or while re-fetching messages
 )
 #pragma clang diagnostic pop
 
@@ -278,6 +279,7 @@ bool netInit(
     this->fetchingUsers = false;
     this->fetchingMessages = false;
     this->onNextMessageFetched = onNextMessageFetched;
+    this->ignoreUsualMessages = false;
 
     assert(!SDLNet_Init());
 
@@ -496,7 +498,7 @@ static void processMessage(const Message* message) {
             queuePush(this->fileExchangeMessages, copyMessage(message));
             break;
         case FLAG_PROCEED:
-            if (!this->fetchingUsers && !this->fetchingMessages) // messages from other users can be lost here, but as we now have a re-fetching messages mechanism, this is no longer a problem
+            if (!this->fetchingUsers && !this->fetchingMessages && !this->ignoreUsualMessages) // messages from other users can be lost here, but as we now have a re-fetching messages mechanism, this is no longer a problem
                 (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
             break;
         case FLAG_FETCH_MESSAGES:
@@ -638,6 +640,24 @@ bool netUserInfoConnected(const NetUserInfo* info) {
 const byte* netUserInfoName(const NetUserInfo* info) {
     assert(info);
     return info->name;
+}
+
+NetUserInfo* netUserInfoCopy(const NetUserInfo* info) {
+    assert(info);
+    NetUserInfo* new = SDL_malloc(sizeof *new);
+
+    new->id = info->id;
+    new->connected = info->connected;
+    SDL_memcpy(new->name, info->name, NET_USERNAME_SIZE);
+
+    return new;
+}
+
+void netUserInfoDestroy(NetUserInfo* info) { SDL_free(info); }
+
+void netSetIgnoreUsualMessages(bool ignore) {
+    assert(this);
+    this->ignoreUsualMessages = ignore;
 }
 
 void netFetchMessages(unsigned id, unsigned long afterTimestamp) {

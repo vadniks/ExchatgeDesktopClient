@@ -26,8 +26,10 @@ typedef struct List_t List; // thread-safe
 
 typedef void (*ListDeallocator)(void*);
 typedef int (*ListComparator)(const void*, const void*);
+typedef void* (*ListItemDuplicator)(const void*);
 
 List* listInit(ListDeallocator nullable deallocator);
+List* listCopy(List* old, ListItemDuplicator itemDuplicator);
 void listAddBack(List* list, const void* value);
 void listAddFront(List* list, const void* value);
 const void* listGet(List* list, unsigned index); // list is actually treated as non-const 'cause mutex inside it is being modified

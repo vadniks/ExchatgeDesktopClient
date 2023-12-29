@@ -73,9 +73,14 @@ unsigned netCurrentUserId(void);
 bool netSend(int flag, const byte* body, unsigned size, unsigned xTo); // blocks the caller thread, returns true on success; flag is for internal use only, outside the module flag must be FLAG_PROCEED // TODO: hide original function
 void netShutdownServer(void);
 void netFetchUsers(void);
+
 unsigned netUserInfoId(const NetUserInfo* info);
 bool netUserInfoConnected(const NetUserInfo* info);
 const byte* netUserInfoName(const NetUserInfo* info);
+NetUserInfo* netUserInfoCopy(const NetUserInfo* info);
+void netUserInfoDestroy(NetUserInfo* info);
+
+void netSetIgnoreUsualMessages(bool ignore); // to let the logic module avoid the problem caused by the 'ratchet' of the stream cipher encryption, missed messages can be then retrieved again
 void netFetchMessages(unsigned id, unsigned long afterTimestamp);
 Crypto* nullable netCreateConversation(unsigned id); // returns the Crypto object associated with newly created conversation on success, expects the id of the user, the current user wanna create conversation with; blocks the caller thread until either a denial received or creation of the conversation succeeds (if an acceptation received) or fails
 Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId); // returns the same as createConversation does, must be called after getting invoked by the onConversationSetUpInviteReceived callback to reply to inviter, returns true on success; blocks the caller thread just like createConversation does

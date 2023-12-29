@@ -248,12 +248,6 @@ static void fetchMissingMessagesFromUser(unsigned id) {
     netFetchMessages(id, timestamp);
 }
 
-static void refetchMessagesFromUsers(List* userIds) {
-    assert(this);
-    for (unsigned i = 0; i < listSize(userIds); fetchMissingMessagesFromUser((unsigned) (long) listGet(userIds, i++)));
-    listDestroy(userIds);
-}
-
 static void processFetchedUsers(List* userInfosList) {
     assert(this && this->databaseInitialized && !this->missingMessagesFetchers);
     listClear(this->usersList);
@@ -286,18 +280,28 @@ static void processFetchedUsers(List* userInfosList) {
             renderSetWindowTitle(this->currentUserName);
         }
     }
+    listDestroy(userInfosList);
 
     renderShowUsersList(this->currentUserName);
 
     if (!listSize(userIdsToFetchMessagesFrom)) {
         listDestroy(userIdsToFetchMessagesFrom);
-        finishLoading(); // if at least one conversation exists, then begin outdated/missing messages fetching, otherwise do nothing and release lock
-    } else
-        lifecycleAsync((LifecycleAsyncActionFunction) &refetchMessagesFromUsers, userIdsToFetchMessagesFrom, 10);
+        netSetIgnoreUsualMessages(false);
+        finishLoading(); // if at least one conversation exists, then begin outdated/missing messages fetching, otherwise do nothing and release locks
+        return;
+    }
+
+    const unsigned size2 = listSize(userIdsToFetchMessagesFrom);
+    for (unsigned i = 0; i < size2; fetchMissingMessagesFromUser((unsigned) (long) listGet(userIdsToFetchMessagesFrom, i++)));
+    listDestroy(userIdsToFetchMessagesFrom);
+    netSetIgnoreUsualMessages(false);
 }
 
-static void onUsersFetched(List* userInfosList)
-{ lifecycleAsync((LifecycleAsyncActionFunction) &processFetchedUsers, userInfosList, 0); }
+static void onUsersFetched(List* userInfosList) {
+    List* xUserInfosList = listCopy(userInfosList, (ListItemDuplicator) &netUserInfoCopy);
+    netSetIgnoreUsualMessages(true);
+    lifecycleAsync((LifecycleAsyncActionFunction) &processFetchedUsers, xUserInfosList, 0);
+}
 
 static void onNextMessageFetched(
     unsigned from,

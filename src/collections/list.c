@@ -42,6 +42,19 @@ List* listInit(ListDeallocator nullable deallocator) {
     return list;
 }
 
+List* listCopy(List* old, ListItemDuplicator itemDuplicator) {
+    assert(old && !old->destroyed);
+    List* new = listInit(old->deallocator);
+
+    RW_MUTEX_READ_LOCKED(old->rwMutex,
+        const unsigned size = old->size;
+        for (unsigned i = 0; i < size; i++)
+            listAddBack(new, (*itemDuplicator)(old->values[i]));
+    )
+
+    return new;
+}
+
 void listAddBack(List* list, const void* value) {
     assert(list && !list->destroyed && list->size < MAX_SIZE);
 
