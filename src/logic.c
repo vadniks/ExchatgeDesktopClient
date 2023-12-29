@@ -329,6 +329,8 @@ static void onNextMessageFetched(
     if (queueSize(this->userIdsToFetchMessagesFrom))
         fetchMissingMessagesFromUser((unsigned) (long) queuePop(this->userIdsToFetchMessagesFrom));
 
+    assert(this->missingMessagesFetchers == queueSize(this->userIdsToFetchMessagesFrom));
+
     if (this->missingMessagesFetchers) return;
     queueClear(this->userIdsToFetchMessagesFrom);
     netSetIgnoreUsualMessages(false);

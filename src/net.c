@@ -684,7 +684,9 @@ static void onNextMessageFetched(const Message* message) {
 static void onEmptyMessagesFetchReplyReceived(const Message* message) {
     assert(this && this->fetchingMessages);
     assert(!message->size && message->count == 1);
+
     (*(this->onNextMessageFetched))(*(unsigned*) (message->body + 1), message->timestamp, 0, NULL, true);
+    this->fetchingMessages = false;
 }
 
 static void onNextUsersBundleFetched(const Message* message) {
