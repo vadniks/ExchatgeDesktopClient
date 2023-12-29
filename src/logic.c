@@ -29,6 +29,8 @@
 #include "lifecycle.h"
 #include "database/database.h"
 #include "options.h"
+#include "collections/list.h"
+#include "collections/queue.h"
 #include "logic.h"
 
 const unsigned LOGIC_MAX_FILE_PATH_SIZE = 0x1ff; // 511, (1 << 9) - 1
@@ -59,6 +61,7 @@ THIS(
     bool autoLoggingIn;
     void* fileHashState;
     atomic unsigned missingMessagesFetchers;
+    Queue* userIdsToFetchMessagesFrom;
 )
 #pragma clang diagnostic pop
 
@@ -94,6 +97,7 @@ void logicInit(void) {
     this->rwops = NULL;
     this->fileHashState = NULL;
     this->missingMessagesFetchers = 0;
+    this->userIdsToFetchMessagesFrom = queueInit(NULL);
 
     cryptoModuleInit();
 
@@ -256,7 +260,7 @@ static void processFetchedUsers(List* userInfosList) {
     const NetUserInfo* info;
     bool conversationExists;
 
-    List* userIdsToFetchMessagesFrom = listInit(NULL);
+    queueClear(this->userIdsToFetchMessagesFrom); // TODO: delete all messages on server on conversation deletion on client
 
     for (unsigned i = 0, id; i < size; i++) {
         info = listGet(userInfosList, i);
@@ -274,7 +278,7 @@ static void processFetchedUsers(List* userInfosList) {
             ));
 
             if (conversationExists)
-                listAddBack(userIdsToFetchMessagesFrom, (void*) (long) id); // deffer the re-fetching of messages so the net module can do clean up and release locks before initiating re-fetching process
+                queuePush(this->userIdsToFetchMessagesFrom, (void*) (long) id);
         } else {
             SDL_memcpy(this->currentUserName, netUserInfoName(info), NET_USERNAME_SIZE);
             renderSetWindowTitle(this->currentUserName);
@@ -284,17 +288,11 @@ static void processFetchedUsers(List* userInfosList) {
 
     renderShowUsersList(this->currentUserName);
 
-    if (!listSize(userIdsToFetchMessagesFrom)) {
-        listDestroy(userIdsToFetchMessagesFrom);
+    if (!queueSize(this->userIdsToFetchMessagesFrom)) {
         netSetIgnoreUsualMessages(false);
         finishLoading(); // if at least one conversation exists, then begin outdated/missing messages fetching, otherwise do nothing and release locks
-        return;
-    }
-
-    const unsigned size2 = listSize(userIdsToFetchMessagesFrom);
-    for (unsigned i = 0; i < size2; fetchMissingMessagesFromUser((unsigned) (long) listGet(userIdsToFetchMessagesFrom, i++)));
-    listDestroy(userIdsToFetchMessagesFrom);
-    netSetIgnoreUsualMessages(false);
+    } else
+        fetchMissingMessagesFromUser((unsigned) (long) queuePop(this->userIdsToFetchMessagesFrom));
 }
 
 static void onUsersFetched(List* userInfosList) {
@@ -317,12 +315,18 @@ static void onNextMessageFetched(
         onMessageReceived(timestamp, from, message, size);
 
     assert(this->missingMessagesFetchers);
+    assert(this->missingMessagesFetchers == queueSize(this->userIdsToFetchMessagesFrom) + 1);
 
     if (!last) return;
     this->missingMessagesFetchers--;
-    assert(this->missingMessagesFetchers < 0u - 1u);
+    assert(this->missingMessagesFetchers < 0u - 1u); // check overflow
+
+    if (queueSize(this->userIdsToFetchMessagesFrom))
+        fetchMissingMessagesFromUser((unsigned) (long) queuePop(this->userIdsToFetchMessagesFrom));
 
     if (this->missingMessagesFetchers) return;
+    queueClear(this->userIdsToFetchMessagesFrom);
+    netSetIgnoreUsualMessages(false);
     finishLoading();
 }
 
@@ -1132,6 +1136,8 @@ static long fetchHostId(void) {
 
 void logicClean(void) {
     assert(this);
+
+    queueDestroy(this->userIdsToFetchMessagesFrom);
 
     assert(!this->rwops);
     assert(!this->fileHashState);
