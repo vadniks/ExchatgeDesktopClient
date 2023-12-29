@@ -201,6 +201,16 @@ static void onMessageReceived(unsigned long timestamp, unsigned fromId, const by
     lifecycleAsync((LifecycleAsyncActionFunction) &processReceivedMessage, parameters, 0);
 }
 
+static void beginLoading(void) {
+    renderShowInfiniteProgressBar();
+    renderSetControlsBlocking(true);
+}
+
+static void finishLoading(void) {
+    renderHideInfiniteProgressBar();
+    renderSetControlsBlocking(false);
+}
+
 static void onLogInResult(bool successful) { // TODO: add broadcasting to all users feature for admin
     assert(this);
     if (successful) {
@@ -210,13 +220,8 @@ static void onLogInResult(bool successful) { // TODO: add broadcasting to all us
         this->state = STATE_UNAUTHENTICATED;
         renderShowLogIn();
         renderShowSystemError();
-        renderHideInfiniteProgressBar();
+        finishLoading();
     }
-}
-
-static void finishLoading(void) {
-    renderHideInfiniteProgressBar();
-    renderSetControlsBlocking(false);
 }
 
 static void onErrorReceived(__attribute_maybe_unused__ int flag) {
@@ -391,9 +396,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
 
 static void onConversationSetUpInviteReceived(unsigned fromId) {
     assert(this);
-
-    renderShowInfiniteProgressBar();
-    renderSetControlsBlocking(true);
+    beginLoading();
 
     unsigned* xFromId = SDL_malloc(sizeof(int));
     *xFromId = fromId;
@@ -478,8 +481,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     assert(this);
     assert(filePath || !filePath && !size);
 
-    renderShowInfiniteProgressBar();
-    renderSetControlsBlocking(true);
+    beginLoading();
 
     const User* user = findUser(this->toUserId);
     assert(user);
@@ -643,9 +645,7 @@ static void onFileExchangeInviteReceived(
     unsigned filenameSize
 ) {
     assert(this);
-
-    renderShowInfiniteProgressBar();
-    renderSetControlsBlocking(true);
+    beginLoading();
 
     void** parameters = SDL_malloc(5 * sizeof(void*));
     (parameters[0] = SDL_malloc(sizeof(int))) && (*((unsigned*) parameters[0]) = fromId);
@@ -795,12 +795,12 @@ static void processCredentials(void** data) {
     )) { // password that's used to sign in also used to encrypt messages & other stuff in the database
         databaseClean();
         renderShowUnableToDecryptDatabaseError();
-        finishLoading();
         this->state = STATE_UNAUTHENTICATED;
 
         if (this->autoLoggingIn)
             renderShowLogIn();
 
+        finishLoading();
         goto cleanup;
     } else
         this->databaseInitialized = true;
@@ -828,10 +828,11 @@ static void processCredentials(void** data) {
     if (!this->netInitialized) {
         this->state = STATE_UNAUTHENTICATED;
         renderShowUnableToConnectToTheServerError();
-        finishLoading();
 
         if (this->autoLoggingIn)
             renderShowLogIn();
+
+        finishLoading();
     } else
         logIn ? netLogIn(username, password) : netRegister(username, password);
 
@@ -857,8 +858,7 @@ void logicOnCredentialsReceived(
     assert(!this->netInitialized);
 
     this->state = STATE_AWAITING_AUTHENTICATION;
-    renderShowInfiniteProgressBar();
-    renderSetControlsBlocking(true);
+    beginLoading();
 
     void** data = SDL_malloc(3 * sizeof(void*));
     data[0] = SDL_calloc(NET_USERNAME_SIZE, sizeof(char));
@@ -935,8 +935,7 @@ static void createOrLoadConversation(unsigned id, bool create) {
         return;
     }
 
-    renderShowInfiniteProgressBar();
-    renderSetControlsBlocking(true);
+    beginLoading();
 
     void** parameters = SDL_malloc(2 * sizeof(void*));
     (parameters[0] = SDL_malloc(sizeof(int))) && (*((unsigned*) parameters[0]) = id);
@@ -972,8 +971,7 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
             createOrLoadConversation(id, chooseVariant == RENDER_START_CONVERSATION);
             break;
         case RENDER_DELETE_CONVERSATION:
-            renderShowInfiniteProgressBar();
-            renderSetControlsBlocking(true);
+            beginLoading();
 
             unsigned* xId = SDL_malloc(sizeof(int));
             *xId = id;
@@ -988,8 +986,7 @@ void logicOnServerShutdownRequested(void) {
     assert(this);
     if (!this->netInitialized) return;
 
-    renderShowInfiniteProgressBar();
-    renderSetControlsBlocking(true);
+    beginLoading();
     lifecycleAsync((LifecycleAsyncActionFunction) &netShutdownServer, NULL, 0);
 }
 
@@ -1104,9 +1101,7 @@ void logicOnSendClicked(const char* text, unsigned size) {
 
 void logicOnUpdateUsersListClicked(void) {
     assert(this && this->databaseInitialized && !this->missingMessagesFetchers);
-
-    renderShowInfiniteProgressBar();
-    renderSetControlsBlocking(true);
+    finishLoading();
 
     listClear(this->usersList);
     renderShowUsersList(this->currentUserName);
