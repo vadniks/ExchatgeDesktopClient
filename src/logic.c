@@ -248,13 +248,21 @@ static void fetchMissingMessagesFromUser(unsigned id) {
     netFetchMessages(id, timestamp);
 }
 
+static void refetchMessagesFromUsers(List* userIds) {
+    assert(this);
+    for (unsigned i = 0; i < listSize(userIds); fetchMissingMessagesFromUser((unsigned) (long) listGet(userIds, i++)));
+    listDestroy(userIds);
+}
+
 static void processFetchedUsers(List* userInfosList) {
     assert(this && this->databaseInitialized && !this->missingMessagesFetchers);
     listClear(this->usersList);
 
     const unsigned size = listSize(userInfosList);
     const NetUserInfo* info;
-    bool conversationExists, atLeastOneConversationExists = false;
+    bool conversationExists;
+
+    List* userIdsToFetchMessagesFrom = listInit(NULL);
 
     for (unsigned i = 0, id; i < size; i++) {
         info = listGet(userInfosList, i);
@@ -271,10 +279,8 @@ static void processFetchedUsers(List* userInfosList) {
                 netUserInfoConnected(info)
             ));
 
-            if (conversationExists) {
-                fetchMissingMessagesFromUser(id);
-                atLeastOneConversationExists = true;
-            }
+            if (conversationExists)
+                listAddBack(userIdsToFetchMessagesFrom, (void*) (long) id); // deffer the re-fetching of messages so the net module can do clean up and release locks before initiating re-fetching process
         } else {
             SDL_memcpy(this->currentUserName, netUserInfoName(info), NET_USERNAME_SIZE);
             renderSetWindowTitle(this->currentUserName);
@@ -283,8 +289,11 @@ static void processFetchedUsers(List* userInfosList) {
 
     renderShowUsersList(this->currentUserName);
 
-    if (!atLeastOneConversationExists)
+    if (!listSize(userIdsToFetchMessagesFrom)) {
+        listDestroy(userIdsToFetchMessagesFrom);
         finishLoading(); // if at least one conversation exists, then begin outdated/missing messages fetching, otherwise do nothing and release lock
+    } else
+        lifecycleAsync((LifecycleAsyncActionFunction) &refetchMessagesFromUsers, userIdsToFetchMessagesFrom, 10);
 }
 
 static void onUsersFetched(List* userInfosList)
