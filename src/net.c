@@ -495,8 +495,8 @@ static void processMessage(const Message* message) {
         case FLAG_FILE:
             queuePush(this->fileExchangeMessages, copyMessage(message));
             break;
-        case FLAG_PROCEED: // and if !this->fetchingMessages as messages of that kind are coming from server and thus aren't processed here at all
-            if (!this->fetchingUsers) // messages from other users can be lost here, but as we now have a re-fetching messages mechanism, this is no longer a problem
+        case FLAG_PROCEED:
+            if (!this->fetchingUsers && !this->fetchingMessages) // messages from other users can be lost here, but as we now have a re-fetching messages mechanism, this is no longer a problem
                 (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
             break;
         case FLAG_FETCH_MESSAGES:
@@ -616,7 +616,7 @@ static NetUserInfo* unpackUserInfo(const byte* bytes) {
 }
 
 void netFetchUsers(void) {
-    assert(this);
+    assert(this && !this->fetchingUsers && !this->fetchingMessages);
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
@@ -641,8 +641,8 @@ const byte* netUserInfoName(const NetUserInfo* info) {
 }
 
 void netFetchMessages(unsigned id, unsigned long afterTimestamp) {
-    assert(this && this->fetchingMessages);
-    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;)
+    assert(this && !this->fetchingUsers && !this->fetchingMessages);
+    this->fetchingMessages = true;
 
     byte body[NET_MESSAGE_BODY_SIZE] = {0};
 
@@ -656,24 +656,25 @@ void netFetchMessages(unsigned id, unsigned long afterTimestamp) {
 static void onNextMessageFetched(const Message* message) {
     assert(this && this->fetchingMessages);
     const bool last = message->index == message->count - 1;
+
     (*(this->onNextMessageFetched))(message->from, message->timestamp, message->size, message->body, last);
-    if (last) { RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->fetchingMessages = true;) }
+    if (last) this->fetchingMessages = false;
 }
 
 static void onEmptyMessagesFetchReplyReceived(const Message* message) {
-    assert(this);
+    assert(this && this->fetchingMessages);
     assert(!message->size && message->count == 1);
     (*(this->onNextMessageFetched))(*(unsigned*) (message->body + 1), message->timestamp, 0, NULL, true);
 }
 
 static void onNextUsersBundleFetched(const Message* message) {
-    assert(this);
+    assert(this && this->fetchingUsers);
     if (!(message->index)) listClear(this->userInfosList); // TODO: test with large amount of elements & test with sleep()
 
     for (unsigned i = 0; i < message->size; i++)
         listAddBack(this->userInfosList, unpackUserInfo(message->body + i * USER_INFO_SIZE));
 
-    if (message->index < message->count - 1) return;
+    if (message->index < message->count - 1) return; // not the last bundle
 
     (*(this->onUsersFetched))(this->userInfosList);
     listClear(this->userInfosList);
