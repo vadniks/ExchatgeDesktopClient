@@ -1107,7 +1107,7 @@ void logicOnSendClicked(const char* text, unsigned size) {
 
 void logicOnUpdateUsersListClicked(void) {
     assert(this && this->databaseInitialized && !this->missingMessagesFetchers);
-    finishLoading();
+    beginLoading();
 
     listClear(this->usersList);
     renderShowUsersList(this->currentUserName);
