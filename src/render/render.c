@@ -742,8 +742,9 @@ static void drawUserRowColumn(
 }
 
 static void drawUserRowColumnDescriptions(__attribute_maybe_unused__ const void* nullable parameter) {
-    nk_label(this->context, ID_TEXT, NK_TEXT_ALIGN_LEFT);
-    nk_label(this->context, NAME_TEXT, NK_TEXT_ALIGN_LEFT);
+    const struct nk_color color = {0xff, 0xff, 0xff, 0x7f};
+    nk_label_colored(this->context, ID_TEXT, NK_TEXT_ALIGN_LEFT, color);
+    nk_label_colored(this->context, NAME_TEXT, NK_TEXT_ALIGN_LEFT, color);
 }
 
 static void drawUserRowColumnIdAndName(const void* parameter) {
@@ -754,7 +755,13 @@ static void drawUserRowColumnIdAndName(const void* parameter) {
 
 static void drawUserRowColumnStatus(const void* parameter) {
     assert(parameter);
-    nk_label(this->context, *((const bool*) parameter) ? ONLINE : OFFLINE, NK_TEXT_ALIGN_LEFT);
+    const bool online = *((const bool*) parameter);
+
+    const struct nk_color
+        colorOffline = {0xff, 0xff, 0xff, 0x7f}, // TODO: extract colors
+        colorOnline = {0, 128, 0, 255};
+
+    nk_label_colored(this->context, online ? ONLINE : OFFLINE, NK_TEXT_ALIGN_LEFT, online ? colorOnline : colorOffline);
 }
 
 static void drawUserRowColumnActions(const void* parameter) {
