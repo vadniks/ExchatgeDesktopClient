@@ -324,7 +324,6 @@ static void onNextMessageFetched(
     if (size > 0) onMessageReceived(timestamp, from, message, size);
 
     assert(this->missingMessagesFetchers);
-    assert(this->missingMessagesFetchers == queueSize(this->userIdsToFetchMessagesFrom) + 1);
 
     if (!last) return;
     this->missingMessagesFetchers--;
