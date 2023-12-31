@@ -99,7 +99,7 @@ void logicInit(void) {
     this->missingMessagesFetchers = 0;
     this->userIdsToFetchMessagesFrom = queueInit(NULL);
 
-    cryptoModuleInit();
+    cryptoInit();
 
     assert(optionsInit(NET_USERNAME_SIZE, NET_UNHASHED_PASSWORD_SIZE, &fetchHostId));
     this->adminMode = optionsIsAdmin();
@@ -167,12 +167,12 @@ static void processReceivedMessage(void** parameters) {
     const unsigned size = encryptedSize - cryptoEncryptedSize(0);
     assert(size > 0 && size <= logicUnencryptedMessageBodySize());
 
-    Crypto* crypto = databaseGetConversation(fromId);
-    if (!crypto) return; // TODO: assert
+    CryptoCoderStreams* coderStreams = databaseGetConversation(fromId);
+    if (!coderStreams) return; // TODO: assert
 
-    byte* message = cryptoDecrypt(crypto, encryptedMessage, encryptedSize, false);
+    byte* message = cryptoDecrypt(coderStreams, encryptedMessage, encryptedSize, false);
     assert(message); // situation: user1 updating users list & fetching messages, meanwhile user2 sends a message, so we have the following: user1 updated all needed info and didn't receive the new message from user2, user1 doesn't know that there's a new missing message on a server, then without updating messages on user1's side, user2 sends him a new message, what will happen next? - user1 receives the second new message from user2 and tries to decrypt it - it may fail due to 'ratchet' mechanism in the stream cipher. Besides, if user1 after receiving the second message will try to re-fetch messages, he won't receive the first missing message - only those after the second message
-    cryptoDestroy(crypto); // tested this situation ----/\ and everything works fine
+    cryptoCoderStreamsDestroy(coderStreams); // tested this situation ----/\ and everything works fine
     // TODO: to avoid possibility of this problem appearing can be implemented the following mechanism: periodically check for missing messages presence (like with checking for a new message) and update if needed
 
     DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, (byte*) message, size);
@@ -383,13 +383,13 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
     const User* user = findUser(xFromId);
     if (!user) goto releaseLocks; // if local users list hasn't been synchronized yet
 
-    Crypto* crypto = netReplyToConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
-    if (crypto)
+    CryptoCoderStreams* coderStreams = netReplyToConversationSetUpInvite(renderShowInviteDialog(user->name), xFromId);
+    if (coderStreams)
         this->toUserId = xFromId, // not only in python there's indentation based scoping, here's an emulation though
         this->state = STATE_EXCHANGING_MESSAGES,
 
-        assert(databaseAddConversation(xFromId, crypto, logicCurrentTimeMillis())),
-        cryptoDestroy(crypto),
+        assert(databaseAddConversation(xFromId, coderStreams, logicCurrentTimeMillis())),
+        cryptoCoderStreamsDestroy(coderStreams),
 
         tryLoadPreviousMessages(xFromId),
         renderShowConversation(user->name);
@@ -671,17 +671,17 @@ static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) { /
     const unsigned actualSize = SDL_RWread(this->rwops, unencryptedBuffer, 1, targetSize);
     if (!actualSize) goto finish;
 
-    Crypto* crypto = databaseGetConversation(this->toUserId);
-    assert(crypto);
+    CryptoCoderStreams* coderStreams = databaseGetConversation(this->toUserId);
+    assert(coderStreams);
 
     const unsigned encryptedSize = cryptoEncryptedSize(actualSize);
     assert(encryptedSize <= NET_MESSAGE_BODY_SIZE);
 
-    byte* encryptedChunk = cryptoEncrypt(crypto, unencryptedBuffer, actualSize, false);
+    byte* encryptedChunk = cryptoEncrypt(coderStreams, unencryptedBuffer, actualSize, false);
     SDL_memcpy(encryptedBuffer, encryptedChunk, encryptedSize);
     SDL_free(encryptedChunk);
 
-    cryptoDestroy(crypto);
+    cryptoCoderStreamsDestroy(coderStreams);
 
     if (!index) assert(!this->fileBytesCounter);
     this->fileBytesCounter += actualSize;
@@ -704,10 +704,10 @@ static void nextFileChunkReceiver(
     const unsigned decryptedSize = receivedBytesCount - cryptoEncryptedSize(0);
     assert(decryptedSize && decryptedSize <= logicUnencryptedMessageBodySize());
 
-    Crypto* crypto = databaseGetConversation(fromId);
-    assert(crypto);
+    CryptoCoderStreams* coderStreams = databaseGetConversation(fromId);
+    assert(coderStreams);
 
-    byte* decrypted = cryptoDecrypt(crypto, encryptedBuffer, receivedBytesCount, false);
+    byte* decrypted = cryptoDecrypt(coderStreams, encryptedBuffer, receivedBytesCount, false);
     assert(decrypted);
 
     assert(SDL_RWwrite(this->rwops, decrypted, 1, decryptedSize) == decryptedSize);
@@ -721,7 +721,7 @@ static void nextFileChunkReceiver(
 
     SDL_free(decrypted);
 
-    cryptoDestroy(crypto);
+    cryptoCoderStreamsDestroy(coderStreams);
 
     if (!index) assert(!this->fileBytesCounter);
     this->fileBytesCounter += decryptedSize;
@@ -897,10 +897,10 @@ static void startConversation(void** parameters) {
     if (databaseConversationExists(*id))
         renderShowConversationAlreadyExists();
     else {
-        Crypto* crypto = NULL;
-        if ((crypto = netCreateConversation(*id))) // blocks the thread until either an error has happened or the conversation has been created
-            assert(databaseAddConversation(*id, crypto, logicCurrentTimeMillis())),
-            cryptoDestroy(crypto),
+        CryptoCoderStreams* coderStreams = NULL;
+        if ((coderStreams = netCreateConversation(*id))) // blocks the thread until either an error has happened or the conversation has been created
+            assert(databaseAddConversation(*id, coderStreams, logicCurrentTimeMillis())),
+            cryptoCoderStreamsDestroy(coderStreams),
 
             tryLoadPreviousMessages(*id),
             renderShowConversation(user->name);
@@ -1072,10 +1072,10 @@ static void sendMessage(void** params) {
     assert(databaseAddMessage(dbMessage));
     databaseMessageDestroy(dbMessage);
 
-    Crypto* crypto = databaseGetConversation(this->toUserId);
-    assert(crypto);
-    byte* encryptedText = cryptoEncrypt(crypto, text, size, false);
-    cryptoDestroy(crypto);
+    CryptoCoderStreams* coderStreams = databaseGetConversation(this->toUserId);
+    assert(coderStreams);
+    byte* encryptedText = cryptoEncrypt(coderStreams, text, size, false);
+    cryptoCoderStreamsDestroy(coderStreams);
 
     byte body[NET_MESSAGE_BODY_SIZE];
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
@@ -1138,6 +1138,8 @@ static long fetchHostId(void) {
 void logicClean(void) {
     assert(this);
 
+    cryptoClean();
+
     queueDestroy(this->userIdsToFetchMessagesFrom);
 
     assert(!this->rwops);
@@ -1145,7 +1147,7 @@ void logicClean(void) {
 
     if (this->databaseInitialized) databaseClean();
 
-    optionsClear();
+    optionsClean();
 
     SDL_free(this->currentUserName);
 

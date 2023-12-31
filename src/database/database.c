@@ -396,11 +396,11 @@ static void addConversationBinder(const void* const* parameters, sqlite3_stmt* s
     assert(!sqlite3_bind_int64(statement, 3, (long) *((const unsigned long*) parameters[2])));
 }
 
-bool databaseAddConversation(unsigned userId, const Crypto* crypto, unsigned long timestamp) {
+bool databaseAddConversation(unsigned userId, const CryptoCoderStreams* coderStreams, unsigned long timestamp) {
     assert(this);
     rwMutexWriteLock(this->rwMutex);
 
-    byte* streamStates = cryptoExportStreamsStates(crypto);
+    byte* streamStates = cryptoExportStreamsStates(coderStreams);
     byte* encryptedStreamsStates = cryptoEncryptSingle(this->key, streamStates, CRYPTO_STREAMS_STATES_SIZE);
     SDL_free(streamStates);
     assert(encryptedStreamsStates);
@@ -448,7 +448,7 @@ static void getConversationResultHandler(void* const* parameters, sqlite3_stmt* 
         assert(false);
 }
 
-Crypto* nullable databaseGetConversation(unsigned userId) {
+CryptoCoderStreams* nullable databaseGetConversation(unsigned userId) {
     assert(this);
     rwMutexReadLock(this->rwMutex);
 
@@ -479,12 +479,12 @@ Crypto* nullable databaseGetConversation(unsigned userId) {
     byte* decryptedStreamsStates = cryptoDecryptSingle(this->key, encryptedStreamsStates, cryptoSingleEncryptedSize(CRYPTO_STREAMS_STATES_SIZE));
     assert(decryptedStreamsStates);
 
-    Crypto* crypto = cryptoInit();
-    cryptoSetUpAutonomous(crypto, this->key, decryptedStreamsStates);
+    CryptoCoderStreams* coderStreams = cryptoCoderStreamsInit();
+    cryptoSetUpAutonomous(coderStreams, this->key, decryptedStreamsStates);
     SDL_free(decryptedStreamsStates);
 
     rwMutexReadUnlock(this->rwMutex);
-    return crypto;
+    return coderStreams;
 }
 
 static void getConversationTimestampBinder(const unsigned* userId, sqlite3_stmt* statement)

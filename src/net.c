@@ -303,8 +303,6 @@ bool netInit(
     this->onNextMessageFetched = onNextMessageFetched;
     this->ignoreUsualMessages = false;
 
-    cryptoInit();
-
     assert(!SDLNet_Init());
 
     IPaddress address;
@@ -1030,7 +1028,6 @@ void netClean(void) {
 
     if (this->connectionCoderStreams) cryptoCoderStreamsDestroy(this->connectionCoderStreams);
     if (this->connectionKeys) cryptoKeysDestroy(this->connectionKeys);
-    cryptoClean();
 
     SDLNet_FreeSocketSet(this->socketSet);
     SDLNet_TCP_Close(this->socket);

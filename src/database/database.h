@@ -52,8 +52,8 @@ bool databaseInit(
 ); // returns true on success (either true or false returned, cleanup is needed to be performed anyway), 'passwordSize'-sized buffer
 
 bool databaseConversationExists(unsigned userId);
-bool databaseAddConversation(unsigned userId, const Crypto* crypto, unsigned long timestamp); // the user of this api must check for existence of the entity being added before actually adding that entity, otherwise the function's gonna throw... ...smth that the caller surely doesn't want to be thrown into him
-Crypto* nullable databaseGetConversation(unsigned userId);
+bool databaseAddConversation(unsigned userId, const CryptoCoderStreams* coderStreams, unsigned long timestamp); // the user of this api must check for existence of the entity being added before actually adding that entity, otherwise the function's gonna throw... ...smth that the caller surely doesn't want to be thrown into him
+CryptoCoderStreams* nullable databaseGetConversation(unsigned userId);
 unsigned long databaseGetConversationTimestamp(unsigned userId); // check for existence first
 void databaseRemoveConversation(unsigned userId); // check for existence first
 bool databaseAddMessage(const DatabaseMessage* message); // check for existence first; from (user id) inside the message may be null if the message came from the current user

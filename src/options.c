@@ -298,7 +298,7 @@ void optionsSetCredentials(const char* nullable credentials) {
     SDL_free(encoded);
 }
 
-void optionsClear(void) {
+void optionsClean(void) {
     assert(this);
 
     if (this->credentials) cryptoFillWithRandomBytes((byte*) this->credentials, credentialsSize());
