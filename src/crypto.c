@@ -64,8 +64,8 @@ struct CryptoCoderStreams_t {
 };
 
 struct CryptoBundle_t {
-    CryptoKeys;
-    CryptoCoderStreams;
+    CryptoKeys keys;
+    CryptoCoderStreams coderStreams;
 };
 
 void cryptoInit(void) {
@@ -76,7 +76,20 @@ void cryptoInit(void) {
     SDL_memset(this->serverSignPublicKey, 0, SERVER_SIGN_PUBLIC_KEY_SIZE);
 }
 
-CryptoKeys* nullable cryptoKeysInit(void) { return (CryptoKeys*) SDL_malloc(sizeof(CryptoKeys)); }
+CryptoKeys* cryptoKeysInit(void) { return SDL_malloc(sizeof(CryptoKeys)); }
+
+CryptoCoderStreams* cryptoCoderStreamsInit(void) { return SDL_malloc(sizeof(CryptoCoderStreams)); }
+
+CryptoBundle* cryptoBundleInit(const CryptoKeys* keys, const CryptoCoderStreams* coderStreams) {
+    CryptoBundle* bundle = SDL_malloc(sizeof *bundle);
+    bundle->keys = *keys;
+    bundle->coderStreams = *coderStreams;
+    return bundle;
+}
+
+CryptoKeys* cryptoBundleKeys(CryptoBundle* bundle) { return &(bundle->keys); }
+
+CryptoCoderStreams* cryptoBundleCoderStreams(CryptoBundle* bundle) { return &(bundle->coderStreams); }
 
 void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize) {
     assert(this);
@@ -424,13 +437,19 @@ void* nullable cryptoHashMultipart(void* nullable previous, const byte* nullable
         assert(false);
 }
 
-void cryptoKeysDestroy(CryptoKeys* keys) {
+static void randomiseAndFree(void* object, unsigned size) {
     assert(this);
-    assert(keys);
+    assert(object);
 
-    cryptoFillWithRandomBytes((byte*) keys, sizeof *keys);
-    SDL_free(keys);
+    cryptoFillWithRandomBytes((byte*) object, size);
+    SDL_free(object);
 }
+
+void cryptoKeysDestroy(CryptoKeys* keys) { randomiseAndFree(keys, sizeof *keys); }
+
+void cryptoCoderStreamsDestroy(CryptoCoderStreams* coderStreams) { randomiseAndFree(coderStreams, sizeof *coderStreams); }
+
+void cryptoBundleDestroy(CryptoBundle* bundle) { randomiseAndFree(bundle, sizeof *bundle); }
 
 void cryptoClean(void) {
     assert(this);

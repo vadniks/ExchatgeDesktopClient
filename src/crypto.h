@@ -34,11 +34,17 @@ struct CryptoCoderStreams_t;
 typedef struct CryptoCoderStreams_t CryptoCoderStreams;
 
 struct CryptoBundle_t;
-typedef struct CryptoBundle_t CryptoBundle;
+typedef struct CryptoBundle_t CryptoBundle; // unifies keys and coder streams
 
 // shared:
 void cryptoInit(void); // initialize the module
-CryptoKeys* nullable cryptoKeysInit(void);
+CryptoKeys* cryptoKeysInit(void);
+CryptoCoderStreams* cryptoCoderStreamsInit(void);
+CryptoBundle* cryptoBundleInit(const CryptoKeys* keys, const CryptoCoderStreams* coderStreams); // copies objects themselves, not just their pointers
+
+// shared
+CryptoKeys* cryptoBundleKeys(CryptoBundle* bundle); // doesn't modify the object itself but returns non-const pointer to it's part
+CryptoCoderStreams* cryptoBundleCoderStreams(CryptoBundle* bundle); // the same
 
 // as client:
 void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize); // must be called before performing any client side operations
@@ -69,5 +75,9 @@ byte* nullable cryptoDecryptSingle(const byte* key, const byte* bytes, unsigned 
 char* cryptoBase64Encode(const byte* bytes, unsigned bytesSize); // returns newly allocated null-terminated string
 byte* nullable cryptoBase64Decode(const char* encoded, unsigned encodedSize, unsigned* xDecodedSize); // also accepts pointer to a variable in which the size of the decoded bytes will be stored
 void* nullable cryptoHashMultipart(void* nullable previous, const byte* nullable bytes, unsigned size); // init - (null, null, any) - returns heap-allocated state, update - (state, bytes, sizeof(bytes)) - returns null, finish - (state, null, any) - frees the state and returns heap-allocated hash (cast to byte*)
-void cryptoKeysDestroy(CryptoKeys* keys);
+
+// shared
+void cryptoKeysDestroy(CryptoKeys* keys); // fills the memory region, occupied by the object, with random data and then frees that area
+void cryptoCoderStreamsDestroy(CryptoCoderStreams* coderStreams);
+void cryptoBundleDestroy(CryptoBundle* bundle);
 void cryptoClean(void); // deinitialize the module
