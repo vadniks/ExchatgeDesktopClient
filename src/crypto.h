@@ -33,18 +33,10 @@ typedef struct CryptoKeys_t CryptoKeys;
 struct CryptoCoderStreams_t;
 typedef struct CryptoCoderStreams_t CryptoCoderStreams;
 
-struct CryptoBundle_t;
-typedef struct CryptoBundle_t CryptoBundle; // unifies keys and coder streams
-
 // shared:
 void cryptoInit(void); // initialize the module
 CryptoKeys* cryptoKeysInit(void);
 CryptoCoderStreams* cryptoCoderStreamsInit(void);
-CryptoBundle* cryptoBundleInit(const CryptoKeys* keys, const CryptoCoderStreams* coderStreams); // copies objects themselves, not just their pointers
-
-// shared
-CryptoKeys* cryptoBundleKeys(CryptoBundle* bundle); // doesn't modify the object itself but returns non-const pointer to it's part
-CryptoCoderStreams* cryptoBundleCoderStreams(CryptoBundle* bundle); // the same
 
 // as client:
 void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize); // must be called before performing any client side operations
@@ -79,5 +71,4 @@ void* nullable cryptoHashMultipart(void* nullable previous, const byte* nullable
 // shared
 void cryptoKeysDestroy(CryptoKeys* keys); // fills the memory region, occupied by the object, with random data and then frees that area
 void cryptoCoderStreamsDestroy(CryptoCoderStreams* coderStreams);
-void cryptoBundleDestroy(CryptoBundle* bundle);
 void cryptoClean(void); // deinitialize the module

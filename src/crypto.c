@@ -63,11 +63,6 @@ struct CryptoCoderStreams_t {
     StreamState clientEncryptionState; // serverEncryptionState for *AsServer functions
 };
 
-struct CryptoBundle_t {
-    CryptoKeys keys;
-    CryptoCoderStreams coderStreams;
-};
-
 void cryptoInit(void) {
     assert(sodium_init() >= 0); // there's no sodium_destroy/clean function, allocated objects will be freed at the exit anyway
     assert(!this);
@@ -78,16 +73,6 @@ void cryptoInit(void) {
 
 CryptoKeys* cryptoKeysInit(void) { return SDL_malloc(sizeof(CryptoKeys)); }
 CryptoCoderStreams* cryptoCoderStreamsInit(void) { return SDL_malloc(sizeof(CryptoCoderStreams)); }
-
-CryptoBundle* cryptoBundleInit(const CryptoKeys* keys, const CryptoCoderStreams* coderStreams) {
-    CryptoBundle* bundle = SDL_malloc(sizeof *bundle);
-    bundle->keys = *keys;
-    bundle->coderStreams = *coderStreams;
-    return bundle;
-}
-
-CryptoKeys* cryptoBundleKeys(CryptoBundle* bundle) { return &(bundle->keys); }
-CryptoCoderStreams* cryptoBundleCoderStreams(CryptoBundle* bundle) { return &(bundle->coderStreams); }
 
 void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize) {
     assert(this);
@@ -445,7 +430,6 @@ static void randomiseAndFree(void* object, unsigned size) {
 
 void cryptoKeysDestroy(CryptoKeys* keys) { randomiseAndFree(keys, sizeof *keys); }
 void cryptoCoderStreamsDestroy(CryptoCoderStreams* coderStreams) { randomiseAndFree(coderStreams, sizeof *coderStreams); }
-void cryptoBundleDestroy(CryptoBundle* bundle) { randomiseAndFree(bundle, sizeof *bundle); }
 
 void cryptoClean(void) {
     assert(this);

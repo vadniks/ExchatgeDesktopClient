@@ -106,7 +106,8 @@ THIS(
     atomic unsigned state;
     unsigned encryptedMessageSize; // constant
     NetOnMessageReceived onMessageReceived;
-    Crypto* connectionCrypto; // client-server level encryption - different for each connection
+    CryptoKeys* connectionKeys;
+    CryptoCoderStreams* connectionCoderStreams;
     byte tokenAnonymous[TOKEN_SIZE]; // constant
     byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // constant, unencrypted but clients don't know how token is generated
     byte token[TOKEN_SIZE];
@@ -179,8 +180,9 @@ static bool waitForReceiveWithTimeout(void) {
 }
 
 static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned serverSignPublicKeySize) {
-    this->connectionCrypto = cryptoInit();
-    assert(this->connectionCrypto);
+    this->connectionKeys = cryptoKeysInit();
+    this->connectionCoderStreams = cryptoCoderStreamsInit();
+
     cryptoSetServerSignPublicKey(serverSignPublicKey, serverSignPublicKeySize);
 
     const unsigned signedPublicKeySize = CRYPTO_SIGNATURE_SIZE + CRYPTO_KEY_SIZE;
@@ -189,16 +191,25 @@ static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned 
 
     // TODO: add timeout to server too
     if (!waitForReceiveWithTimeout()) return;
-    if (SDLNet_TCP_Recv(this->socket, serverSignedPublicKey, (int) signedPublicKeySize) != (int) signedPublicKeySize) return;
+
+    if (SDLNet_TCP_Recv(
+        this->socket,
+        serverSignedPublicKey,
+        (int) signedPublicKeySize
+    ) != (int) signedPublicKeySize) return;
     assert(cryptoCheckServerSignedBytes(serverSignedPublicKey, serverKeyStart, CRYPTO_KEY_SIZE));
 
     if (!SDL_memcmp(serverKeyStart, this->serverKeyStub, CRYPTO_KEY_SIZE)) return; // denial of service
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
-    if (!cryptoExchangeKeys(this->connectionCrypto, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE)) return;
+    if (!cryptoExchangeKeys(this->connectionKeys, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE)) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
-    if (SDLNet_TCP_Send(this->socket, cryptoClientPublicKey(this->connectionCrypto), (int) CRYPTO_KEY_SIZE) != (int) CRYPTO_KEY_SIZE) return;
+    if (SDLNet_TCP_Send(
+        this->socket,
+        cryptoClientPublicKey(this->connectionKeys),
+        (int) CRYPTO_KEY_SIZE
+    ) != (int) CRYPTO_KEY_SIZE) return;
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
 
     const unsigned serverSignedCoderHeaderSize = CRYPTO_SIGNATURE_SIZE + CRYPTO_HEADER_SIZE;
@@ -206,11 +217,21 @@ static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned 
     const byte* serverCoderHeaderStart = serverSignedCoderHeader + CRYPTO_SIGNATURE_SIZE;
 
     if (!waitForReceiveWithTimeout()) return;
-    if (SDLNet_TCP_Recv(this->socket, serverSignedCoderHeader, (int) serverSignedCoderHeaderSize) != (int) serverSignedCoderHeaderSize) return;
+    if (SDLNet_TCP_Recv(
+        this->socket,
+        serverSignedCoderHeader,
+        (int) serverSignedCoderHeaderSize
+    ) != (int) serverSignedCoderHeaderSize) return;
+
     assert(cryptoCheckServerSignedBytes(serverSignedCoderHeader, serverCoderHeaderStart, CRYPTO_HEADER_SIZE));
     this->state = STATE_SERVER_CODER_HEADER_RECEIVED;
 
-    byte* clientCoderHeader = cryptoInitializeCoderStreams(this->connectionCrypto, serverCoderHeaderStart);
+    byte* clientCoderHeader = cryptoInitializeCoderStreams(
+        this->connectionKeys,
+        this->connectionCoderStreams,
+        serverCoderHeaderStart
+    );
+
     if (clientCoderHeader) {
         if (SDLNet_TCP_Send(this->socket, clientCoderHeader, (int) CRYPTO_HEADER_SIZE) == (int) CRYPTO_HEADER_SIZE)
             this->state = STATE_CLIENT_CODER_HEADER_SENT;
@@ -252,7 +273,8 @@ bool netInit(
     this->socket = NULL;
     this->socketSet = NULL;
     this->onMessageReceived = onMessageReceived;
-    this->connectionCrypto = NULL;
+    this->connectionKeys = NULL;
+    this->connectionCoderStreams = NULL;
     SDL_memset(this->tokenAnonymous, 0, TOKEN_SIZE);
     SDL_memset(this->tokenServerUnsignedValue, (1 << 8) - 1, TOKEN_UNSIGNED_VALUE_SIZE);
     SDL_memcpy(this->token, this->tokenAnonymous, TOKEN_SIZE); // until user is authenticated he has an anonymous token
@@ -280,6 +302,8 @@ bool netInit(
     this->fetchingMessages = false;
     this->onNextMessageFetched = onNextMessageFetched;
     this->ignoreUsualMessages = false;
+
+    cryptoInit();
 
     assert(!SDLNet_Init());
 
@@ -534,7 +558,7 @@ static Message* nullable receive(void) {
         return NULL;
     }
 
-    byte* decrypted = cryptoDecrypt(this->connectionCrypto, buffer, this->encryptedMessageSize, false);
+    byte* decrypted = cryptoDecrypt(this->connectionCoderStreams, buffer, this->encryptedMessageSize, false);
     SDL_free(buffer);
     assert(decrypted);
 
@@ -585,7 +609,7 @@ bool netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
     SDL_memcpy(&(message.token), this->token, TOKEN_SIZE);
 
     byte* packedMessage = packMessage(&message);
-    byte* encryptedMessage = cryptoEncrypt(this->connectionCrypto, packedMessage, MESSAGE_SIZE, false);
+    byte* encryptedMessage = cryptoEncrypt(this->connectionCoderStreams, packedMessage, MESSAGE_SIZE, false);
     SDL_free(packedMessage);
 
     if (!encryptedMessage) return false;
@@ -708,7 +732,7 @@ static void finishSettingUpConversation(void) {
     this->settingUpConversation = false;
 }
 
-Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving messages from users only after all users were fetched and assert that the sender's id is found locally
+CryptoCoderStreams* nullable netCreateConversation(unsigned id) { // TODO: start receiving messages from users only after all users were fetched and assert that the sender's id is found locally
     assert(this);
 
     assert(!this->settingUpConversation && !this->exchangingFile);
@@ -738,19 +762,19 @@ Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving m
     SDL_memcpy(akaServerPublicKey, message->body, CRYPTO_KEY_SIZE);
     SDL_free(message);
 
-    Crypto* crypto = cryptoInit();
+    CryptoKeys* keys = cryptoKeysInit();
 
-    if (!cryptoExchangeKeys(crypto, akaServerPublicKey)) {
+    if (!cryptoExchangeKeys(keys, akaServerPublicKey)) {
         finishSettingUpConversation();
-        cryptoDestroy(crypto);
+        cryptoKeysDestroy(keys);
         return NULL;
     }
 
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
-    SDL_memcpy(body, cryptoClientPublicKey(crypto), CRYPTO_KEY_SIZE);
+    SDL_memcpy(body, cryptoClientPublicKey(keys), CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS_DONE, body, CRYPTO_KEY_SIZE, id)) {
         finishSettingUpConversation();
-        cryptoDestroy(crypto);
+        cryptoKeysDestroy(keys);
         return NULL;
     }
 
@@ -760,7 +784,7 @@ Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving m
     {
         finishSettingUpConversation();
         SDL_free(message);
-        cryptoDestroy(crypto);
+        cryptoKeysDestroy(keys);
         return NULL;
     }
 
@@ -768,10 +792,13 @@ Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving m
     SDL_memcpy(akaServerStreamHeader, message->body, CRYPTO_HEADER_SIZE);
     SDL_free(message);
 
-    byte* akaClientStreamHeader = cryptoInitializeCoderStreams(crypto, akaServerStreamHeader);
+    CryptoCoderStreams* coderStreams = cryptoCoderStreamsInit();
+    byte* akaClientStreamHeader = cryptoInitializeCoderStreams(keys, coderStreams, akaServerStreamHeader);
+    cryptoKeysDestroy(keys);
+
     if (!akaClientStreamHeader) {
         finishSettingUpConversation();
-        cryptoDestroy(crypto);
+        cryptoCoderStreamsDestroy(coderStreams);
         return NULL;
     }
 
@@ -782,17 +809,17 @@ Crypto* nullable netCreateConversation(unsigned id) { // TODO: start receiving m
     finishSettingUpConversation();
 
     if (!netSend(FLAG_EXCHANGE_HEADERS_DONE, body, CRYPTO_HEADER_SIZE, id)) {
-        cryptoDestroy(crypto);
+        cryptoCoderStreamsDestroy(coderStreams);
         return NULL;
     }
 
-    return crypto;
+    return coderStreams;
 }
 
 static inline bool inviteProcessingTimeoutExceeded(void)
 { return (*(this->currentTimeMillisGetter))() - this->inviteProcessingStartMillis > TIMEOUT; }
 
-Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId) { // TODO: create a dashboard page with some analysis for admin
+CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId) { // TODO: create a dashboard page with some analysis for admin
     assert(this);
     assert(this->settingUpConversation && !this->exchangingFile);
     queueClear(this->conversationSetupMessages);
@@ -811,14 +838,14 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
         return NULL;
     }
 
-    Crypto* crypto = cryptoInit();
-    const byte* akaServerPublicKey = cryptoGenerateKeyPairAsServer(crypto);
+    CryptoKeys* keys = cryptoKeysInit();
+    const byte* akaServerPublicKey = cryptoGenerateKeyPairAsServer(keys);
 
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, CRYPTO_KEY_SIZE, fromId)) {
         finishSettingUpConversation();
-        cryptoDestroy(crypto);
+        cryptoKeysDestroy(keys);
         return NULL;
     }
 
@@ -828,7 +855,7 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
         || message->size != CRYPTO_KEY_SIZE)
     {
         finishSettingUpConversation();
-        cryptoDestroy(crypto);
+        cryptoKeysDestroy(keys);
         SDL_free(message);
         return NULL;
     }
@@ -836,16 +863,19 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     byte akaClientPublicKey[CRYPTO_KEY_SIZE];
     SDL_memcpy(akaClientPublicKey, message->body, CRYPTO_KEY_SIZE);
     SDL_free(message);
-    if (!cryptoExchangeKeysAsServer(crypto, akaClientPublicKey)) {
+    if (!cryptoExchangeKeysAsServer(keys, akaClientPublicKey)) {
         finishSettingUpConversation();
-        cryptoDestroy(crypto);
+        cryptoKeysDestroy(keys);
         return NULL;
     }
 
-    byte* akaServerStreamHeader = cryptoCreateEncoderAsServer(crypto);
+    CryptoCoderStreams* coderStreams = cryptoCoderStreamsInit();
+    byte* akaServerStreamHeader = cryptoCreateEncoderAsServer(keys, coderStreams);
+
     if (!akaServerStreamHeader) {
         finishSettingUpConversation();
-        cryptoDestroy(crypto);
+        cryptoKeysDestroy(keys);
+        cryptoCoderStreamsDestroy(coderStreams);
         return NULL;
     }
     SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
@@ -854,7 +884,8 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
 
     if (!netSend(FLAG_EXCHANGE_HEADERS, body, CRYPTO_HEADER_SIZE, fromId)) {
         finishSettingUpConversation();
-        cryptoDestroy(crypto);
+        cryptoKeysDestroy(keys);
+        cryptoCoderStreamsDestroy(coderStreams);
         return NULL;
     }
 
@@ -864,7 +895,8 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
     {
         finishSettingUpConversation();
         SDL_free(message);
-        cryptoDestroy(crypto);
+        cryptoKeysDestroy(keys);
+        cryptoCoderStreamsDestroy(coderStreams);
         return NULL;
     }
 
@@ -874,12 +906,15 @@ Crypto* nullable netReplyToConversationSetUpInvite(bool accept, unsigned fromId)
 
     finishSettingUpConversation();
 
-    if (!cryptoCreateDecoderStreamAsServer(crypto, akaClientStreamHeader)) {
-        cryptoDestroy(crypto);
+    const bool decoderCreated = cryptoCreateDecoderStreamAsServer(keys, coderStreams, akaClientStreamHeader);
+    cryptoKeysDestroy(keys);
+
+    if (!decoderCreated) {
+        cryptoCoderStreamsDestroy(coderStreams);
         return NULL;
     }
 
-    return crypto;
+    return coderStreams;
 }
 
 static void finishFileExchanging(void) {
@@ -993,7 +1028,9 @@ void netClean(void) {
     SDL_free(this->serverKeyStub);
     listDestroy(this->userInfosList);
 
-    if (this->connectionCrypto) cryptoDestroy(this->connectionCrypto);
+    if (this->connectionCoderStreams) cryptoCoderStreamsDestroy(this->connectionCoderStreams);
+    if (this->connectionKeys) cryptoKeysDestroy(this->connectionKeys);
+    cryptoClean();
 
     SDLNet_FreeSocketSet(this->socketSet);
     SDLNet_TCP_Close(this->socket);
