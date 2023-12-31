@@ -20,6 +20,7 @@ add_compile_options("-Wno-language-extension-token")
 add_compile_options("-Wno-microsoft-fixed-enum")
 add_compile_options("-Wno-empty-body")
 add_compile_options("-Wno-c2x-extensions")
+add_compile_options("-Wno-gnu-empty-struct")
 
 add_compile_options("-std=gnu11")
 

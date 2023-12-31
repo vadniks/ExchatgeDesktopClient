@@ -23,9 +23,6 @@
 
 typedef crypto_secretstream_xchacha20poly1305_state StreamState;
 
-typedef unsigned long long xuint64; // even that 'long' is doubled it is still 64 bits (8 bytes) so it's just unsigned long
-staticAssert(sizeof(xuint64) == sizeof(long));
-
 staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SESSIONKEYBYTES == crypto_secretbox_KEYBYTES);
@@ -46,53 +43,76 @@ STATIC_CONST_UNSIGNED NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
 static const byte TAG_INTERMEDIATE = crypto_secretstream_xchacha20poly1305_TAG_MESSAGE; // 0
 __attribute_maybe_unused__ static const byte TAG_LAST = crypto_secretstream_xchacha20poly1305_TAG_FINAL; // 3
 
-static byte serverSignPublicKey[SERVER_SIGN_PUBLIC_KEY_SIZE] = {0};
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
+THIS(
+    byte serverSignPublicKey[SERVER_SIGN_PUBLIC_KEY_SIZE];
+)
+#pragma clang diagnostic pop
 
-struct Crypto_t {
-    byte serverPublicKey[CRYPTO_KEY_SIZE]; // clientPublicKey for *AsServer functions // TODO: optimise: make separate structs for keys, for streams and for the module's state
+struct CryptoKeys_t {
+    byte serverPublicKey[CRYPTO_KEY_SIZE]; // clientPublicKey for *AsServer functions
     byte clientPublicKey[CRYPTO_KEY_SIZE]; // serverPublicKey for *AsServer functions
     byte clientSecretKey[CRYPTO_KEY_SIZE]; // serverSecretKey for *AsServer functions
     byte clientKey[CRYPTO_KEY_SIZE];
     byte serverKey[CRYPTO_KEY_SIZE];
+};
+
+struct CryptoCoderStreams_t {
     StreamState clientDecryptionState; // serverDecryptionState for *AsServer functions
     StreamState clientEncryptionState; // serverEncryptionState for *AsServer functions
 };
 
-void cryptoModuleInit(void) { assert(sodium_init() >= 0); } // there's no sodium_destroy/clean function, allocated objects will be freed at the exit anyway
+struct CryptoBundle_t {
+    CryptoKeys;
+    CryptoCoderStreams;
+};
 
-Crypto* nullable cryptoInit(void) { return (Crypto*) SDL_malloc(sizeof(Crypto)); }
+void cryptoInit(void) {
+    assert(sodium_init() >= 0); // there's no sodium_destroy/clean function, allocated objects will be freed at the exit anyway
+    assert(!this);
 
-void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize) {
-    assert(serverSignPublicKeySize == SERVER_SIGN_PUBLIC_KEY_SIZE);
-    SDL_memcpy(serverSignPublicKey, xServerSignPublicKey, SERVER_SIGN_PUBLIC_KEY_SIZE);
+    this = SDL_malloc(sizeof *this);
+    SDL_memset(this->serverSignPublicKey, 0, SERVER_SIGN_PUBLIC_KEY_SIZE);
 }
 
-bool cryptoExchangeKeys(Crypto* crypto, const byte* serverPublicKey) {
-    assert(crypto && !crypto_kx_keypair(crypto->clientPublicKey, crypto->clientSecretKey));
-    SDL_memcpy(crypto->serverPublicKey, serverPublicKey, CRYPTO_KEY_SIZE);
+CryptoKeys* nullable cryptoKeysInit(void) { return (CryptoKeys*) SDL_malloc(sizeof(CryptoKeys)); }
+
+void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize) {
+    assert(this);
+    assert(serverSignPublicKeySize == SERVER_SIGN_PUBLIC_KEY_SIZE);
+    SDL_memcpy(this->serverSignPublicKey, xServerSignPublicKey, SERVER_SIGN_PUBLIC_KEY_SIZE);
+}
+
+bool cryptoExchangeKeys(CryptoKeys* keys, const byte* serverPublicKey) {
+    assert(this);
+    assert(keys && !crypto_kx_keypair(keys->clientPublicKey, keys->clientSecretKey));
+
+    SDL_memcpy(keys->serverPublicKey, serverPublicKey, CRYPTO_KEY_SIZE);
 
     const int result = crypto_kx_client_session_keys(
-        crypto->clientKey,
-        crypto->serverKey,
-        crypto->clientPublicKey,
-        crypto->clientSecretKey,
-        crypto->serverPublicKey
+        keys->clientKey,
+        keys->serverKey,
+        keys->clientPublicKey,
+        keys->clientSecretKey,
+        keys->serverPublicKey
     );
 
     return !result;
 }
 
-byte* nullable cryptoInitializeCoderStreams(Crypto* crypto, const byte* serverStreamHeader) {
-    assert(crypto);
+byte* nullable cryptoInitializeCoderStreams(const CryptoKeys* keys, CryptoCoderStreams* coderStreams, const byte* serverStreamHeader) {
+    assert(this);
+    assert(coderStreams);
 
     int result = crypto_secretstream_xchacha20poly1305_init_pull(
-        &(crypto->clientDecryptionState), serverStreamHeader, crypto->serverKey
+        &(coderStreams->clientDecryptionState), serverStreamHeader, keys->serverKey
     );
     if (result != 0) return NULL;
 
     byte* clientStreamHeader = SDL_malloc(CRYPTO_HEADER_SIZE);
     result = crypto_secretstream_xchacha20poly1305_init_push(
-        &(crypto->clientEncryptionState), clientStreamHeader, crypto->clientKey
+        &(coderStreams->clientEncryptionState), clientStreamHeader, keys->clientKey
     );
 
     if (result != 0) {
@@ -103,6 +123,7 @@ byte* nullable cryptoInitializeCoderStreams(Crypto* crypto, const byte* serverSt
 }
 
 bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedBytes, unsigned unsignedSize) {
+    assert(this);
     assert(unsignedSize > 0);
 
     const unsigned combinedSize = CRYPTO_SIGNATURE_SIZE + unsignedSize;
@@ -117,7 +138,7 @@ bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedByt
         generatedUnsigned,
         &generatedUnsignedSize,
         combined, combinedSize,
-        serverSignPublicKey
+        this->serverSignPublicKey
     ) != 0)
         return false;
 
@@ -129,6 +150,7 @@ bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedByt
 }
 
 byte* cryptoMakeKey(const byte* passwordBuffer, unsigned size) {
+    assert(this);
     assert(passwordBuffer && size >= crypto_generichash_BYTES_MIN && size <= crypto_generichash_BYTES_MAX);
 
     byte* hash = SDL_malloc(CRYPTO_KEY_SIZE * sizeof(char));
@@ -137,67 +159,68 @@ byte* cryptoMakeKey(const byte* passwordBuffer, unsigned size) {
     return hash;
 }
 
-void cryptoSetUpAutonomous(Crypto* crypto, const byte* key, const byte* nullable streamsStates) {
-    assert(crypto && key);
-    SDL_memcpy(&(crypto->clientKey), key, CRYPTO_KEY_SIZE);
+void cryptoSetUpAutonomous(CryptoCoderStreams* coderStreams, const byte* key, const byte* nullable streamsStates) {
+    assert(this);
+    assert(coderStreams && key);
 
     if (!streamsStates) {
         byte header[CRYPTO_HEADER_SIZE];
-        assert(!crypto_secretstream_xchacha20poly1305_init_push(&(crypto->clientEncryptionState), header, key));
-        assert(!crypto_secretstream_xchacha20poly1305_init_pull(&(crypto->clientDecryptionState), header, key));
+        assert(!crypto_secretstream_xchacha20poly1305_init_push(&(coderStreams->clientEncryptionState), header, key));
+        assert(!crypto_secretstream_xchacha20poly1305_init_pull(&(coderStreams->clientDecryptionState), header, key));
     } else {
         const unsigned size = CRYPTO_STREAMS_STATES_SIZE / 2;
-        SDL_memcpy(&(crypto->clientDecryptionState), streamsStates, size);
-        SDL_memcpy(&(crypto->clientEncryptionState), streamsStates + size, size);
+        SDL_memcpy(&(coderStreams->clientDecryptionState), streamsStates, size);
+        SDL_memcpy(&(coderStreams->clientEncryptionState), streamsStates + size, size);
     }
 }
 
-byte* cryptoExportStreamsStates(const Crypto* crypto) {
-    assert(crypto);
+byte* cryptoExportStreamsStates(const CryptoCoderStreams* coderStreams) {
+    assert(this);
+    assert(coderStreams);
+
     const unsigned size = CRYPTO_STREAMS_STATES_SIZE / 2;
 
     byte* bytes = SDL_malloc(CRYPTO_STREAMS_STATES_SIZE);
-    SDL_memcpy(bytes, &(crypto->clientDecryptionState), size);
-    SDL_memcpy(bytes + size, &(crypto->clientEncryptionState), size);
+    SDL_memcpy(bytes, &(coderStreams->clientDecryptionState), size);
+    SDL_memcpy(bytes + size, &(coderStreams->clientEncryptionState), size);
 
     return bytes;
 }
 
-const byte* cryptoClientKey(const Crypto* crypto) {
-    assert(crypto);
-    return crypto->clientKey;
+static inline byte* clientPublicKeyAsServer(CryptoKeys* keys) { return keys->serverPublicKey; }
+static inline byte* serverPublicKeyAsServer(CryptoKeys* keys) { return keys->clientPublicKey; }
+static inline byte* serverSecretKeyAsServer(CryptoKeys* keys) { return keys->clientSecretKey; }
+
+static inline StreamState* serverDecryptionStateAsServer(CryptoCoderStreams* coderStreams) { return &(coderStreams->clientDecryptionState); }
+static inline StreamState* serverEncryptionStateAsServer(CryptoCoderStreams* coderStreams) { return &(coderStreams->clientEncryptionState); }
+
+const byte* cryptoGenerateKeyPairAsServer(CryptoKeys* keys) {
+    assert(this);
+    assert(!crypto_kx_keypair(serverPublicKeyAsServer(keys), serverSecretKeyAsServer(keys)));
+    return keys->clientPublicKey;
 }
 
-static inline byte* clientPublicKeyAsServer(Crypto* crypto) { return crypto->serverPublicKey; }
-static inline byte* serverPublicKeyAsServer(Crypto* crypto) { return crypto->clientPublicKey; }
-static inline byte* serverSecretKeyAsServer(Crypto* crypto) { return crypto->clientSecretKey; }
-
-static inline StreamState* serverDecryptionStateAsServer(Crypto* crypto) { return &(crypto->clientDecryptionState); }
-static inline StreamState* serverEncryptionStateAsServer(Crypto* crypto) { return &(crypto->clientEncryptionState); }
-
-const byte* cryptoGenerateKeyPairAsServer(Crypto* crypto) {
-    assert(!crypto_kx_keypair(serverPublicKeyAsServer(crypto), serverSecretKeyAsServer(crypto)));
-    return crypto->clientPublicKey;
-}
-
-bool cryptoExchangeKeysAsServer(Crypto* crypto, const byte* clientPublicKey) {
-    SDL_memcpy(clientPublicKeyAsServer(crypto), clientPublicKey, CRYPTO_KEY_SIZE);
+bool cryptoExchangeKeysAsServer(CryptoKeys* keys, const byte* clientPublicKey) {
+    assert(this);
+    SDL_memcpy(clientPublicKeyAsServer(keys), clientPublicKey, CRYPTO_KEY_SIZE);
 
     const int result = crypto_kx_server_session_keys(
-        crypto->serverKey,
-        crypto->clientKey,
-        serverPublicKeyAsServer(crypto),
-        serverSecretKeyAsServer(crypto),
-        clientPublicKeyAsServer(crypto)
+        keys->serverKey,
+        keys->clientKey,
+        serverPublicKeyAsServer(keys),
+        serverSecretKeyAsServer(keys),
+        clientPublicKeyAsServer(keys)
     );
 
     return !result;
 }
 
-byte* nullable cryptoCreateEncoderAsServer(Crypto* crypto) {
+byte* nullable cryptoCreateEncoderAsServer(const CryptoKeys* keys, CryptoCoderStreams* coderStreams) {
+    assert(this);
+
     byte* serverStreamHeader = SDL_malloc(CRYPTO_HEADER_SIZE);
     const int result = crypto_secretstream_xchacha20poly1305_init_push(
-        serverEncryptionStateAsServer(crypto), serverStreamHeader, crypto->serverKey
+        serverEncryptionStateAsServer(coderStreams), serverStreamHeader, keys->serverKey
     );
 
     if (result != 0) {
@@ -207,34 +230,38 @@ byte* nullable cryptoCreateEncoderAsServer(Crypto* crypto) {
     return serverStreamHeader;
 }
 
-bool cryptoCreateDecoderStreamAsServer(Crypto* crypto, const byte* clientStreamHeader) {
+bool cryptoCreateDecoderStreamAsServer(const CryptoKeys* keys, CryptoCoderStreams* coderStreams, const byte* clientStreamHeader) {
+    assert(this);
+
     const int result = crypto_secretstream_xchacha20poly1305_init_pull(
-        serverDecryptionStateAsServer(crypto), clientStreamHeader, crypto->clientKey
+        serverDecryptionStateAsServer(coderStreams), clientStreamHeader, keys->clientKey
     );
+
     return !result;
 }
 
 unsigned cryptoEncryptedSize(unsigned unencryptedSize)
 { return unencryptedSize + ENCRYPTED_ADDITIONAL_BYTES_SIZE; }
 
-const byte* cryptoClientPublicKey(const Crypto* crypto) {
-    assert(crypto);
-    return crypto->clientPublicKey;
+const byte* cryptoClientPublicKey(const CryptoKeys* keys) {
+    assert(keys);
+    return keys->clientPublicKey;
 }
 
-byte* nullable cryptoEncrypt(Crypto* crypto, const byte* bytes, unsigned bytesSize, bool server) {
-    assert(crypto && bytes && bytesSize > 0);
+byte* nullable cryptoEncrypt(CryptoCoderStreams* coderStreams, const byte* bytes, unsigned bytesSize, bool server) {
+    assert(this);
+    assert(coderStreams && bytes && bytesSize > 0);
 
-    xuint64 generatedEncryptedSize = 0;
-    const xuint64 encryptedSize = cryptoEncryptedSize(bytesSize);
+    unsigned long long generatedEncryptedSize = 0; // same as unsigned long
+    const unsigned long encryptedSize = cryptoEncryptedSize(bytesSize);
     byte* encrypted = SDL_malloc(encryptedSize);
 
     const int result = crypto_secretstream_xchacha20poly1305_push(
-        server ? serverEncryptionStateAsServer(crypto) :&(crypto->clientEncryptionState),
+        server ? serverEncryptionStateAsServer(coderStreams) : &(coderStreams->clientEncryptionState),
         encrypted,
         &generatedEncryptedSize,
         bytes,
-        (xuint64) bytesSize,
+        (unsigned long) bytesSize,
         NULL,
         0,
         TAG_INTERMEDIATE
@@ -249,21 +276,22 @@ byte* nullable cryptoEncrypt(Crypto* crypto, const byte* bytes, unsigned bytesSi
     }
 }
 
-byte* nullable cryptoDecrypt(Crypto* crypto, const byte* bytes, unsigned bytesSize, bool server) {
-    assert(crypto && bytes && bytesSize > ENCRYPTED_ADDITIONAL_BYTES_SIZE);
+byte* nullable cryptoDecrypt(CryptoCoderStreams* coderStreams, const byte* bytes, unsigned bytesSize, bool server) {
+    assert(this);
+    assert(coderStreams && bytes && bytesSize > ENCRYPTED_ADDITIONAL_BYTES_SIZE);
 
-    xuint64 generatedDecryptedSize = 0;
+    unsigned long long generatedDecryptedSize = 0; // same as unsigned long
     byte tag;
-    const xuint64 decryptedSize = bytesSize - ENCRYPTED_ADDITIONAL_BYTES_SIZE;
+    const unsigned long decryptedSize = bytesSize - ENCRYPTED_ADDITIONAL_BYTES_SIZE;
     byte* decrypted = SDL_malloc(decryptedSize);
 
     const int result = crypto_secretstream_xchacha20poly1305_pull(
-        server ? serverDecryptionStateAsServer(crypto) : &(crypto->clientDecryptionState),
+        server ? serverDecryptionStateAsServer(coderStreams) : &(coderStreams->clientDecryptionState),
         decrypted,
         &generatedDecryptedSize,
         &tag,
         bytes,
-        (xuint64) bytesSize,
+        (unsigned long) bytesSize,
         NULL,
         0
     );
@@ -278,6 +306,7 @@ byte* nullable cryptoDecrypt(Crypto* crypto, const byte* bytes, unsigned bytesSi
 }
 
 void cryptoFillWithRandomBytes(byte* filled, unsigned size) {
+    assert(this);
     assert(size > 0);
     randombytes_buf(filled, size);
 }
@@ -286,6 +315,7 @@ unsigned cryptoSingleEncryptedSize(unsigned unencryptedSize)
 { return MAC_SIZE + unencryptedSize + NONCE_SIZE; }
 
 byte* nullable cryptoEncryptSingle(const byte* key, const byte* bytes, unsigned bytesSize) {
+    assert(this);
     assert(key && bytes);
 
     const unsigned encryptedSize = cryptoSingleEncryptedSize(bytesSize);
@@ -307,6 +337,7 @@ byte* nullable cryptoEncryptSingle(const byte* key, const byte* bytes, unsigned 
 }
 
 byte* nullable cryptoDecryptSingle(const byte* key, const byte* bytes, unsigned bytesSize) {
+    assert(this);
     assert(key && bytes);
 
     const unsigned decryptedSize = bytesSize - MAC_SIZE - NONCE_SIZE;
@@ -326,6 +357,7 @@ byte* nullable cryptoDecryptSingle(const byte* key, const byte* bytes, unsigned 
 }
 
 char* cryptoBase64Encode(const byte* bytes, unsigned bytesSize) {
+    assert(this);
     assert(bytesSize);
 
     const unsigned encodedSize = sodium_base64_encoded_len(bytesSize, sodium_base64_VARIANT_URLSAFE);
@@ -339,6 +371,8 @@ char* cryptoBase64Encode(const byte* bytes, unsigned bytesSize) {
 }
 
 byte* nullable cryptoBase64Decode(const char* encoded, unsigned encodedSize, unsigned* xDecodedSize) {
+    assert(this);
+
     const unsigned decodedSize = encodedSize / 4 * 3;
     if (!encodedSize || !decodedSize) return NULL;
 
@@ -365,6 +399,8 @@ byte* nullable cryptoBase64Decode(const char* encoded, unsigned encodedSize, uns
 }
 
 void* nullable cryptoHashMultipart(void* nullable previous, const byte* nullable bytes, unsigned size) {
+    assert(this);
+
     if (!previous && !bytes) {
         previous = SDL_malloc(sizeof(crypto_generichash_state));
         assert(!crypto_generichash_init((crypto_generichash_state*) previous, NULL, 0, CRYPTO_HASH_SIZE));
@@ -388,8 +424,16 @@ void* nullable cryptoHashMultipart(void* nullable previous, const byte* nullable
         assert(false);
 }
 
-void cryptoDestroy(Crypto* crypto) {
-    assert(crypto);
-    cryptoFillWithRandomBytes((byte*) crypto, sizeof(Crypto));
-    SDL_free(crypto);
+void cryptoKeysDestroy(CryptoKeys* keys) {
+    assert(this);
+    assert(keys);
+
+    cryptoFillWithRandomBytes((byte*) keys, sizeof *keys);
+    SDL_free(keys);
+}
+
+void cryptoClean(void) {
+    assert(this);
+    SDL_free(this);
+    this = NULL;
 }

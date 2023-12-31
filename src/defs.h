@@ -38,10 +38,6 @@
 #   error "Gimme atomics!"
 #endif
 
-#define THIS(x) \
-    typedef struct { x } This; \
-    static This* this = NULL;
-
 #define staticAssert(x) _Static_assert(x, "")
 #define atomic _Atomic
 #define fallthrough __attribute__((fallthrough));
@@ -50,6 +46,10 @@
 
 #pragma clang deprecated(type_of, "")
 #pragma clang deprecated(auto_type, "")
+
+#define THIS(x) \
+    typedef struct { x } This; \
+    static This* atomic this = NULL;
 
 #ifndef __GLIBC__
 #   error "Project uses glibc"
