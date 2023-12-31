@@ -1138,7 +1138,7 @@ static long fetchHostId(void) {
 void logicClean(void) {
     assert(this);
 
-    cryptoClean();
+    if (this->netInitialized) netClean();
 
     queueDestroy(this->userIdsToFetchMessagesFrom);
 
@@ -1146,14 +1146,13 @@ void logicClean(void) {
     assert(!this->fileHashState);
 
     if (this->databaseInitialized) databaseClean();
-
     optionsClean();
+    cryptoClean();
 
     SDL_free(this->currentUserName);
 
     listDestroy(this->usersList);
     listDestroy(this->messagesList);
 
-    if (this->netInitialized) netClean();
     SDL_free(this);
 }
