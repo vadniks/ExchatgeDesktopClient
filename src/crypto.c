@@ -49,7 +49,7 @@ __attribute_maybe_unused__ static const byte TAG_LAST = crypto_secretstream_xcha
 static byte serverSignPublicKey[SERVER_SIGN_PUBLIC_KEY_SIZE] = {0};
 
 struct Crypto_t {
-    byte serverPublicKey[CRYPTO_KEY_SIZE]; // clientPublicKey for *AsServer functions
+    byte serverPublicKey[CRYPTO_KEY_SIZE]; // clientPublicKey for *AsServer functions // TODO: optimise: make separate structs for keys, for streams and for the module's state
     byte clientPublicKey[CRYPTO_KEY_SIZE]; // serverPublicKey for *AsServer functions
     byte clientSecretKey[CRYPTO_KEY_SIZE]; // serverSecretKey for *AsServer functions
     byte clientKey[CRYPTO_KEY_SIZE];
