@@ -21,8 +21,6 @@
 #include <assert.h>
 #include "crypto.h"
 
-typedef crypto_secretstream_xchacha20poly1305_state StreamState;
-
 staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SESSIONKEYBYTES == crypto_secretbox_KEYBYTES);
@@ -30,6 +28,8 @@ staticAssert(crypto_secretstream_xchacha20poly1305_KEYBYTES == crypto_secretbox_
 staticAssert(crypto_generichash_BYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_secretbox_KEYBYTES == 32);
 staticAssert(crypto_sign_BYTES == 64);
+
+typedef crypto_secretstream_xchacha20poly1305_state StreamState;
 
 const unsigned CRYPTO_KEY_SIZE = crypto_secretstream_xchacha20poly1305_KEYBYTES; // 32
 const unsigned CRYPTO_HEADER_SIZE = crypto_secretstream_xchacha20poly1305_HEADERBYTES; // 24
@@ -77,7 +77,6 @@ void cryptoInit(void) {
 }
 
 CryptoKeys* cryptoKeysInit(void) { return SDL_malloc(sizeof(CryptoKeys)); }
-
 CryptoCoderStreams* cryptoCoderStreamsInit(void) { return SDL_malloc(sizeof(CryptoCoderStreams)); }
 
 CryptoBundle* cryptoBundleInit(const CryptoKeys* keys, const CryptoCoderStreams* coderStreams) {
@@ -88,7 +87,6 @@ CryptoBundle* cryptoBundleInit(const CryptoKeys* keys, const CryptoCoderStreams*
 }
 
 CryptoKeys* cryptoBundleKeys(CryptoBundle* bundle) { return &(bundle->keys); }
-
 CryptoCoderStreams* cryptoBundleCoderStreams(CryptoBundle* bundle) { return &(bundle->coderStreams); }
 
 void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize) {
@@ -446,9 +444,7 @@ static void randomiseAndFree(void* object, unsigned size) {
 }
 
 void cryptoKeysDestroy(CryptoKeys* keys) { randomiseAndFree(keys, sizeof *keys); }
-
 void cryptoCoderStreamsDestroy(CryptoCoderStreams* coderStreams) { randomiseAndFree(coderStreams, sizeof *coderStreams); }
-
 void cryptoBundleDestroy(CryptoBundle* bundle) { randomiseAndFree(bundle, sizeof *bundle); }
 
 void cryptoClean(void) {
