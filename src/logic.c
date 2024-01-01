@@ -165,9 +165,9 @@ static void processReceivedMessage(void** parameters) {
     if (!user) return; // thanks to caching messages while users information is synchronizing, losing messages here is unlikely to happen, but theoretically it is still possible - it would be an error though as the sender is required to instantiate a conversation with the recipient first and the recipient's logic won't let to do that as it would drop/ignore conversation creation requests/invites from the sender - TODO: assert(user found)?
 
     const unsigned size = encryptedSize - cryptoEncryptedSize(0);
-    SDL_Log("%u %u %u %lu", encryptedSize, size, fromId, timestamp); // TODO: caught it once and encryptedSize was 4 - why? After all messages on server had been deleted this bug has never appeared again - WTF?!
-    printBinaryArray(encryptedMessage, encryptedSize); // TODO: stays for debug, maybe I'll catch it again sometime
-    assert(size > 0 && size <= logicUnencryptedMessageBodySize()); // TODO: fails sometimes!
+    assert(size > 0 && size <= logicUnencryptedMessageBodySize());
+
+    // TODO: update users list on successful conversation setup
 
     CryptoCoderStreams* coderStreams = databaseGetConversation(fromId);
     if (!coderStreams) return; // TODO: assert
