@@ -168,6 +168,7 @@ static void processReceivedMessage(void** parameters) {
     assert(size > 0 && size <= logicUnencryptedMessageBodySize());
 
     // TODO: update users list on successful conversation setup
+    // TODO: test conversation setup and file exchanging with 3 users: 2 try to setup/exchange and the 3rd one tries to interfere
 
     CryptoCoderStreams* coderStreams = databaseGetConversation(fromId);
     if (!coderStreams) return; // TODO: assert
