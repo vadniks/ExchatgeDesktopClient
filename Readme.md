@@ -28,6 +28,7 @@ Project is created for Linux x86_64 desktop platforms (PCs).
 * Human-readable options file,
 * Multiple active simultaneous connections,
 * Digital signatures checking between clients and server,
+* Broadcasting (unencrypted, from admin to all others),
 * Instant messages delivery.
 
 ## `TODO`
