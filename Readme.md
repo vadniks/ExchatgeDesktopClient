@@ -1,6 +1,4 @@
 
-# _UNSTABLE YET_
-
 # Exchatge - a secured message exchanger (desktop client)
 
 ```
@@ -18,6 +16,19 @@ of encryption between clients, any interception of messages by
 the server or anyone else is useless. File exchange is supported.
 
 Project is created for Linux x86_64 desktop platforms (PCs).
+
+## Key features:
+* Double end-to-end encryption (each connection between client and server is encrypted, as well as the each conversation channel between 2 clients),
+* Encrypted file exchanging via binary protocol,
+* Authentication and authorization (each client has login and password, ephemeral token based protection),
+* User roles (one admin and $(MAX_USERS_COUNT - 1) users),
+* Asynchronous execution,
+* Missing messages fetching,
+* Graphical user interface,
+* Human-readable options file,
+* Multiple active simultaneous connections,
+* Digital signatures checking between clients and server,
+* Instant messages delivery.
 
 ## `TODO`
 * Maybe add unit tests,
