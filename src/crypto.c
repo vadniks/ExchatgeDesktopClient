@@ -26,6 +26,8 @@ staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SESSIONKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_secretstream_xchacha20poly1305_KEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_generichash_BYTES == crypto_secretbox_KEYBYTES);
+staticAssert(crypto_box_PUBLICKEYBYTES == crypto_secretbox_KEYBYTES);
+staticAssert(crypto_box_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_secretbox_KEYBYTES == 32);
 staticAssert(crypto_sign_BYTES == 64);
 
@@ -42,6 +44,7 @@ STATIC_CONST_UNSIGNED MAC_SIZE = crypto_secretbox_MACBYTES; // 16
 STATIC_CONST_UNSIGNED NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
 static const byte TAG_INTERMEDIATE = crypto_secretstream_xchacha20poly1305_TAG_MESSAGE; // 0
 __attribute_maybe_unused__ static const byte TAG_LAST = crypto_secretstream_xchacha20poly1305_TAG_FINAL; // 3
+STATIC_CONST_UNSIGNED SEAL_BOX_PREFIX_SIZE = crypto_box_SEALBYTES; // 48
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
@@ -61,6 +64,11 @@ struct CryptoKeys_t {
 struct CryptoCoderStreams_t {
     StreamState clientDecryptionState; // serverDecryptionState for *AsServer functions
     StreamState clientEncryptionState; // serverEncryptionState for *AsServer functions
+};
+
+struct CryptoSealKeys_t {
+    byte publicKey[CRYPTO_KEY_SIZE];
+    byte secretKey[CRYPTO_KEY_SIZE];
 };
 
 void cryptoInit(void) {
@@ -143,6 +151,36 @@ bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedByt
         !SDL_memcmp(unsignedBytes, generatedUnsigned, unsignedSize)
     );
     return true;
+}
+
+CryptoSealKeys* cryptoSealKeysInit(void) {
+    assert(this);
+
+    CryptoSealKeys* keys = SDL_malloc(sizeof *keys);
+    assert(!crypto_box_keypair(keys->publicKey, keys->secretKey));
+
+    return keys;
+}
+
+unsigned cryptoDecryptedBroadcastSize(unsigned encryptedSize) { return encryptedSize - SEAL_BOX_PREFIX_SIZE; }
+
+byte* nullable cryptoDecryptBroadcast(byte* encrypted, unsigned size, const CryptoSealKeys* sealKeys) {
+    assert(this);
+
+    byte* decrypted = SDL_malloc(cryptoDecryptedBroadcastSize(size));
+
+    if (crypto_box_seal_open(
+        decrypted,
+        encrypted,
+        size,
+        sealKeys->publicKey,
+        sealKeys->secretKey
+    ) != 0) {
+        SDL_free(decrypted);
+        return NULL;
+    }
+
+    return decrypted;
 }
 
 byte* cryptoMakeKey(const byte* passwordBuffer, unsigned size) {
@@ -428,6 +466,7 @@ static void randomiseAndFree(void* object, unsigned size) {
     SDL_free(object);
 }
 
+void cryptoSealKeysDestroy(CryptoSealKeys* keys) { randomiseAndFree(keys, sizeof *keys); }
 void cryptoKeysDestroy(CryptoKeys* keys) { randomiseAndFree(keys, sizeof *keys); }
 void cryptoCoderStreamsDestroy(CryptoCoderStreams* coderStreams) { randomiseAndFree(coderStreams, sizeof *coderStreams); }
 

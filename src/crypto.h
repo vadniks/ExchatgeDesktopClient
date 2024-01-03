@@ -33,16 +33,22 @@ typedef struct CryptoKeys_t CryptoKeys;
 struct CryptoCoderStreams_t;
 typedef struct CryptoCoderStreams_t CryptoCoderStreams;
 
-// shared:
+struct CryptoSealKeys_t;
+typedef struct CryptoSealKeys_t CryptoSealKeys; // key pair for processing broadcasts (unidirectional messaging)
+
+// shared
 void cryptoInit(void); // initialize the module
 CryptoKeys* cryptoKeysInit(void);
 CryptoCoderStreams* cryptoCoderStreamsInit(void);
 
-// as client:
+// as client
 void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize); // must be called before performing any client side operations
 bool cryptoExchangeKeys(CryptoKeys* keys, const byte* serverPublicKey); // returns true on success
 byte* nullable cryptoInitializeCoderStreams(const CryptoKeys* keys, CryptoCoderStreams* coderStreams, const byte* serverStreamHeader); // expects a HEADER_SIZE-sized server header's bytes, returns a deallocation-required HEADER-SIZE-sized client header's bytes on success and null otherwise
 bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedBytes, unsigned unsignedSize);
+CryptoSealKeys* cryptoSealKeysInit(void); // allocates the structure and generates key pair
+unsigned cryptoDecryptedBroadcastSize(unsigned encryptedSize);
+byte* nullable cryptoDecryptBroadcast(byte* encrypted, unsigned size, const CryptoSealKeys* sealKeys);
 
 // as an autonomous client (without need for server)
 byte* cryptoMakeKey(const byte* passwordBuffer, unsigned size); // makes KEY_SIZE-sized key (deallocation's required) from a 'size'-sized password
@@ -55,7 +61,7 @@ bool cryptoExchangeKeysAsServer(CryptoKeys* keys, const byte* clientPublicKey); 
 byte* nullable cryptoCreateEncoderAsServer(const CryptoKeys* keys, CryptoCoderStreams* coderStreams); // returns encoder header on success, deallocation's needed
 bool cryptoCreateDecoderStreamAsServer(const CryptoKeys* keys, CryptoCoderStreams* coderStreams, const byte* clientStreamHeader); // returns true on success, expects client's encoderr stream header with size of HEADER_SIZE
 
-// shared:
+// shared
 unsigned cryptoEncryptedSize(unsigned unencryptedSize);
 const byte* cryptoClientPublicKey(const CryptoKeys* keys);
 byte* nullable cryptoEncrypt(CryptoCoderStreams* coderStreams, const byte* bytes, unsigned bytesSize, bool server); // returns encryptedSize()-sized encrypted bytes
@@ -67,6 +73,9 @@ byte* nullable cryptoDecryptSingle(const byte* key, const byte* bytes, unsigned 
 char* cryptoBase64Encode(const byte* bytes, unsigned bytesSize); // returns newly allocated null-terminated string
 byte* nullable cryptoBase64Decode(const char* encoded, unsigned encodedSize, unsigned* xDecodedSize); // also accepts pointer to a variable in which the size of the decoded bytes will be stored
 void* nullable cryptoHashMultipart(void* nullable previous, const byte* nullable bytes, unsigned size); // init - (null, null, any) - returns heap-allocated state, update - (state, bytes, sizeof(bytes)) - returns null, finish - (state, null, any) - frees the state and returns heap-allocated hash (cast to byte*)
+
+// as client
+void cryptoSealKeysDestroy(CryptoSealKeys* keys);
 
 // shared
 void cryptoKeysDestroy(CryptoKeys* keys); // fills the memory region, occupied by the object, with random data and then frees that area
