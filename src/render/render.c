@@ -1094,7 +1094,7 @@ static void drawAdminActions(void) {
         nk_spacer(this->context);
     } nk_layout_row_end(this->context);
 
-    nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
+    nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.2f), 1);
     nk_spacer(this->context);
 
     nk_layout_row_dynamic(this->context, rowHeight, 3); {
@@ -1116,11 +1116,8 @@ static void drawAdminActions(void) {
             nk_layout_row_dynamic(this->context, rowHeight * 0.5f, 1);
             nk_label(this->context, BROADCAST_MESSAGE, NK_TEXT_ALIGN_CENTERED);
 
-            nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 4); {
-                nk_layout_row_push(this->context, 0.2f);
-                nk_spacer(this->context);
-
-                nk_layout_row_push(this->context, aboveInitialWidth ? 0.33f : 0.38f);
+            nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 2); {
+                nk_layout_row_push(this->context, aboveInitialWidth ? 0.85f : 0.75f);
                 nk_edit_string(
                     this->context,
                     NK_EDIT_SIMPLE,
@@ -1130,12 +1127,9 @@ static void drawAdminActions(void) {
                     nk_filter_default
                 );
 
-                nk_layout_row_push(this->context, 0.2f);
+                nk_layout_row_push(this->context, aboveInitialWidth ? 0.15f : 0.25f);
                 if (nk_button_label(this->context, SEND))
                     (*(this->onBroadcastMessageSendRequested))(this->enteredBroadcastMessageText, this->enteredBroadcastMessageTextSize);
-
-                nk_layout_row_push(this->context, 0.2f);
-                nk_spacer(this->context);
             } nk_layout_row_end(this->context);
 
             nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
