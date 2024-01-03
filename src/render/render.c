@@ -1103,7 +1103,8 @@ static void drawAdminActions(void) {
         nk_spacer(this->context);
     }
 
-    nk_layout_row_begin(this->context, NK_DYNAMIC, height * 0.25f, 3); {
+    const float groupHeight = height * ((float) this->height >= (float) WINDOW_HEIGHT * 1.5f ? 0.15f : 0.3f);
+    nk_layout_row_begin(this->context, NK_DYNAMIC, groupHeight, 3); {
         nk_layout_row_push(this->context, 0.3f);
         nk_spacer(this->context);
 
@@ -1111,34 +1112,35 @@ static void drawAdminActions(void) {
         if (!nk_group_begin(this->context, BROADCAST_HINT, NK_WINDOW_NO_SCROLLBAR)) {
             nk_spacer(this->context);
             goto endOfGroup;
-        }
+        } {
+            nk_layout_row_dynamic(this->context, rowHeight * 0.5f, 1);
+            nk_label(this->context, BROADCAST_MESSAGE, NK_TEXT_ALIGN_CENTERED);
 
-        nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 4); {
-            nk_layout_row_push(this->context, 0.2f);
-            nk_spacer(this->context);
+            nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 4); {
+                nk_layout_row_push(this->context, 0.2f);
+                nk_spacer(this->context);
 
-            nk_layout_row_push(this->context, aboveInitialWidth ? 0.33f : 0.38f);
-            nk_edit_string(
-                this->context,
-                NK_EDIT_SIMPLE,
-                this->enteredBroadcastMessageText,
-                (int*) &(this->enteredBroadcastMessageTextSize),
-                (int) RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE, // TODO: too many nested blocks
-                nk_filter_default
-            );
+                nk_layout_row_push(this->context, aboveInitialWidth ? 0.33f : 0.38f);
+                nk_edit_string(
+                    this->context,
+                    NK_EDIT_SIMPLE,
+                    this->enteredBroadcastMessageText,
+                    (int*) &(this->enteredBroadcastMessageTextSize),
+                    (int) RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE, // TODO: too many nested blocks
+                    nk_filter_default
+                );
 
-            nk_layout_row_push(this->context, 0.2f);
-            if (nk_button_label(this->context, BROADCAST_MESSAGE))
-                (*(this->onBroadcastMessageSendRequested))(this->enteredBroadcastMessageText, this->enteredBroadcastMessageTextSize);
+                nk_layout_row_push(this->context, 0.2f);
+                if (nk_button_label(this->context, SEND))
+                    (*(this->onBroadcastMessageSendRequested))(this->enteredBroadcastMessageText, this->enteredBroadcastMessageTextSize);
 
-            nk_layout_row_push(this->context, 0.2f);
-            nk_spacer(this->context);
-        } nk_layout_row_end(this->context);
+                nk_layout_row_push(this->context, 0.2f);
+                nk_spacer(this->context);
+            } nk_layout_row_end(this->context);
 
-        nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
-        nk_label_colored_wrap(this->context, BROADCAST_HINT, (struct nk_color) {0xff, 0xff, 0xff, 0x88});
-
-        nk_group_end(this->context);
+            nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
+            nk_label_colored_wrap(this->context, BROADCAST_HINT, (struct nk_color) {0xff, 0xff, 0xff, 0x88});
+        } nk_group_end(this->context);
 
         endOfGroup:
         nk_layout_row_push(this->context, 0.3f);
