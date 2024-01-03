@@ -33,12 +33,12 @@ typedef struct CryptoKeys_t CryptoKeys;
 struct CryptoCoderStreams_t;
 typedef struct CryptoCoderStreams_t CryptoCoderStreams;
 
-// shared:
+// shared
 void cryptoInit(void); // initialize the module
 CryptoKeys* cryptoKeysInit(void);
 CryptoCoderStreams* cryptoCoderStreamsInit(void);
 
-// as client:
+// as client
 void cryptoSetServerSignPublicKey(const byte* xServerSignPublicKey, unsigned serverSignPublicKeySize); // must be called before performing any client side operations
 bool cryptoExchangeKeys(CryptoKeys* keys, const byte* serverPublicKey); // returns true on success
 byte* nullable cryptoInitializeCoderStreams(const CryptoKeys* keys, CryptoCoderStreams* coderStreams, const byte* serverStreamHeader); // expects a HEADER_SIZE-sized server header's bytes, returns a deallocation-required HEADER-SIZE-sized client header's bytes on success and null otherwise
@@ -49,13 +49,13 @@ byte* cryptoMakeKey(const byte* passwordBuffer, unsigned size); // makes KEY_SIZ
 void cryptoSetUpAutonomous(CryptoCoderStreams* coderStreams, const byte* key, const byte* nullable streamsStates); // sets up for standalone encryption with either creation of new encryption/decryption streams or with recreation of the existed ones, in which case the streamsStates mustn't be null; key must be a KEY_SIZE-sized byte array
 byte* cryptoExportStreamsStates(const CryptoCoderStreams* coderStreams); // exports encryption/decryption streams states in a byte array form with size of STREAMS_STATES_SIZE which requires freeing
 
-// as 'server', kinda ('cause sodium has ..._client_... & ..._server_..., using only client api won't work - tested):
+// as 'server', kinda ('cause sodium has ..._client_... & ..._server_..., using only client api won't work - tested)
 const byte* cryptoGenerateKeyPairAsServer(CryptoKeys* keys); // returns public key that must be deallocated, acts as a server
 bool cryptoExchangeKeysAsServer(CryptoKeys* keys, const byte* clientPublicKey); // returns true on success
 byte* nullable cryptoCreateEncoderAsServer(const CryptoKeys* keys, CryptoCoderStreams* coderStreams); // returns encoder header on success, deallocation's needed
 bool cryptoCreateDecoderStreamAsServer(const CryptoKeys* keys, CryptoCoderStreams* coderStreams, const byte* clientStreamHeader); // returns true on success, expects client's encoderr stream header with size of HEADER_SIZE
 
-// shared:
+// shared
 unsigned cryptoEncryptedSize(unsigned unencryptedSize);
 const byte* cryptoClientPublicKey(const CryptoKeys* keys);
 byte* nullable cryptoEncrypt(CryptoCoderStreams* coderStreams, const byte* bytes, unsigned bytesSize, bool server); // returns encryptedSize()-sized encrypted bytes
