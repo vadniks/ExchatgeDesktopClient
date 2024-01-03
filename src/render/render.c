@@ -92,6 +92,7 @@ STATIC_CONST_STRING ENTER_ABSOLUTE_PATH_TO_FILE = "Enter absolute path to the fi
 STATIC_CONST_STRING PASTE_WITH_CTRL_V = "Paste with Ctrl+V";
 STATIC_CONST_STRING AUTO_LOGGING_IN = "Auto logging in";
 STATIC_CONST_STRING ADMIN_ACTIONS = "Admin actions";
+STATIC_CONST_STRING BROADCAST_MESSAGE = "Broadcast message";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -151,6 +152,8 @@ THIS(
     RenderAutoLoggingInSupplier autoLoggingInSupplier;
     RenderOnAdminActionsPageRequested onAdminActionsPageRequested;
     RenderOnBroadcastMessageSendRequested onBroadcastMessageSendRequested;
+    char enteredBroadcastMessageText[RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE];
+    unsigned enteredBroadcastMessageTextSize;
 )
 #pragma clang diagnostic pop
 
@@ -438,7 +441,11 @@ void renderShowFileChooser(void) {
 
 void renderShowAdminActions(void) {
     assert(this);
-    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->state = STATE_ADMIN_ACTIONS;)
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
+        SDL_memset(this->enteredBroadcastMessageText, 0, RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
+        this->enteredBroadcastMessageTextSize = 0;
+        this->state = STATE_ADMIN_ACTIONS;
+    )
 }
 
 bool renderIsConversationShown(void) {
@@ -1018,7 +1025,7 @@ static void drawFileChooser(void) {
     char title[this->conversationNameSize + 1];
     SDL_memcpy(title, this->conversationName, this->conversationNameSize);
 
-    { nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3);
+    nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3); {
         nk_layout_row_push(this->context, 0.2f);
         if (nk_button_label(this->context, BACK)) (*(this->fileChooseResultHandler))(NULL, 0);
 
@@ -1027,45 +1034,45 @@ static void drawFileChooser(void) {
 
         nk_layout_row_push(this->context, aboveInitialWidth ? 0.47f : 0.42f);
         nk_label(this->context, this->conversationName, NK_TEXT_ALIGN_RIGHT);
-    nk_layout_row_end(this->context); }
+    } nk_layout_row_end(this->context);
 
     nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
     nk_spacer(this->context);
 
-    nk_layout_row_dynamic(this->context, rowHeight, 3);
+    nk_layout_row_dynamic(this->context, rowHeight, 3); {
+        nk_spacer(this->context);
+        nk_label_colored(
+            this->context,
+            ENTER_ABSOLUTE_PATH_TO_FILE,
+            NK_TEXT_ALIGN_CENTERED,
+            (struct nk_color) {0xff, 0xff, 0xff, 0x88}
+        );
+        nk_spacer(this->context);
 
-    nk_spacer(this->context);
-    nk_label_colored(
-        this->context,
-        ENTER_ABSOLUTE_PATH_TO_FILE,
-        NK_TEXT_ALIGN_CENTERED,
-        (struct nk_color) {0xff, 0xff, 0xff, 0x88}
-    );
-    nk_spacer(this->context);
+        nk_spacer(this->context);
+        nk_label_colored(
+            this->context,
+            PASTE_WITH_CTRL_V,
+            NK_TEXT_ALIGN_CENTERED,
+            (struct nk_color) {0xff, 0xff, 0xff, 0x88}
+        );
+        nk_spacer(this->context);
 
-    nk_spacer(this->context);
-    nk_label_colored(
-        this->context,
-        PASTE_WITH_CTRL_V,
-        NK_TEXT_ALIGN_CENTERED,
-        (struct nk_color) {0xff, 0xff, 0xff, 0x88}
-    );
-    nk_spacer(this->context);
+        nk_spacer(this->context);
+        nk_edit_string(
+            this->context,
+            NK_EDIT_SIMPLE,
+            this->enteredFilePath,
+            (int*) &(this->enteredFilePathSize),
+            (int) this->maxFilePathSize,
+            nk_filter_default
+        );
+        nk_spacer(this->context);
 
-    nk_spacer(this->context);
-    nk_edit_string(
-        this->context,
-        NK_EDIT_SIMPLE,
-        this->enteredFilePath,
-        (int*) &(this->enteredFilePathSize),
-        (int) this->maxFilePathSize,
-        nk_filter_default
-    );
-    nk_spacer(this->context);
-
-    nk_spacer(this->context);
-    if (nk_button_label(this->context, CHOOSE)) onFileChosen();
-    nk_spacer(this->context);
+        nk_spacer(this->context);
+        if (nk_button_label(this->context, CHOOSE)) onFileChosen();
+        nk_spacer(this->context);
+    }
 }
 
 static void drawAdminActions(void) {
@@ -1075,7 +1082,7 @@ static void drawAdminActions(void) {
     char title[this->conversationNameSize + 1];
     SDL_memcpy(title, this->conversationName, this->conversationNameSize);
 
-    { nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3);
+    nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3); {
         nk_layout_row_push(this->context, 0.2f);
         if (nk_button_label(this->context, BACK)) (*(this->onAdminActionsPageRequested))(false);
 
@@ -1084,9 +1091,38 @@ static void drawAdminActions(void) {
 
         nk_layout_row_push(this->context, aboveInitialWidth ? 0.47f : 0.42f);
         nk_spacer(this->context);
-    nk_layout_row_end(this->context); }
+    } nk_layout_row_end(this->context);
 
-    // (*(this->onServerShutdownRequested))();
+    nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
+    nk_spacer(this->context);
+
+    nk_layout_row_dynamic(this->context, rowHeight, 3); {
+        nk_spacer(this->context);
+        if (nk_button_label(this->context, SHUTDOWN_SERVER)) (*(this->onServerShutdownRequested))();
+        nk_spacer(this->context);
+    }
+
+    nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 4); {
+        nk_layout_row_push(this->context, 0.2f);
+        nk_spacer(this->context);
+
+        nk_layout_row_push(this->context, aboveInitialWidth ? 0.33f : 0.38f);
+        nk_edit_string(
+            this->context,
+            NK_EDIT_SIMPLE,
+            this->enteredBroadcastMessageText,
+            (int*) &(this->enteredBroadcastMessageTextSize),
+            (int) RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE,
+            nk_filter_default
+        );
+
+        nk_layout_row_push(this->context, 0.2f);
+        if (nk_button_label(this->context, BROADCAST_MESSAGE))
+            (*(this->onBroadcastMessageSendRequested))(this->enteredBroadcastMessageText, this->enteredBroadcastMessageTextSize);
+
+        nk_layout_row_push(this->context, 0.2f);
+        nk_spacer(this->context);
+    }
 }
 
 static void drawErrorIfNeeded(void) {
