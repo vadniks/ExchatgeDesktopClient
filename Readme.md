@@ -28,7 +28,7 @@ Project is created for Linux x86_64 desktop platforms (PCs).
 * Human-readable options file,
 * Multiple active simultaneous connections,
 * Digital signatures checking between clients and server,
-* Broadcasting (unencrypted, from admin to all others),
+* Broadcasting (only one layer of encryption - between client and server, from admin to all others),
 * Instant messages delivery.
 
 ## `TODO`
@@ -37,7 +37,7 @@ Project is created for Linux x86_64 desktop platforms (PCs).
 
 ## Dependencies
 
-Client side is written entirely in C (C11).
+Client side is written entirely in C (C11, with GNU extensions).
 
 Build is performed via [GNU Make](https://www.gnu.org/software/make) 
 or via [Ninja](https://ninja-build.org/) 
