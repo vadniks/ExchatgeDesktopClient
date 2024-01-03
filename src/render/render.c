@@ -93,6 +93,7 @@ STATIC_CONST_STRING PASTE_WITH_CTRL_V = "Paste with Ctrl+V";
 STATIC_CONST_STRING AUTO_LOGGING_IN = "Auto logging in";
 STATIC_CONST_STRING ADMIN_ACTIONS = "Admin actions";
 STATIC_CONST_STRING BROADCAST_MESSAGE = "Broadcast message";
+STATIC_CONST_STRING BROADCAST_HINT = "All currently online users will receive this message, no encryption will be performed";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -1102,27 +1103,47 @@ static void drawAdminActions(void) {
         nk_spacer(this->context);
     }
 
-    nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 4); {
-        nk_layout_row_push(this->context, 0.2f);
+    nk_layout_row_begin(this->context, NK_DYNAMIC, height * 0.25f, 3); {
+        nk_layout_row_push(this->context, 0.3f);
         nk_spacer(this->context);
 
-        nk_layout_row_push(this->context, aboveInitialWidth ? 0.33f : 0.38f);
-        nk_edit_string(
-            this->context,
-            NK_EDIT_SIMPLE,
-            this->enteredBroadcastMessageText,
-            (int*) &(this->enteredBroadcastMessageTextSize),
-            (int) RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE,
-            nk_filter_default
-        );
+        nk_layout_row_push(this->context, 0.4f);
+        if (!nk_group_begin(this->context, BROADCAST_HINT, NK_WINDOW_NO_SCROLLBAR)) {
+            nk_spacer(this->context);
+            goto endOfGroup;
+        }
 
-        nk_layout_row_push(this->context, 0.2f);
-        if (nk_button_label(this->context, BROADCAST_MESSAGE))
-            (*(this->onBroadcastMessageSendRequested))(this->enteredBroadcastMessageText, this->enteredBroadcastMessageTextSize);
+        nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 4); {
+            nk_layout_row_push(this->context, 0.2f);
+            nk_spacer(this->context);
 
-        nk_layout_row_push(this->context, 0.2f);
+            nk_layout_row_push(this->context, aboveInitialWidth ? 0.33f : 0.38f);
+            nk_edit_string(
+                this->context,
+                NK_EDIT_SIMPLE,
+                this->enteredBroadcastMessageText,
+                (int*) &(this->enteredBroadcastMessageTextSize),
+                (int) RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE, // TODO: too many nested blocks
+                nk_filter_default
+            );
+
+            nk_layout_row_push(this->context, 0.2f);
+            if (nk_button_label(this->context, BROADCAST_MESSAGE))
+                (*(this->onBroadcastMessageSendRequested))(this->enteredBroadcastMessageText, this->enteredBroadcastMessageTextSize);
+
+            nk_layout_row_push(this->context, 0.2f);
+            nk_spacer(this->context);
+        } nk_layout_row_end(this->context);
+
+        nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
+        nk_label_colored_wrap(this->context, BROADCAST_HINT, (struct nk_color) {0xff, 0xff, 0xff, 0x88});
+
+        nk_group_end(this->context);
+
+        endOfGroup:
+        nk_layout_row_push(this->context, 0.3f);
         nk_spacer(this->context);
-    }
+    } nk_layout_row_end(this->context);
 }
 
 static void drawErrorIfNeeded(void) {
