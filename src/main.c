@@ -16,12 +16,45 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define DEVELOPMENT_MODE 0 // TODO: debug
+#define DEVELOPMENT_MODE 1 // TODO: debug
 
 #if DEVELOPMENT_MODE == 1 // Designing & testing new feature
 
-int main(void) {
+#include <SDL.h>
+#include <sodium.h>
+#include <assert.h>
+#include <time.h>
+#include <stdlib.h>
+#include "defs.h"
 
+int main(void) {
+    assert(!SDL_Init(0));
+    assert(sodium_init() >= 0);
+
+    { // broadcast from admin to all other users - only admin can write, others can only read
+        const int size = 5, encryptedSize = crypto_box_SEALBYTES + size;
+
+        staticAssert(crypto_box_PUBLICKEYBYTES == crypto_box_SECRETKEYBYTES);
+        byte recipientPublicKey[crypto_box_PUBLICKEYBYTES]; // each client except admin
+        byte recipientSecretKey[crypto_box_SECRETKEYBYTES];
+        assert(!crypto_box_keypair(recipientPublicKey, recipientSecretKey));
+
+        byte text[size], encrypted[encryptedSize], decrypted[size];
+        srand(time(NULL));
+
+        for (unsigned i = 0; i < 5; i++) {
+            for (char j = 0; j < size; text[j++] = rand() % ('z' + 1 - 'a') + 'a');
+            SDL_Log("1 |%.*s|", size, text);
+
+            assert(!crypto_box_seal(encrypted, text, size, recipientPublicKey)); // admin
+            assert(!crypto_box_seal_open(decrypted, encrypted, encryptedSize, recipientPublicKey, recipientSecretKey));
+
+            SDL_Log("2 |%.*s|", size, decrypted);
+            SDL_Log("");
+        }
+    }
+
+    SDL_Quit();
     return 0;
 }
 
