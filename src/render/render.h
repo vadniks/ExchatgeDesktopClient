@@ -102,6 +102,7 @@ bool renderShowFileExchangeRequestDialog(const char* fromUserName, unsigned file
 
 void renderSetControlsBlocking(bool blocking); // true to block controls, false to unblock, use with show*Dialog
 
+void renderShowSystemMessage(const char* text, unsigned size);
 void renderShowSystemError(void); // just shows an error system message with text 'Error'
 void renderShowDisconnectedError(void);
 void renderShowUnableToConnectToTheServerError(void); // TODO: too long name

@@ -540,6 +540,15 @@ static void postSystemMessage(const char* text, bool error) { // expects a null-
 }
 #pragma clang diagnostic pop
 
+void renderShowSystemMessage(const char* text, unsigned size) {
+    assert(this && size > 0 && size <= RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
+
+    SystemMessage* message = SDL_malloc(sizeof *message);
+    SDL_memcpy(message->text, text, size);
+
+    queuePush(this->systemMessagesQueue, message);
+}
+
 void renderShowSystemError(void) { postSystemMessage(ERROR_TEXT, true); }
 void renderShowDisconnectedError(void) { postSystemMessage(DISCONNECTED, true); }
 void renderShowUnableToConnectToTheServerError(void) { postSystemMessage(UNABLE_TO_CONNECT_TO_THE_SERVER, true); }

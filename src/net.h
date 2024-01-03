@@ -35,6 +35,7 @@ typedef unsigned (*NetNextFileChunkSupplier)(unsigned index, byte* buffer); // r
 typedef void (*NetNextFileChunkReceiver)(unsigned fromId, unsigned index, unsigned receivedBytesCount, const byte* buffer);
 typedef void (*NetOnNextMessageFetched)(unsigned from, unsigned long timestamp, unsigned size, const byte* nullable message, bool last); // message is null (and last is true too) when there are no messages from the given user and from is equal to fromServer
 typedef void (*NetOnUsersFetched)(List* userInfosList); // receives a list of UserInfo objects, which is deallocated automatically (and every item inside it) after the callback returns
+typedef void (*NetOnBroadcastMessageReceived)(const byte* text, unsigned size); // unencrypted text
 
 struct NetUserInfo_t;
 typedef struct NetUserInfo_t NetUserInfo;
@@ -63,7 +64,8 @@ bool netInit( // blocks the caller thread until secure connection is established
     NetOnFileExchangeInviteReceived onFileExchangeInviteReceived,
     NetNextFileChunkSupplier nextFileChunkSupplier,
     NetNextFileChunkReceiver netNextFileChunkReceiver,
-    NetOnNextMessageFetched onNextMessageFetched
+    NetOnNextMessageFetched onNextMessageFetched,
+    NetOnBroadcastMessageReceived onBroadcastMessageReceived
 ); // returns true on success
 
 void netLogIn(const char* username, const char* password); // in case of failure the server disconnects client
@@ -73,6 +75,7 @@ unsigned netCurrentUserId(void);
 bool netSend(int flag, const byte* body, unsigned size, unsigned xTo); // blocks the caller thread, returns true on success; flag is for internal use only, outside the module flag must be FLAG_PROCEED // TODO: hide original function
 void netShutdownServer(void);
 void netFetchUsers(void);
+void netSendBroadcast(const byte* text, unsigned size);
 
 unsigned netUserInfoId(const NetUserInfo* info);
 bool netUserInfoConnected(const NetUserInfo* info);

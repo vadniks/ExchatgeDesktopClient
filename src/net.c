@@ -54,10 +54,14 @@ STATIC_CONST_UNSIGNED long TIMEOUT = 5000; // in milliseconds
 
 typedef enum : int {
     FLAG_PROCEED = 0x00000000,
+    FLAG_BROADCAST = 0x00000001,
+
     FLAG_LOG_IN = 0x00000004,
     FLAG_LOGGED_IN = 0x00000005,
+
     FLAG_REGISTER = 0x00000006,
     FLAG_REGISTERED = 0x00000007,
+
     FLAG_ERROR = 0x00000009,
     FLAG_UNAUTHENTICATED = 0x0000000a,
     FLAG_ACCESS_DENIED = 0x0000000b,
@@ -134,6 +138,7 @@ THIS(
     atomic bool fetchingMessages;
     NetOnNextMessageFetched onNextMessageFetched;
     atomic bool ignoreUsualMessages; // ignore usual messages from other users (with flag proceed) while updating user infos or while re-fetching messages
+    NetOnBroadcastMessageReceived onBroadcastMessageReceived;
 )
 #pragma clang diagnostic pop
 
@@ -254,7 +259,8 @@ bool netInit(
     NetOnFileExchangeInviteReceived onFileExchangeInviteReceived,
     NetNextFileChunkSupplier nextFileChunkSupplier,
     NetNextFileChunkReceiver netNextFileChunkReceiver,
-    NetOnNextMessageFetched onNextMessageFetched
+    NetOnNextMessageFetched onNextMessageFetched,
+    NetOnBroadcastMessageReceived onBroadcastMessageReceived
 ) {
     assert(!this && onMessageReceived && onLogInResult && onErrorReceived && onDisconnected);
 
@@ -299,6 +305,7 @@ bool netInit(
     this->fetchingMessages = false;
     this->onNextMessageFetched = onNextMessageFetched;
     this->ignoreUsualMessages = false;
+    this->onBroadcastMessageReceived = onBroadcastMessageReceived;
 
     assert(!SDLNet_Init());
 
@@ -440,6 +447,9 @@ static void processMessagesFromServer(const Message* message) {
             break;
         case FLAG_FETCH_MESSAGES:
             onEmptyMessagesFetchReplyReceived(message);
+            break;
+        case FLAG_BROADCAST:
+            (*(this->onBroadcastMessageReceived))(message->body, message->size);
             break;
         default:
             assert(false);
@@ -646,6 +656,11 @@ void netFetchUsers(void) {
 
     this->fetchingUsers = true;
     netSend(FLAG_FETCH_USERS, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
+}
+
+void netSendBroadcast(const byte* text, unsigned size) {
+    assert(this && size);
+    netSend(FLAG_BROADCAST, text, size, TO_SERVER);
 }
 
 unsigned netUserInfoId(const NetUserInfo* info) {

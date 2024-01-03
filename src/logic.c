@@ -732,6 +732,11 @@ static void nextFileChunkReceiver(
     // this->fileHashState and this->rwops are freed elsewhere
 }
 
+static void onBroadcastMessageReceived(const byte* text, unsigned size) {
+    assert(this);
+    renderShowSystemMessage((const char*) text, size);
+}
+
 static void clipboardPaste(void) {
     if (!SDL_HasClipboardText()) return;
     if (!renderIsConversationShown() && !renderIsFileChooserShown()) return;
@@ -831,7 +836,8 @@ static void processCredentials(void** data) {
         &onFileExchangeInviteReceived,
         &nextFileChunkSupplier,
         &nextFileChunkReceiver,
-        &onNextMessageFetched
+        &onNextMessageFetched,
+        &onBroadcastMessageReceived
     );
 
     if (!this->netInitialized) {
