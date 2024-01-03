@@ -732,6 +732,17 @@ static void nextFileChunkReceiver(
     // this->fileHashState and this->rwops are freed elsewhere
 }
 
+void logicOnAdminActionsPageRequested(bool enter) {
+    assert(this);
+    if (enter) renderShowAdminActions();
+    else renderShowUsersList(this->currentUserName);
+}
+
+void logicOnBroadcastMessageSendRequested(const char* text, unsigned size) {
+    assert(this);
+
+}
+
 static void onBroadcastMessageReceived(const byte* text, unsigned size) {
     assert(this);
     renderShowSystemMessage((const char*) text, size);

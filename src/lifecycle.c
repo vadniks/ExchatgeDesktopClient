@@ -107,7 +107,9 @@ bool lifecycleInit(void) {
         &logicOnFileChooserRequested,
         &logicFileChooseResultHandler,
         &logicOnAutoLoggingInChanged,
-        &logicAutoLoggingInSupplier
+        &logicAutoLoggingInSupplier,
+        &logicOnAdminActionsPageRequested,
+        &logicOnBroadcastMessageSendRequested
     );
     logicInit();
     renderSetMaxMessageSizeAndInitConversationMessageBuffer(logicUnencryptedMessageBodySize()); // TODO: unite all setters to one global setter

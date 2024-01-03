@@ -31,6 +31,12 @@ typedef void (*RenderCredentialsReceivedCallback)( // buffer is filled with rand
     bool logIn // true if called from log in page, false if called from register page
 );
 
+typedef enum {
+    RENDER_DELETE_CONVERSATION = -1,
+    RENDER_START_CONVERSATION = false, // 0
+    RENDER_CONTINUE_CONVERSATION = true // 1
+} RenderConversationChooseVariants;
+
 typedef void (*RenderCredentialsRandomFiller)(char* credentials, unsigned size); // Function that fills credentials fields with random data & doesn't deallocates them
 typedef void (*RenderLogInRegisterPageQueriedByUserCallback)(bool logIn);
 typedef void (*RenderOnServerShutdownRequested)(void);
@@ -42,14 +48,9 @@ typedef void (*RenderOnFileChooserRequested)(void);
 typedef void (*RenderFileChooseResultHandler)(const char* nullable filePath, unsigned size); // receives absolute path of the chosen file (which is deallocated automatically and therefore must be copied), or null and zero size if no file was chosen (return requested) or error occurred
 typedef void (*RenderOnAutoLoggingInChanged)(bool value);
 typedef bool (*RenderAutoLoggingInSupplier)(void);
-
-typedef enum {
-    RENDER_DELETE_CONVERSATION = -1,
-    RENDER_START_CONVERSATION = false, // 0
-    RENDER_CONTINUE_CONVERSATION = true // 1
-} RenderConversationChooseVariants;
-
 typedef void (*RenderUserForConversationChosenCallback)(unsigned id, RenderConversationChooseVariants chooseVariant);
+typedef void (*RenderOnAdminActionsPageRequested)(bool enter); // true if the page is needed to be shown, else - to be hidden
+typedef void (*RenderOnBroadcastMessageSendRequested)(const char* text, unsigned size);
 
 extern const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE; // TODO: make inline all one-line functions in implementation
 
@@ -70,7 +71,9 @@ void renderInit(
     RenderOnFileChooserRequested onFileChooserRequested,
     RenderFileChooseResultHandler fileChooseResultHandler,
     RenderOnAutoLoggingInChanged onAutoLoggingInChanged,
-    RenderAutoLoggingInSupplier autoLoggingInSupplier
+    RenderAutoLoggingInSupplier autoLoggingInSupplier,
+    RenderOnAdminActionsPageRequested onAdminActionsPageRequested,
+    RenderOnBroadcastMessageSendRequested onBroadcastMessageSendRequested
 );
 
 // these must be called before first call to renderDraw() to initialize things, begin1 // TODO: unite them in one function
@@ -93,6 +96,7 @@ void renderShowRegister(void);
 void renderShowUsersList(const char* currentUserName); // the name of the user who is currently logged in via this client, this->usernameSize-sized, copied
 void renderShowConversation(const char* conversationName); // expects the name (which is copied) (with length == this->conversationNameSize) of the user with whom the current user will have a conversation or the name of that conversation
 void renderShowFileChooser(void);
+void renderShowAdminActions(void);
 
 bool renderIsConversationShown(void);
 bool renderIsFileChooserShown(void);

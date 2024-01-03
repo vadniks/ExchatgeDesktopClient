@@ -37,7 +37,8 @@ typedef enum : unsigned {
     STATE_REGISTER = 2,
     STATE_USERS_LIST = 3,
     STATE_CONVERSATION = 4,
-    STATE_FILE_CHOOSER = 5
+    STATE_FILE_CHOOSER = 5,
+    STATE_ADMIN_ACTIONS = 6
 } States;
 
 STATIC_CONST_STRING TITLE = "Exchatge";
@@ -90,6 +91,7 @@ STATIC_CONST_STRING FILE_TRANSMITTED = "File transmitted";
 STATIC_CONST_STRING ENTER_ABSOLUTE_PATH_TO_FILE = "Enter absolute path to the file";
 STATIC_CONST_STRING PASTE_WITH_CTRL_V = "Paste with Ctrl+V";
 STATIC_CONST_STRING AUTO_LOGGING_IN = "Auto logging in";
+STATIC_CONST_STRING ADMIN_ACTIONS = "Admin actions";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -147,6 +149,8 @@ THIS(
     unsigned long frameCount;
     RenderOnAutoLoggingInChanged onAutoLoggingInChanged;
     RenderAutoLoggingInSupplier autoLoggingInSupplier;
+    RenderOnAdminActionsPageRequested onAdminActionsPageRequested;
+    RenderOnBroadcastMessageSendRequested onBroadcastMessageSendRequested;
 )
 #pragma clang diagnostic pop
 
@@ -202,7 +206,9 @@ void renderInit(
     RenderOnFileChooserRequested onFileChooserRequested,
     RenderFileChooseResultHandler fileChooseResultHandler,
     RenderOnAutoLoggingInChanged onAutoLoggingInChanged,
-    RenderAutoLoggingInSupplier autoLoggingInSupplier
+    RenderAutoLoggingInSupplier autoLoggingInSupplier,
+    RenderOnAdminActionsPageRequested onAdminActionsPageRequested,
+    RenderOnBroadcastMessageSendRequested onBroadcastMessageSendRequested
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -256,6 +262,8 @@ void renderInit(
     this->frameCount = 0;
     this->onAutoLoggingInChanged = onAutoLoggingInChanged;
     this->autoLoggingInSupplier = autoLoggingInSupplier;
+    this->onAdminActionsPageRequested = onAdminActionsPageRequested;
+    this->onBroadcastMessageSendRequested = onBroadcastMessageSendRequested;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -426,6 +434,11 @@ void renderShowConversation(const char* conversationName) {
 void renderShowFileChooser(void) {
     assert(this);
     RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->state = STATE_FILE_CHOOSER;)
+}
+
+void renderShowAdminActions(void) {
+    assert(this);
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex, this->state = STATE_ADMIN_ACTIONS;)
 }
 
 bool renderIsConversationShown(void) {
@@ -815,8 +828,8 @@ static void drawUsersList(void) {
     nk_label(this->context, currentUserName, NK_TEXT_ALIGN_CENTERED);
 
     if (this->adminMode) {
-        if (nk_button_label(this->context, SHUTDOWN_SERVER))
-            (*(this->onServerShutdownRequested))();
+        if (nk_button_label(this->context, ADMIN_ACTIONS))
+            (*(this->onAdminActionsPageRequested))(true);
     } else
         nk_spacer(this->context);
 
@@ -1055,6 +1068,27 @@ static void drawFileChooser(void) {
     nk_spacer(this->context);
 }
 
+static void drawAdminActions(void) {
+    const float height = currentHeight(), rowHeight = (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f;
+    const bool aboveInitialWidth = this->width >= WINDOW_WIDTH * 2;
+
+    char title[this->conversationNameSize + 1];
+    SDL_memcpy(title, this->conversationName, this->conversationNameSize);
+
+    { nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3);
+        nk_layout_row_push(this->context, 0.2f);
+        if (nk_button_label(this->context, BACK)) (*(this->onAdminActionsPageRequested))(false);
+
+        nk_layout_row_push(this->context, aboveInitialWidth ? 0.33f : 0.38f);
+        nk_label(this->context, ADMIN_ACTIONS, NK_TEXT_ALIGN_RIGHT);
+
+        nk_layout_row_push(this->context, aboveInitialWidth ? 0.47f : 0.42f);
+        nk_spacer(this->context);
+    nk_layout_row_end(this->context); }
+
+    // (*(this->onServerShutdownRequested))();
+}
+
 static void drawErrorIfNeeded(void) {
     this->systemMessageTicks++;
 
@@ -1106,6 +1140,9 @@ static void drawPage(void) {
             break;
         case STATE_FILE_CHOOSER:
             drawFileChooser();
+            break;
+        case STATE_ADMIN_ACTIONS:
+            drawAdminActions();
             break;
         default: assert(false);
     }
