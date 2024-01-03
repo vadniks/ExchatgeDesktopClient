@@ -740,6 +740,7 @@ void logicOnAdminActionsPageRequested(bool enter) {
 
 void logicOnBroadcastMessageSendRequested(const char* text, unsigned size) {
     assert(this && this->netInitialized);
+    if (!size) return;
     netSendBroadcast((const byte*) text, size);
 }
 

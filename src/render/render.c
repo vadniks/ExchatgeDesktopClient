@@ -562,9 +562,10 @@ static void postSystemMessage(const char* text, bool error) { // expects a null-
 #pragma clang diagnostic pop
 
 void renderShowSystemMessage(const char* text, unsigned size) {
-    assert(this && size > 0 && size <= RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
+    assert(this && size > 0 && size <= RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE - 1);
 
     SystemMessage* message = SDL_malloc(sizeof *message);
+    SDL_memset(message->text, 0, RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
     SDL_memcpy(message->text, text, size);
 
     queuePush(this->systemMessagesQueue, message);
@@ -1076,6 +1077,12 @@ static void drawFileChooser(void) {
     }
 }
 
+static void onBroadcastMessageSendRequested(void) {
+    (*(this->onBroadcastMessageSendRequested))(this->enteredBroadcastMessageText, this->enteredBroadcastMessageTextSize);
+    SDL_memset(this->enteredBroadcastMessageText, 0, RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
+    this->enteredBroadcastMessageTextSize = 0;
+}
+
 static void drawAdminActions(void) {
     const float height = currentHeight(), rowHeight = (float) decreaseHeightIfNeeded((unsigned) height) * 0.1f;
     const bool aboveInitialWidth = this->width >= WINDOW_WIDTH * 2;
@@ -1123,13 +1130,12 @@ static void drawAdminActions(void) {
                     NK_EDIT_SIMPLE,
                     this->enteredBroadcastMessageText,
                     (int*) &(this->enteredBroadcastMessageTextSize),
-                    (int) RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE, // TODO: too many nested blocks
+                    (int) RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE - 1, // TODO: too many nested blocks
                     nk_filter_default
                 );
 
                 nk_layout_row_push(this->context, aboveInitialWidth ? 0.15f : 0.25f);
-                if (nk_button_label(this->context, SEND))
-                    (*(this->onBroadcastMessageSendRequested))(this->enteredBroadcastMessageText, this->enteredBroadcastMessageTextSize);
+                if (nk_button_label(this->context, SEND)) onBroadcastMessageSendRequested();
             } nk_layout_row_end(this->context);
 
             nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
