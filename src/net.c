@@ -106,7 +106,6 @@ THIS(
     atomic unsigned state;
     unsigned encryptedMessageSize; // constant
     NetOnMessageReceived onMessageReceived;
-    CryptoKeys* connectionKeys;
     CryptoCoderStreams* connectionCoderStreams;
     byte tokenAnonymous[TOKEN_SIZE]; // constant
     byte tokenServerUnsignedValue[TOKEN_UNSIGNED_VALUE_SIZE]; // constant, unencrypted but clients don't know how token is generated
@@ -179,8 +178,7 @@ static bool waitForReceiveWithTimeout(void) {
     return false;
 }
 
-static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned serverSignPublicKeySize) {
-    this->connectionKeys = cryptoKeysInit();
+static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned serverSignPublicKeySize, CryptoKeys* connectionKeys) {
     this->connectionCoderStreams = cryptoCoderStreamsInit();
 
     cryptoSetServerSignPublicKey(serverSignPublicKey, serverSignPublicKeySize);
@@ -202,12 +200,12 @@ static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned 
     if (!SDL_memcmp(serverKeyStart, this->serverKeyStub, CRYPTO_KEY_SIZE)) return; // denial of service
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
-    if (!cryptoExchangeKeys(this->connectionKeys, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE)) return;
+    if (!cryptoExchangeKeys(connectionKeys, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE)) return;
     this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
     if (SDLNet_TCP_Send(
         this->socket,
-        cryptoClientPublicKey(this->connectionKeys),
+        cryptoClientPublicKey(connectionKeys),
         (int) CRYPTO_KEY_SIZE
     ) != (int) CRYPTO_KEY_SIZE) return;
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
@@ -227,7 +225,7 @@ static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned 
     this->state = STATE_SERVER_CODER_HEADER_RECEIVED;
 
     byte* clientCoderHeader = cryptoInitializeCoderStreams(
-        this->connectionKeys,
+        connectionKeys,
         this->connectionCoderStreams,
         serverCoderHeaderStart
     );
@@ -273,7 +271,6 @@ bool netInit(
     this->socket = NULL;
     this->socketSet = NULL;
     this->onMessageReceived = onMessageReceived;
-    this->connectionKeys = NULL;
     this->connectionCoderStreams = NULL;
     SDL_memset(this->tokenAnonymous, 0, TOKEN_SIZE);
     SDL_memset(this->tokenServerUnsignedValue, (1 << 8) - 1, TOKEN_UNSIGNED_VALUE_SIZE);
@@ -325,7 +322,9 @@ bool netInit(
     assert(this->socketSet);
     assert(SDLNet_TCP_AddSocket(this->socketSet, this->socket) == 1);
 
-    initiateSecuredConnection(serverSignPublicKey, serverSignPublicKeySize);
+    CryptoKeys* connectionKeys = cryptoKeysInit();
+    initiateSecuredConnection(serverSignPublicKey, serverSignPublicKeySize, connectionKeys);
+    cryptoKeysDestroy(connectionKeys);
 
     if (this->state != STATE_SECURE_CONNECTION_ESTABLISHED) {
         netClean();
@@ -1027,7 +1026,6 @@ void netClean(void) {
     listDestroy(this->userInfosList);
 
     if (this->connectionCoderStreams) cryptoCoderStreamsDestroy(this->connectionCoderStreams);
-    if (this->connectionKeys) cryptoKeysDestroy(this->connectionKeys);
 
     SDLNet_FreeSocketSet(this->socketSet);
     SDLNet_TCP_Close(this->socket);
