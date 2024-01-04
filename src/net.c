@@ -377,8 +377,11 @@ static Message* unpackMessage(const byte* buffer) {
     SDL_memcpy(&(msg->token), buffer + INT_SIZE * 6 + LONG_SIZE, TOKEN_SIZE);
 
     assert(msg->size <= NET_MAX_MESSAGE_BODY_SIZE);
-    if (msg->size) SDL_memcpy(&(msg->body), buffer + MESSAGE_HEAD_SIZE, msg->size);
-    else msg->body = NULL;
+    if (msg->size) {
+        msg->body = SDL_malloc(msg->size);
+        SDL_memcpy(&(msg->body), buffer + MESSAGE_HEAD_SIZE, msg->size);
+    } else
+        msg->body = NULL;
 
     return msg;
 }
@@ -604,7 +607,7 @@ static void readReceivedMessage(void) {
         onDisconnected();
     else {
         processMessage(message);
-        SDL_free(message);
+        destroyMessage(message);
     }
 }
 
@@ -758,7 +761,7 @@ static void onEmptyMessagesFetchReplyReceived(const Message* message) {
     this->fetchingMessages = false;
 }
 
-static void onNextUsersBundleFetched(const Message* message) { // TODO
+static void onNextUsersBundleFetched(const Message* message) {
     assert(this && this->fetchingUsers);
     if (!(message->index)) listClear(this->userInfosList); // TODO: test with large amount of elements & test with sleep()
 
@@ -772,7 +775,7 @@ static void onNextUsersBundleFetched(const Message* message) { // TODO
     this->fetchingUsers = false;
 }
 
-static void finishSettingUpConversation(void) {                      // --below-- --all-- TODO
+static void finishSettingUpConversation(void) {
     queueClear(this->conversationSetupMessages);
     this->settingUpConversation = false;
 }
@@ -784,10 +787,7 @@ CryptoCoderStreams* nullable netCreateConversation(unsigned id) { // TODO: start
     this->settingUpConversation = true;
     queueClear(this->conversationSetupMessages);
 
-    byte body[NET_MAX_MESSAGE_BODY_SIZE];
-
-    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
-    if (!netSend(FLAG_EXCHANGE_KEYS, body, INVITE_ASK, id)) {
+    if (!netSend(FLAG_EXCHANGE_KEYS, (byte[INVITE_ASK]) {0}, INVITE_ASK, id)) {
         finishSettingUpConversation();
         return NULL;
     }
@@ -796,16 +796,17 @@ CryptoCoderStreams* nullable netCreateConversation(unsigned id) { // TODO: start
 
     if (!(message = queueWaitAndPop(this->conversationSetupMessages, (int) TIMEOUT))
         || message->flag != FLAG_EXCHANGE_KEYS
-        || message->size != CRYPTO_KEY_SIZE)
+        || message->size != CRYPTO_KEY_SIZE
+        || !message->body)
     {
         finishSettingUpConversation();
-        SDL_free(message);
+        destroyMessage(message);
         return NULL;
     }
 
     byte akaServerPublicKey[CRYPTO_KEY_SIZE];
     SDL_memcpy(akaServerPublicKey, message->body, CRYPTO_KEY_SIZE);
-    SDL_free(message);
+    destroyMessage(message);
 
     CryptoKeys* keys = cryptoKeysInit();
 
@@ -815,9 +816,7 @@ CryptoCoderStreams* nullable netCreateConversation(unsigned id) { // TODO: start
         return NULL;
     }
 
-    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
-    SDL_memcpy(body, cryptoClientPublicKey(keys), CRYPTO_KEY_SIZE);
-    if (!netSend(FLAG_EXCHANGE_KEYS_DONE, body, CRYPTO_KEY_SIZE, id)) {
+    if (!netSend(FLAG_EXCHANGE_KEYS_DONE, cryptoClientPublicKey(keys), CRYPTO_KEY_SIZE, id)) {
         finishSettingUpConversation();
         cryptoKeysDestroy(keys);
         return NULL;
@@ -825,17 +824,18 @@ CryptoCoderStreams* nullable netCreateConversation(unsigned id) { // TODO: start
 
     if (!(message = queueWaitAndPop(this->conversationSetupMessages, (int) TIMEOUT))
         || message->flag != FLAG_EXCHANGE_HEADERS
-        || message->size != CRYPTO_HEADER_SIZE)
+        || message->size != CRYPTO_HEADER_SIZE
+        || !message->body)
     {
         finishSettingUpConversation();
-        SDL_free(message);
+        destroyMessage(message);
         cryptoKeysDestroy(keys);
         return NULL;
     }
 
     byte akaServerStreamHeader[CRYPTO_HEADER_SIZE];
     SDL_memcpy(akaServerStreamHeader, message->body, CRYPTO_HEADER_SIZE);
-    SDL_free(message);
+    destroyMessage(message);
 
     CryptoCoderStreams* coderStreams = cryptoCoderStreamsInit();
     byte* akaClientStreamHeader = cryptoInitializeCoderStreams(keys, coderStreams, akaServerStreamHeader);
@@ -847,13 +847,11 @@ CryptoCoderStreams* nullable netCreateConversation(unsigned id) { // TODO: start
         return NULL;
     }
 
-    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
-    SDL_memcpy(body, akaClientStreamHeader, CRYPTO_HEADER_SIZE);
+    const bool result = netSend(FLAG_EXCHANGE_HEADERS_DONE, akaClientStreamHeader, CRYPTO_HEADER_SIZE, id);
     SDL_free(akaClientStreamHeader);
-
     finishSettingUpConversation();
 
-    if (!netSend(FLAG_EXCHANGE_HEADERS_DONE, body, CRYPTO_HEADER_SIZE, id)) {
+    if (!result) {
         cryptoCoderStreamsDestroy(coderStreams);
         return NULL;
     }
@@ -869,9 +867,6 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
     assert(this->settingUpConversation && !this->exchangingFile);
     queueClear(this->conversationSetupMessages);
 
-    byte body[NET_MAX_MESSAGE_BODY_SIZE];
-    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
-
     if (inviteProcessingTimeoutExceeded()) {
         finishSettingUpConversation();
         return NULL;
@@ -879,16 +874,14 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
 
     if (!accept) {
         finishSettingUpConversation();
-        netSend(FLAG_EXCHANGE_KEYS, body, INVITE_DENY, fromId);
+        netSend(FLAG_EXCHANGE_KEYS, (byte[INVITE_DENY]) {0}, INVITE_DENY, fromId);
         return NULL;
     }
 
     CryptoKeys* keys = cryptoKeysInit();
     const byte* akaServerPublicKey = cryptoGenerateKeyPairAsServer(keys);
 
-    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
-    SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
-    if (!netSend(FLAG_EXCHANGE_KEYS, body, CRYPTO_KEY_SIZE, fromId)) {
+    if (!netSend(FLAG_EXCHANGE_KEYS, akaServerPublicKey, CRYPTO_KEY_SIZE, fromId)) {
         finishSettingUpConversation();
         cryptoKeysDestroy(keys);
         return NULL;
@@ -897,17 +890,18 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
     Message* message = NULL;
     if (!(message = queueWaitAndPop(this->conversationSetupMessages, (int) TIMEOUT))
         || message->flag != FLAG_EXCHANGE_KEYS_DONE
-        || message->size != CRYPTO_KEY_SIZE)
+        || message->size != CRYPTO_KEY_SIZE
+        || !message->body)
     {
         finishSettingUpConversation();
         cryptoKeysDestroy(keys);
-        SDL_free(message);
+        destroyMessage(message);
         return NULL;
     }
 
     byte akaClientPublicKey[CRYPTO_KEY_SIZE];
     SDL_memcpy(akaClientPublicKey, message->body, CRYPTO_KEY_SIZE);
-    SDL_free(message);
+    destroyMessage(message);
     if (!cryptoExchangeKeysAsServer(keys, akaClientPublicKey)) {
         finishSettingUpConversation();
         cryptoKeysDestroy(keys);
@@ -923,11 +917,11 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
         cryptoCoderStreamsDestroy(coderStreams);
         return NULL;
     }
-    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
-    SDL_memcpy(body, akaServerStreamHeader, CRYPTO_HEADER_SIZE);
+
+    const bool result = netSend(FLAG_EXCHANGE_HEADERS, akaServerStreamHeader, CRYPTO_HEADER_SIZE, fromId);
     SDL_free(akaServerStreamHeader);
 
-    if (!netSend(FLAG_EXCHANGE_HEADERS, body, CRYPTO_HEADER_SIZE, fromId)) {
+    if (!result) {
         finishSettingUpConversation();
         cryptoKeysDestroy(keys);
         cryptoCoderStreamsDestroy(coderStreams);
@@ -936,10 +930,11 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
 
     if (!(message = queueWaitAndPop(this->conversationSetupMessages, (int) TIMEOUT))
         || message->flag != FLAG_EXCHANGE_HEADERS_DONE
-        || message->size != CRYPTO_HEADER_SIZE)
+        || message->size != CRYPTO_HEADER_SIZE
+        || !message->body)
     {
         finishSettingUpConversation();
-        SDL_free(message);
+        destroyMessage(message);
         cryptoKeysDestroy(keys);
         cryptoCoderStreamsDestroy(coderStreams);
         return NULL;
@@ -947,7 +942,7 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
 
     byte akaClientStreamHeader[CRYPTO_HEADER_SIZE];
     SDL_memcpy(akaClientStreamHeader, message->body, CRYPTO_HEADER_SIZE);
-    SDL_free(message);
+    destroyMessage(message);
 
     finishSettingUpConversation();
 
