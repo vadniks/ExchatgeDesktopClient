@@ -1000,6 +1000,8 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, co
 
     unsigned index = 0, bytesWritten;
     while ((bytesWritten = (*(this->nextFileChunkSupplier))(index++, body))) {
+        assert(bytesWritten <= NET_MAX_MESSAGE_BODY_SIZE);
+
         if (!netSend(FLAG_FILE, body, bytesWritten, toId)) {
             finishFileExchanging();
             return false;
