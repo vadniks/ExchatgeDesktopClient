@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <SDL.h>
 #include <SDL_net.h>
 #include <assert.h>
 #include <endian.h>
@@ -43,12 +44,12 @@ typedef enum : unsigned {
 STATIC_CONST_UNSIGNED INT_SIZE = sizeof(int);
 STATIC_CONST_UNSIGNED LONG_SIZE = sizeof(long);
 
-STATIC_CONST_UNSIGNED MESSAGE_SIZE = 1 << 10; // 1024
+STATIC_CONST_UNSIGNED MAX_MESSAGE_SIZE = 1 << 8; // 256
 STATIC_CONST_UNSIGNED TOKEN_TRAILING_SIZE = 16;
 STATIC_CONST_UNSIGNED TOKEN_UNSIGNED_VALUE_SIZE = 2 * INT_SIZE; // 8
 STATIC_CONST_UNSIGNED TOKEN_SIZE = TOKEN_UNSIGNED_VALUE_SIZE + 40 + TOKEN_TRAILING_SIZE; // 64
 STATIC_CONST_UNSIGNED MESSAGE_HEAD_SIZE = INT_SIZE * 6 + LONG_SIZE + TOKEN_SIZE; // 96
-const unsigned NET_MESSAGE_BODY_SIZE = MESSAGE_SIZE - MESSAGE_HEAD_SIZE; // 928
+const unsigned NET_MAX_MESSAGE_BODY_SIZE = MAX_MESSAGE_SIZE - MESSAGE_HEAD_SIZE; // 160
 
 STATIC_CONST_UNSIGNED long TIMEOUT = 5000; // in milliseconds
 
@@ -108,7 +109,6 @@ THIS(
     TCPsocket socket;
     SDLNet_SocketSet socketSet;
     atomic unsigned state;
-    unsigned encryptedMessageSize; // constant
     NetOnMessageReceived onMessageReceived;
     CryptoCoderStreams* connectionCoderStreams;
     byte tokenAnonymous[TOKEN_SIZE]; // constant
@@ -153,14 +153,8 @@ typedef struct {
     unsigned from; // id of the sender
     unsigned to; // id of the receiver
     byte token[TOKEN_SIZE];
-} MessageHead;
-
-typedef struct {
-    MessageHead;
-    byte body[NET_MESSAGE_BODY_SIZE]; // payload // TODO: make Message's body part size-variable
+    byte* nullable body; // payload
 } Message;
-
-staticAssert(sizeof(MessageHead) == 96 && sizeof(Message) == 1024 && sizeof(Message) - sizeof(MessageHead) == 928);
 
 struct NetUserInfo_t {
     unsigned id;
@@ -206,7 +200,6 @@ static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned 
     this->state = STATE_SERVER_PUBLIC_KEY_RECEIVED;
 
     if (!cryptoExchangeKeys(connectionKeys, serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE)) return;
-    this->encryptedMessageSize = cryptoEncryptedSize(MESSAGE_SIZE);
 
     if (SDLNet_TCP_Send(
         this->socket,
@@ -241,6 +234,11 @@ static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned 
     }
 
     SDL_free(clientCoderHeader);
+}
+
+static void destroyMessage(Message* msg) {
+    SDL_free(msg->body);
+    SDL_free(msg);
 }
 
 bool netInit(
@@ -299,8 +297,8 @@ bool netInit(
     this->nextFileChunkSupplier = nextFileChunkSupplier;
     this->netNextFileChunkReceiver = netNextFileChunkReceiver;
     this->exchangingFile = false;
-    this->conversationSetupMessages = queueInitExtra(&SDL_free, currentTimeMillisGetter);
-    this->fileExchangeMessages = queueInitExtra(&SDL_free, currentTimeMillisGetter);
+    this->conversationSetupMessages = queueInitExtra((QueueDeallocator) &destroyMessage, currentTimeMillisGetter);
+    this->fileExchangeMessages = queueInitExtra((QueueDeallocator) &destroyMessage, currentTimeMillisGetter);
     this->fetchingUsers = false;
     this->fetchingMessages = false;
     this->onNextMessageFetched = onNextMessageFetched;
@@ -364,6 +362,8 @@ void netRegister(const char* username, const char* password) {
     SDL_free(credentials);
 }
 
+static inline unsigned wholeMessageBytesSize(unsigned size) { return sizeof(Message) - sizeof(void*) + size; } // replace the pointer to body with the actual body
+
 static Message* unpackMessage(const byte* buffer) {
     Message* msg = SDL_malloc(sizeof *msg);
 
@@ -375,13 +375,17 @@ static Message* unpackMessage(const byte* buffer) {
     SDL_memcpy(&(msg->from), buffer + INT_SIZE * 4 + LONG_SIZE, INT_SIZE);
     SDL_memcpy(&(msg->to), buffer + INT_SIZE * 5 + LONG_SIZE, INT_SIZE);
     SDL_memcpy(&(msg->token), buffer + INT_SIZE * 6 + LONG_SIZE, TOKEN_SIZE);
-    SDL_memcpy(&(msg->body), buffer + MESSAGE_HEAD_SIZE, NET_MESSAGE_BODY_SIZE);
+
+    assert(msg->size <= NET_MAX_MESSAGE_BODY_SIZE);
+    if (msg->size) SDL_memcpy(&(msg->body), buffer + MESSAGE_HEAD_SIZE, msg->size);
+    else msg->body = NULL;
 
     return msg;
 }
 
 static byte* packMessage(const Message* msg) {
-    byte* buffer = SDL_calloc(MESSAGE_SIZE, sizeof(char));
+    assert(!msg->body && !msg->size || msg->body && msg->size && msg->size <= NET_MAX_MESSAGE_BODY_SIZE);
+    byte* buffer = SDL_malloc(wholeMessageBytesSize(msg->size));
 
     SDL_memcpy(buffer, &(msg->flag), INT_SIZE);
     SDL_memcpy(buffer + INT_SIZE, &(msg->timestamp), LONG_SIZE);
@@ -391,7 +395,8 @@ static byte* packMessage(const Message* msg) {
     SDL_memcpy(buffer + INT_SIZE * 4 + LONG_SIZE, &(msg->from), INT_SIZE);
     SDL_memcpy(buffer + INT_SIZE * 5 + LONG_SIZE, &(msg->to), INT_SIZE);
     SDL_memcpy(buffer + INT_SIZE * 6 + LONG_SIZE, &(msg->token), TOKEN_SIZE);
-    SDL_memcpy(buffer + MESSAGE_HEAD_SIZE, &(msg->body), NET_MESSAGE_BODY_SIZE);
+
+    if (msg->body && msg->size) SDL_memcpy(buffer + MESSAGE_HEAD_SIZE, &(msg->body), msg->size);
 
     return buffer;
 }
@@ -420,11 +425,12 @@ static void onNextMessageFetched(const Message* message);
 static void onEmptyMessagesFetchReplyReceived(const Message* message);
 
 static void processMessagesFromServer(const Message* message) {
-    const bool cst = checkServerToken(message->token);
-    assert(cst);
+    const bool checked = checkServerToken(message->token);
+    assert(checked);
 
     switch (message->flag) {
         case FLAG_LOGGED_IN:
+            assert(message->body && message->size);
             this->state = STATE_AUTHENTICATED;
 
             RW_MUTEX_WRITE_LOCKED(this->rwMutex,
@@ -449,6 +455,7 @@ static void processMessagesFromServer(const Message* message) {
             onEmptyMessagesFetchReplyReceived(message);
             break;
         case FLAG_BROADCAST:
+            assert(message->body && message->size);
             (*(this->onBroadcastMessageReceived))(message->body, message->size);
             break;
         default:
@@ -457,6 +464,7 @@ static void processMessagesFromServer(const Message* message) {
 }
 
 static void processConversationSetUpMessage(const Message* message) {
+    assert(message->body && message->size);
     assert(message->flag == FLAG_EXCHANGE_KEYS && message->size == INVITE_ASK);
 
     if (this->settingUpConversation || this->exchangingFile)
@@ -472,6 +480,7 @@ static inline unsigned fileExchangeRequestInitialSize(void)
 { return INT_SIZE + CRYPTO_HASH_SIZE + INT_SIZE + NET_MAX_FILENAME_SIZE; }
 
 static void processFileExchangeRequestMessage(const Message* message) {
+    assert(message->body && message->size);
     assert(message->flag == FLAG_FILE_ASK && message->size == fileExchangeRequestInitialSize());
 
     if (this->settingUpConversation || this->exchangingFile)
@@ -494,8 +503,16 @@ static void processFileExchangeRequestMessage(const Message* message) {
 }
 
 static Message* copyMessage(const Message* message) {
+    assert(message->body && message->size || !message->body && !message->size);
+
     Message* new = SDL_malloc(sizeof(Message));
     SDL_memcpy(new, message, sizeof *new);
+
+    if (message->size) {
+        new->body = SDL_malloc(message->size);
+        SDL_memcpy(new->body, message->body, message->size);
+    }
+
     return new;
 }
 
@@ -521,6 +538,7 @@ static void processMessage(const Message* message) {
             break;
         case FLAG_FILE_ASK:
             if (message->size == fileExchangeRequestInitialSize()) {
+                assert(message->body);
                 processFileExchangeRequestMessage(message);
                 break;
             }
@@ -529,6 +547,7 @@ static void processMessage(const Message* message) {
             queuePush(this->fileExchangeMessages, copyMessage(message));
             break;
         case FLAG_PROCEED:
+            assert(message->body && message->size);
             if (!this->fetchingUsers && !this->fetchingMessages && !this->ignoreUsualMessages) // messages from other users can be lost here, but as we now have a re-fetching messages mechanism, this is no longer a problem
                 (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
             break;
@@ -553,20 +572,24 @@ static bool checkSocket(void) {
     return result;
 }
 
-static Message* nullable receive(void) {
-    byte* buffer = SDL_malloc(this->encryptedMessageSize);
+static unsigned encryptedMessageMaxSize(void) { return cryptoEncryptedSize(MAX_MESSAGE_SIZE); }
 
+static bool receivePart(void* buffer, unsigned targetSize) { // parts: size - first part, encrypted message - second part
     RW_MUTEX_WRITE_LOCKED(this->rwMutex,
-        const int result = SDLNet_TCP_Recv(this->socket, buffer, (int) this->encryptedMessageSize);
-    ) // Recv returns zero on socket was disconnection or error appearing
+        const int result = SDLNet_TCP_Recv(this->socket, buffer, (int) targetSize);
+    )
+    return result == (int) targetSize; // Recv returns zero on socket was disconnection or error appearing
+}
 
-    if (result != (int) this->encryptedMessageSize) {
-        SDL_free(buffer);
-        return NULL;
-    }
+static Message* nullable receive(void) {
+    unsigned size = 0;
+    if (!receivePart(&size, INT_SIZE)) return NULL;
+    assert(size && size <= encryptedMessageMaxSize());
 
-    byte* decrypted = cryptoDecrypt(this->connectionCoderStreams, buffer, this->encryptedMessageSize, false);
-    SDL_free(buffer);
+    byte buffer[size];
+    if (!receivePart(buffer, size)) return NULL;
+
+    byte* decrypted = cryptoDecrypt(this->connectionCoderStreams, buffer, size, false);
     assert(decrypted);
 
     Message* message = unpackMessage(decrypted);
@@ -596,46 +619,58 @@ unsigned netCurrentUserId(void) {
     return this->userId;
 }
 
-bool netSend(int flag, const byte* body, unsigned size, unsigned xTo) {
-    assert(this && size > 0 && size <= NET_MESSAGE_BODY_SIZE);
+static bool sendPart(const void* buffer, unsigned targetSize) {
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
+        const int bytesSent = SDLNet_TCP_Send(this->socket, buffer, (int) targetSize);
+    )
+    return bytesSent == (int) targetSize;
+}
+
+bool netSend(int flag, const byte* nullable body, unsigned size, unsigned xTo) {
+    assert(this);
+    assert(body && size && size <= NET_MAX_MESSAGE_BODY_SIZE || !body && !size && flag != FLAG_PROCEED && flag != FLAG_BROADCAST);
 
     Message message = {
-        {
-            flag,
-            (*(this->currentTimeMillisGetter))(),
-            size,
-            0,
-            1,
-            this->userId,
-            xTo,
-            { 0 }
-        },
-        { 0 }
+        flag,
+        (*(this->currentTimeMillisGetter))(),
+        size,
+        0,
+        1,
+        this->userId,
+        xTo,
+        {0},
+        size ? (byte[size]) {} : NULL
     };
-    SDL_memcpy(&(message.body), body, size);
+    if (size) SDL_memcpy(message.body, body, size);
     SDL_memcpy(&(message.token), this->token, TOKEN_SIZE);
 
+    const unsigned packedSize = wholeMessageBytesSize(size);
+
     byte* packedMessage = packMessage(&message);
-    byte* encryptedMessage = cryptoEncrypt(this->connectionCoderStreams, packedMessage, MESSAGE_SIZE, false);
+    byte* encryptedMessage = cryptoEncrypt(
+        this->connectionCoderStreams,
+        packedMessage,
+        packedSize,
+        false
+    );
     SDL_free(packedMessage);
 
     if (!encryptedMessage) return false;
-
     this->lastSentFlag = flag;
-    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
-        const int bytesSent = SDLNet_TCP_Send(this->socket, encryptedMessage, (int) this->encryptedMessageSize);
-    )
 
+    if (!sendPart(&size, INT_SIZE)) {
+        SDL_free(encryptedMessage);
+        return false;
+    }
+
+    const bool result = sendPart(encryptedMessage, cryptoEncryptedSize(packedSize));
     SDL_free(encryptedMessage);
-    return bytesSent == (int) this->encryptedMessageSize;
+    return result;
 }
 
 void netShutdownServer(void) {
     assert(this);
-
-    byte body[NET_MESSAGE_BODY_SIZE];
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
-    netSend(FLAG_SHUTDOWN, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
+    netSend(FLAG_SHUTDOWN, NULL, 0, TO_SERVER);
 }
 
 static NetUserInfo* unpackUserInfo(const byte* bytes) {
@@ -648,14 +683,14 @@ static NetUserInfo* unpackUserInfo(const byte* bytes) {
     return info;
 }
 
-void netFetchUsers(void) {
+void netFetchUsers(void) { // TODO
     assert(this && !this->fetchingUsers && !this->fetchingMessages);
 
-    byte body[NET_MESSAGE_BODY_SIZE];
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    byte body[NET_MAX_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
 
     this->fetchingUsers = true;
-    netSend(FLAG_FETCH_USERS, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
+    netSend(FLAG_FETCH_USERS, body, NET_MAX_MESSAGE_BODY_SIZE, TO_SERVER);
 }
 
 void netSendBroadcast(const byte* text, unsigned size) {
@@ -700,13 +735,13 @@ void netFetchMessages(unsigned id, unsigned long afterTimestamp) {
     assert(this && !this->fetchingUsers && !this->fetchingMessages);
     this->fetchingMessages = true;
 
-    byte body[NET_MESSAGE_BODY_SIZE] = {0};
+    byte body[NET_MAX_MESSAGE_BODY_SIZE] = {0};
 
     body[0] = 1;
     *((unsigned long*) &(body[1])) = afterTimestamp;
     *((unsigned*) &(body[1 + LONG_SIZE])) = id;
 
-    netSend(FLAG_FETCH_MESSAGES, body, NET_MESSAGE_BODY_SIZE, TO_SERVER);
+    netSend(FLAG_FETCH_MESSAGES, body, NET_MAX_MESSAGE_BODY_SIZE, TO_SERVER);
 }
 
 static void onNextMessageFetched(const Message* message) {
@@ -751,9 +786,9 @@ CryptoCoderStreams* nullable netCreateConversation(unsigned id) { // TODO: start
     this->settingUpConversation = true;
     queueClear(this->conversationSetupMessages);
 
-    byte body[NET_MESSAGE_BODY_SIZE];
+    byte body[NET_MAX_MESSAGE_BODY_SIZE];
 
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, INVITE_ASK, id)) {
         finishSettingUpConversation();
         return NULL;
@@ -782,7 +817,7 @@ CryptoCoderStreams* nullable netCreateConversation(unsigned id) { // TODO: start
         return NULL;
     }
 
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, cryptoClientPublicKey(keys), CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS_DONE, body, CRYPTO_KEY_SIZE, id)) {
         finishSettingUpConversation();
@@ -814,7 +849,7 @@ CryptoCoderStreams* nullable netCreateConversation(unsigned id) { // TODO: start
         return NULL;
     }
 
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaClientStreamHeader, CRYPTO_HEADER_SIZE);
     SDL_free(akaClientStreamHeader);
 
@@ -836,8 +871,8 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
     assert(this->settingUpConversation && !this->exchangingFile);
     queueClear(this->conversationSetupMessages);
 
-    byte body[NET_MESSAGE_BODY_SIZE];
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    byte body[NET_MAX_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
 
     if (inviteProcessingTimeoutExceeded()) {
         finishSettingUpConversation();
@@ -853,7 +888,7 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
     CryptoKeys* keys = cryptoKeysInit();
     const byte* akaServerPublicKey = cryptoGenerateKeyPairAsServer(keys);
 
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaServerPublicKey, CRYPTO_KEY_SIZE);
     if (!netSend(FLAG_EXCHANGE_KEYS, body, CRYPTO_KEY_SIZE, fromId)) {
         finishSettingUpConversation();
@@ -890,7 +925,7 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
         cryptoCoderStreamsDestroy(coderStreams);
         return NULL;
     }
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
     SDL_memcpy(body, akaServerStreamHeader, CRYPTO_HEADER_SIZE);
     SDL_free(akaServerStreamHeader);
 
@@ -942,8 +977,8 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, co
     this->exchangingFile = true;
     queueClear(this->fileExchangeMessages);
 
-    byte body[NET_MESSAGE_BODY_SIZE];
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    byte body[NET_MAX_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
 
     *((unsigned*) body) = fileSize;
     SDL_memcpy(body + INT_SIZE, hash, CRYPTO_HASH_SIZE);
@@ -988,8 +1023,8 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
         return false;
     }
 
-    byte body[NET_MESSAGE_BODY_SIZE];
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
+    byte body[NET_MAX_MESSAGE_BODY_SIZE];
+    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
     if (accept) *((unsigned*) body) = fileSize;
 
     if (!netSend(FLAG_FILE_ASK, body, INT_SIZE, fromId)) {
@@ -1018,7 +1053,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
             continue;
         }
 
-        assert(message->size <= NET_MESSAGE_BODY_SIZE);
+        assert(message->size <= NET_MAX_MESSAGE_BODY_SIZE);
         (*(this->netNextFileChunkReceiver))(fromId, index++, message->size, message->body);
 
         SDL_free(message);
