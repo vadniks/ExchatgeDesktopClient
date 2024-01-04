@@ -35,5 +35,5 @@ ConversationMessage* conversationMessageCreate(
     unsigned fromSize,
     const char* text,
     unsigned textSize
-); // from: name of the sender (is copied) (is in range (0, NET_USERNAME_SIZE]), null if from this client; text: text (whose length == size and 0 < length <= NET_MESSAGE_BODY_SIZE) is copied
+); // from: name of the sender (is copied) (is in range (0, NET_USERNAME_SIZE]), null if from this client; text: text (whose length == size and 0 < length <= NET_MAX_MESSAGE_BODY_SIZE) is copied
 void conversationMessageDestroy(ConversationMessage* message);

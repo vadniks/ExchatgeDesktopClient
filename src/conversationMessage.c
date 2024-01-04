@@ -22,7 +22,7 @@
 
 List* conversationMessageInitList(void) { return listInit((ListDeallocator) &conversationMessageDestroy); }
 
-ConversationMessage* conversationMessageCreate( // from: name of the sender (is copied) (length is equal to fromSize which is in range (0, NET_USERNAME_SIZE]), null if from this client; text: text (whose length = textSize == size and 0 < length <= NET_MESSAGE_BODY_SIZE) is copied
+ConversationMessage* conversationMessageCreate( // from: name of the sender (is copied) (length is equal to fromSize which is in range (0, NET_USERNAME_SIZE]), null if from this client; text: text (whose length = textSize == size and 0 < length <= NET_MAX_MESSAGE_BODY_SIZE) is copied
     unsigned long timestamp,
     const char* nullable from,
     unsigned fromSize,
