@@ -763,6 +763,7 @@ static void onEmptyMessagesFetchReplyReceived(const Message* message) {
 
 static void onNextUsersBundleFetched(const Message* message) {
     assert(this && this->fetchingUsers);
+    assert(message->size && message->body);
     if (!(message->index)) listClear(this->userInfosList); // TODO: test with large amount of elements & test with sleep()
 
     for (unsigned i = 0; i < message->size; i++)
