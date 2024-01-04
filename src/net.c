@@ -644,9 +644,8 @@ bool netSend(int flag, const byte* nullable body, unsigned size, unsigned xTo) {
         this->userId,
         xTo,
         {0},
-        size ? (byte[size]) {} : NULL
+        size ? (byte*) body : NULL
     };
-    if (size) SDL_memcpy(message.body, body, size);
     SDL_memcpy(&(message.token), this->token, TOKEN_SIZE);
 
     const unsigned packedSize = wholeMessageBytesSize(size);
