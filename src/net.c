@@ -964,6 +964,7 @@ static void finishFileExchanging(void) {
 }
 
 bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, const char* filename, unsigned filenameSize) {
+    assert(this);
     assert(fileSize);
     assert(filenameSize <= NET_MAX_FILENAME_SIZE);
 
@@ -971,7 +972,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, co
     this->exchangingFile = true;
     queueClear(this->fileExchangeMessages);
 
-    byte body[NET_MAX_MESSAGE_BODY_SIZE];
+    byte body[fileExchangeRequestInitialSize()];
     SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
 
     *((unsigned*) body) = fileSize;
@@ -987,13 +988,15 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, co
     Message* message = NULL;
     if (!(message = queueWaitAndPop(this->fileExchangeMessages, (int) TIMEOUT))
         || message->flag != FLAG_FILE_ASK
+        || message->size != INT_SIZE
+        || !message->body
         || *((unsigned*) message->body) != fileSize)
     {
         finishFileExchanging();
-        SDL_free(message);
+        destroyMessage(message);
         return false;
     }
-    SDL_free(message);
+    destroyMessage(message);
 
     unsigned index = 0, bytesWritten;
     while ((bytesWritten = (*(this->nextFileChunkSupplier))(index++, body))) {
@@ -1017,11 +1020,8 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
         return false;
     }
 
-    byte body[NET_MAX_MESSAGE_BODY_SIZE];
-    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
-    if (accept) *((unsigned*) body) = fileSize;
-
-    if (!netSend(FLAG_FILE_ASK, body, INT_SIZE, fromId)) {
+    if (!accept) fileSize = 0;
+    if (!netSend(FLAG_FILE_ASK, (byte*) &fileSize, INT_SIZE, fromId)) {
         finishFileExchanging();
         return false;
     }
@@ -1039,10 +1039,10 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
         if ((*(this->currentTimeMillisGetter))() - lastReceivedChunkMillis >= TIMEOUT)
             break;
 
-        if (message->flag == FLAG_FILE && message->size > 0)
+        if (message->flag == FLAG_FILE && message->size > 0 && message->body)
             lastReceivedChunkMillis = (*(this->currentTimeMillisGetter))();
         else {
-            SDL_free(message);
+            destroyMessage(message);
             message = NULL;
             continue;
         }
@@ -1050,13 +1050,13 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
         assert(message->size <= NET_MAX_MESSAGE_BODY_SIZE);
         (*(this->netNextFileChunkReceiver))(fromId, index++, message->size, message->body);
 
-        SDL_free(message);
+        destroyMessage(message);
         message = NULL;
     }
-    SDL_free(message);
+    destroyMessage(message);
 
     finishFileExchanging();
-    return true; // TODO: check index == __initial_message__->count here and returns check result
+    return true; // TODO: check index == __initial_message__->count here and returns check result + this will shorten the loading time
 }
 
 void netClean(void) {
