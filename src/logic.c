@@ -165,7 +165,7 @@ static void processReceivedMessage(void** parameters) {
     if (!user) return; // thanks to caching messages while users information is synchronizing, losing messages here is unlikely to happen, but theoretically it is still possible - it would be an error though as the sender is required to instantiate a conversation with the recipient first and the recipient's logic won't let to do that as it would drop/ignore conversation creation requests/invites from the sender - TODO: assert(user found)?
 
     const unsigned size = encryptedSize - cryptoEncryptedSize(0);
-    assert(size > 0 && size <= logicUnencryptedMessageBodySize());
+    assert(size > 0 && size <= logicMaxUnencryptedMessageBodySize());
 
     // TODO: update users list on successful conversation setup
     // TODO: test conversation setup and file exchanging with 3 users: 2 try to setup/exchange and the 3rd one tries to interfere
@@ -420,7 +420,7 @@ void logicOnFileChooserRequested(void) {
 static byte* nullable calculateOpenedFileChecksum(void) {
     assert(this->rwops);
 
-    const unsigned bufferSize = logicUnencryptedMessageBodySize();
+    const unsigned bufferSize = logicMaxUnencryptedMessageBodySize();
     byte buffer[bufferSize];
     SDL_memset(buffer, 0, bufferSize);
 
@@ -545,6 +545,7 @@ void logicFileChooseResultHandler(const char* nullable filePath, unsigned size) 
     const char* filename = xBasename(filePath);
     assert(filename);
     const unsigned long filenameSize = SDL_strlen(filename);
+    assert(filenameSize && filenameSize <= NET_MAX_FILENAME_SIZE);
 
     void** parameters = SDL_malloc(3 * sizeof(void*));
     parameters[0] = (void*) fileSize;
@@ -668,7 +669,7 @@ static void onFileExchangeInviteReceived(
 
 static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) { // TODO: notify user when a new message has been received
     assert(this && this->rwops);
-    const unsigned targetSize = logicUnencryptedMessageBodySize();
+    const unsigned targetSize = logicMaxUnencryptedMessageBodySize();
 
     byte unencryptedBuffer[targetSize];
     const unsigned actualSize = SDL_RWread(this->rwops, unencryptedBuffer, 1, targetSize);
@@ -678,7 +679,7 @@ static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) { /
     assert(coderStreams);
 
     const unsigned encryptedSize = cryptoEncryptedSize(actualSize);
-    assert(encryptedSize <= NET_MESSAGE_BODY_SIZE);
+    assert(encryptedSize <= NET_MAX_MESSAGE_BODY_SIZE);
 
     byte* encryptedChunk = cryptoEncrypt(coderStreams, unencryptedBuffer, actualSize, false);
     SDL_memcpy(encryptedBuffer, encryptedChunk, encryptedSize);
@@ -705,7 +706,7 @@ static void nextFileChunkReceiver(
     assert(this && this->rwops);
 
     const unsigned decryptedSize = receivedBytesCount - cryptoEncryptedSize(0);
-    assert(decryptedSize && decryptedSize <= logicUnencryptedMessageBodySize());
+    assert(decryptedSize && decryptedSize <= logicMaxUnencryptedMessageBodySize());
 
     CryptoCoderStreams* coderStreams = databaseGetConversation(fromId);
     assert(coderStreams);
@@ -753,7 +754,7 @@ static void clipboardPaste(void) {
     if (!SDL_HasClipboardText()) return;
     if (!renderIsConversationShown() && !renderIsFileChooserShown()) return;
 
-    const unsigned maxSize = renderIsConversationShown() ? NET_MESSAGE_BODY_SIZE : LOGIC_MAX_FILE_PATH_SIZE;
+    const unsigned maxSize = renderIsConversationShown() ? logicMaxUnencryptedMessageBodySize() : LOGIC_MAX_FILE_PATH_SIZE;
     char* text = SDL_GetClipboardText(), * buffer = NULL;
     unsigned size;
 
@@ -816,7 +817,7 @@ static void processCredentials(void** data) {
         (byte*) password,
         NET_UNHASHED_PASSWORD_SIZE,
         NET_USERNAME_SIZE,
-        NET_MESSAGE_BODY_SIZE,
+        logicMaxUnencryptedMessageBodySize(),
         &fetchHostId
     )) { // password that's used to sign in also used to encrypt messages & other stuff in the database
         databaseClean();
@@ -1086,7 +1087,7 @@ static void sendMessage(void** params) {
     assert(this && params && this->databaseInitialized);
 
     unsigned size = *((unsigned*) params[1]), encryptedSize = cryptoEncryptedSize(size);
-    assert(size && encryptedSize <= NET_MESSAGE_BODY_SIZE);
+    assert(size && encryptedSize <= NET_MAX_MESSAGE_BODY_SIZE);
 
     const byte* text = params[0];
     DatabaseMessage* dbMessage = databaseMessageCreate(logicCurrentTimeMillis(), this->toUserId, netCurrentUserId(), text, size);
@@ -1098,12 +1099,8 @@ static void sendMessage(void** params) {
     byte* encryptedText = cryptoEncrypt(coderStreams, text, size, false);
     cryptoCoderStreamsDestroy(coderStreams);
 
-    byte body[NET_MESSAGE_BODY_SIZE];
-    SDL_memset(body, 0, NET_MESSAGE_BODY_SIZE);
-    SDL_memcpy(body, encryptedText, encryptedSize);
+    netSend(NET_FLAG_PROCEED, encryptedText, encryptedSize, this->toUserId);
     SDL_free(encryptedText);
-
-    netSend(NET_FLAG_PROCEED, body, encryptedSize, this->toUserId);
 
     SDL_free(params[0]);
     SDL_free(params[1]);
@@ -1136,7 +1133,7 @@ void logicOnUpdateUsersListClicked(void) {
     lifecycleAsync((LifecycleAsyncActionFunction) &netFetchUsers, NULL, 0);
 }
 
-unsigned logicUnencryptedMessageBodySize(void) { return NET_MESSAGE_BODY_SIZE - cryptoEncryptedSize(0); } // 928 - 17 = 911
+unsigned logicMaxUnencryptedMessageBodySize(void) { return NET_MAX_MESSAGE_BODY_SIZE - cryptoEncryptedSize(0); } // 160 - 17 = 143
 
 static long fetchHostId(void) {
     const long dummy = (long) 0xfffffffffffffffFULL; // unsigned long long (= unsigned long)

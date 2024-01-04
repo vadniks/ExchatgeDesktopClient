@@ -112,7 +112,7 @@ bool lifecycleInit(void) {
         &logicOnBroadcastMessageSendRequested
     );
     logicInit();
-    renderSetMaxMessageSizeAndInitConversationMessageBuffer(logicUnencryptedMessageBodySize()); // TODO: unite all setters to one global setter
+    renderSetMaxMessageSizeAndInitConversationMessageBuffer(logicMaxUnencryptedMessageBodySize()); // TODO: unite all setters to one global setter
     renderSetAdminMode(logicIsAdminMode());
     renderSetUsersList(logicUsersList());
     renderSetMessagesList(logicMessagesList());

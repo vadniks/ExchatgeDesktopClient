@@ -99,7 +99,9 @@ STATIC_CONST_UNSIGNED FROM_SERVER = 0x7fffffff;
 STATIC_CONST_UNSIGNED INVITE_ASK = 1;
 STATIC_CONST_UNSIGNED INVITE_DENY = 2;
 
-const unsigned NET_MAX_FILENAME_SIZE = 0xff;
+const unsigned NET_MAX_FILENAME_SIZE = NET_MAX_MESSAGE_BODY_SIZE - 40; // 120 // 40 = INT_SIZE + CRYPTO_HASH_SIZE + INT_SIZE
+
+staticAssert(NET_MAX_FILENAME_SIZE < NET_MAX_MESSAGE_BODY_SIZE);
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
