@@ -135,7 +135,7 @@ THIS(
     Queue* conversationSetupMessages;
     Queue* fileExchangeMessages;
     atomic bool fetchingUsers;
-    atomic bool fetchingMessages;
+    atomic bool fetchingMessages; // TODO: deprecated: practically unused, doesn't work properly
     NetOnNextMessageFetched onNextMessageFetched;
     atomic bool ignoreUsualMessages; // ignore usual messages from other users (with flag proceed) while updating user infos or while re-fetching messages
     NetOnBroadcastMessageReceived onBroadcastMessageReceived;
@@ -683,14 +683,10 @@ static NetUserInfo* unpackUserInfo(const byte* bytes) {
     return info;
 }
 
-void netFetchUsers(void) { // TODO
+void netFetchUsers(void) {
     assert(this && !this->fetchingUsers && !this->fetchingMessages);
-
-    byte body[NET_MAX_MESSAGE_BODY_SIZE];
-    SDL_memset(body, 0, NET_MAX_MESSAGE_BODY_SIZE);
-
     this->fetchingUsers = true;
-    netSend(FLAG_FETCH_USERS, body, NET_MAX_MESSAGE_BODY_SIZE, TO_SERVER);
+    netSend(FLAG_FETCH_USERS, NULL, 0, TO_SERVER);
 }
 
 void netSendBroadcast(const byte* text, unsigned size) {
@@ -735,17 +731,18 @@ void netFetchMessages(unsigned id, unsigned long afterTimestamp) {
     assert(this && !this->fetchingUsers && !this->fetchingMessages);
     this->fetchingMessages = true;
 
-    byte body[NET_MAX_MESSAGE_BODY_SIZE] = {0};
+    byte body[1 + LONG_SIZE + INT_SIZE] = {0};
 
     body[0] = 1;
     *((unsigned long*) &(body[1])) = afterTimestamp;
     *((unsigned*) &(body[1 + LONG_SIZE])) = id;
 
-    netSend(FLAG_FETCH_MESSAGES, body, NET_MAX_MESSAGE_BODY_SIZE, TO_SERVER);
+    netSend(FLAG_FETCH_MESSAGES, body, sizeof body, TO_SERVER);
 }
 
 static void onNextMessageFetched(const Message* message) {
     assert(this && this->fetchingMessages);
+    assert(message->body && message->size);
     const bool last = message->index == message->count - 1;
 
     (*(this->onNextMessageFetched))(message->from, message->timestamp, message->size, message->body, last);
@@ -754,13 +751,14 @@ static void onNextMessageFetched(const Message* message) {
 
 static void onEmptyMessagesFetchReplyReceived(const Message* message) {
     assert(this && this->fetchingMessages);
-    assert(!message->size && message->count == 1);
+    assert(message->body && message->size);
+    assert(message->count == 1);
 
-    (*(this->onNextMessageFetched))(*(unsigned*) (message->body + 1), message->timestamp, 0, NULL, true);
+    (*(this->onNextMessageFetched))(*(unsigned*) (message->body + 1 + LONG_SIZE), message->timestamp, 0, NULL, true);
     this->fetchingMessages = false;
 }
 
-static void onNextUsersBundleFetched(const Message* message) {
+static void onNextUsersBundleFetched(const Message* message) { // TODO
     assert(this && this->fetchingUsers);
     if (!(message->index)) listClear(this->userInfosList); // TODO: test with large amount of elements & test with sleep()
 
@@ -774,7 +772,7 @@ static void onNextUsersBundleFetched(const Message* message) {
     this->fetchingUsers = false;
 }
 
-static void finishSettingUpConversation(void) {
+static void finishSettingUpConversation(void) {                      // --below-- --all-- TODO
     queueClear(this->conversationSetupMessages);
     this->settingUpConversation = false;
 }
