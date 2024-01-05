@@ -364,7 +364,7 @@ void netRegister(const char* username, const char* password) {
     SDL_free(credentials);
 }
 
-static inline unsigned wholeMessageBytesSize(unsigned size) { return sizeof(Message) - sizeof(void*) + size; } // replace the pointer to body with the actual body
+static inline unsigned wholeMessageBytesSize(unsigned size) { return MESSAGE_HEAD_SIZE + size; } // replace the pointer to body with the actual body
 
 static Message* unpackMessage(const byte* buffer) {
     Message* msg = SDL_malloc(sizeof *msg);
