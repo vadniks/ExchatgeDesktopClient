@@ -663,6 +663,9 @@ bool netSend(int flag, const byte* nullable body, unsigned size, unsigned xTo) {
     if (!encryptedMessage) return false;
     this->lastSentFlag = flag;
     const unsigned encryptedSize = cryptoEncryptedSize(packedSize);
+    assert(encryptedSize <= cryptoEncryptedSize(MAX_MESSAGE_SIZE));
+
+    SDL_Log("ns %u %u %u", size, packedSize, encryptedSize);
 
     if (!sendPart(&encryptedSize, INT_SIZE)) {
         SDL_free(encryptedMessage);

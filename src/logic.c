@@ -1110,6 +1110,7 @@ static void sendMessage(void** params) {
 
 void logicOnSendClicked(const char* text, unsigned size) {
     assert(this);
+    SDL_Log("sn %u", size);
     if (!size) return;
 
     void** params = SDL_malloc(2 * sizeof(void*));
