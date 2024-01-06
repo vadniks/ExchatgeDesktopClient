@@ -238,8 +238,9 @@ static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned 
     SDL_free(clientCoderHeader);
 }
 
-static void destroyMessage(Message* msg) {
-    SDL_free(msg->body);
+static void destroyMessage(void* nullable msg) { // 'cause null cannot be interpreted as anything else than unspecified/untyped void*
+    if (!msg) return;
+    SDL_free(((Message*) msg)->body);
     SDL_free(msg);
 }
 
@@ -1061,7 +1062,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
         destroyMessage(message);
         message = NULL;
     }
-    if (message) destroyMessage(message);
+    destroyMessage(message);
 
     finishFileExchanging();
     return true; // TODO: check index == __initial_message__->count here and returns check result + this will shorten the loading time
