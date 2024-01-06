@@ -25,7 +25,7 @@ add_compile_options("-Wno-gnu-empty-struct")
 add_compile_options("-std=gnu11")
 
 add_compile_options("-Ofast") # -O3
-#add_link_options("-s")
+add_link_options("-s")
 
 #add_link_options("-rdynamic") # TODO: debug only for use with backtrace_symbols()
 
