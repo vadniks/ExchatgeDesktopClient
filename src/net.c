@@ -584,17 +584,16 @@ static bool receivePart(void* buffer, unsigned targetSize) { // parts: size - fi
     RW_MUTEX_WRITE_LOCKED(this->rwMutex,
         const int result = SDLNet_TCP_Recv(this->socket, buffer, (int) targetSize);
     )
-    SDL_Log("rp %d %d", result, targetSize);
     return result == (int) targetSize; // Recv returns zero on socket was disconnection or error appearing
 }
 
 static Message* nullable receive(void) {
     unsigned size = 0;
-    if (!receivePart(&size, INT_SIZE)) { SDL_Log("r 1"); return NULL; } // disconnected
+    if (!receivePart(&size, INT_SIZE)) return NULL; // disconnected
     assert(size && size <= encryptedMessageMaxSize());
 
     byte buffer[size];
-    if (!receivePart(buffer, size)) { SDL_Log("r 2 %d", size); return NULL; } // if size was received but the actual message wasn't then a message was sent right before disconnection - maybe it was an error message // TODO: make size signed and instead of sending a message of error send just error code within size (negative value)
+    if (!receivePart(buffer, size)) return NULL;
 
     byte* decrypted = cryptoDecrypt(this->connectionCoderStreams, buffer, size, false);
     assert(decrypted);
@@ -665,8 +664,6 @@ bool netSend(int flag, const byte* nullable body, unsigned size, unsigned xTo) {
     this->lastSentFlag = flag;
     const unsigned encryptedSize = cryptoEncryptedSize(packedSize);
     assert(encryptedSize <= cryptoEncryptedSize(MAX_MESSAGE_SIZE));
-
-    SDL_Log("ns %u %u %u", size, packedSize, encryptedSize);
 
     if (!sendPart(&encryptedSize, INT_SIZE)) {
         SDL_free(encryptedMessage);

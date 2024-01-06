@@ -219,7 +219,6 @@ static void finishLoading(void) {
 
 static void onLogInResult(bool successful) { // TODO: add broadcasting to all users feature for admin
     assert(this);
-    SDL_Log("log in %c", successful ? 't' : 'f');
     if (successful) {
         this->state = STATE_AUTHENTICATED;
         lifecycleAsync((LifecycleAsyncActionFunction) &netFetchUsers, NULL, 0);
@@ -1113,7 +1112,6 @@ static void sendMessage(void** params) {
 
 void logicOnSendClicked(const char* text, unsigned size) {
     assert(this);
-    SDL_Log("sn %u", size);
     if (!size) return;
 
     void** params = SDL_malloc(2 * sizeof(void*));
