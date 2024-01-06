@@ -381,7 +381,7 @@ static Message* unpackMessage(const byte* buffer) {
     assert(msg->size <= NET_MAX_MESSAGE_BODY_SIZE);
     if (msg->size) {
         msg->body = SDL_malloc(msg->size);
-        SDL_memcpy(&(msg->body), buffer + MESSAGE_HEAD_SIZE, msg->size);
+        SDL_memcpy(msg->body, buffer + MESSAGE_HEAD_SIZE, msg->size);
     } else
         msg->body = NULL;
 
@@ -401,7 +401,7 @@ static byte* packMessage(const Message* msg) {
     SDL_memcpy(buffer + INT_SIZE * 5 + LONG_SIZE, &(msg->to), INT_SIZE);
     SDL_memcpy(buffer + INT_SIZE * 6 + LONG_SIZE, &(msg->token), TOKEN_SIZE);
 
-    if (msg->body && msg->size) SDL_memcpy(buffer + MESSAGE_HEAD_SIZE, &(msg->body), msg->size);
+    if (msg->body && msg->size) SDL_memcpy(buffer + MESSAGE_HEAD_SIZE, msg->body, msg->size);
 
     return buffer;
 }
