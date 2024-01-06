@@ -25,9 +25,12 @@ add_compile_options("-Wno-gnu-empty-struct")
 add_compile_options("-std=gnu11")
 
 add_compile_options("-Ofast") # -O3
-add_link_options("-s")
 
-#add_link_options("-rdynamic") # TODO: debug only for use with backtrace_symbols()
+set(DEBUG false)
+if(NOT DEBUG)
+    add_link_options("-s")
+    add_link_options("-rdynamic") # TODO: debug only for use with backtrace_symbols()
+endif()
 
 file(GLOB sources CONFIGURE_DEPENDS "src/*.c" "src/*.h")
 add_executable(${PROJECT_NAME} ${sources})
@@ -63,7 +66,7 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(SEND_ERROR "Target is not 64 bits")
 endif()
 
-if (NOT CMAKE_C_BYTE_ORDER STREQUAL LITTLE_ENDIAN)
+if(NOT CMAKE_C_BYTE_ORDER STREQUAL LITTLE_ENDIAN)
     message(SEND_ERROR "Target is not little endian")
 endif()
 
