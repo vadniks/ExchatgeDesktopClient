@@ -217,6 +217,7 @@ static void finishLoading(void) {
 
 static void onLogInResult(bool successful) { // TODO: add broadcasting to all users feature for admin
     assert(this);
+    SDL_Log("log in %c", successful ? 't' : 'f');
     if (successful) {
         this->state = STATE_AUTHENTICATED;
         lifecycleAsync((LifecycleAsyncActionFunction) &netFetchUsers, NULL, 0);

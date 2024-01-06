@@ -583,16 +583,17 @@ static bool receivePart(void* buffer, unsigned targetSize) { // parts: size - fi
     RW_MUTEX_WRITE_LOCKED(this->rwMutex,
         const int result = SDLNet_TCP_Recv(this->socket, buffer, (int) targetSize);
     )
+    SDL_Log("rp %d %d", result, targetSize);
     return result == (int) targetSize; // Recv returns zero on socket was disconnection or error appearing
 }
 
 static Message* nullable receive(void) {
     unsigned size = 0;
-    if (!receivePart(&size, INT_SIZE)) return NULL;
+    if (!receivePart(&size, INT_SIZE)) { SDL_Log("r 1"); return NULL; } // disconnected
     assert(size && size <= encryptedMessageMaxSize());
 
     byte buffer[size];
-    if (!receivePart(buffer, size)) return NULL; // if size was received but the actual message wasn't then a message was sent right before disconnection - maybe it was an error message // TODO: make size signed and instead of sending a message of error send just error code within size (negative value)
+    if (!receivePart(buffer, size)) { SDL_Log("r 2 %d", size); return NULL; } // if size was received but the actual message wasn't then a message was sent right before disconnection - maybe it was an error message // TODO: make size signed and instead of sending a message of error send just error code within size (negative value)
 
     byte* decrypted = cryptoDecrypt(this->connectionCoderStreams, buffer, size, false);
     assert(decrypted);
@@ -765,11 +766,11 @@ static void onEmptyMessagesFetchReplyReceived(const Message* message) {
 
 static void onNextUsersBundleFetched(const Message* message) {
     assert(this && this->fetchingUsers);
-    assert(message->size && message->body);
+    assert(message->body && message->size && message->size <= NET_MAX_MESSAGE_BODY_SIZE);
     if (!(message->index)) listClear(this->userInfosList); // TODO: test with large amount of elements & test with sleep()
 
-    for (unsigned i = 0; i < message->size; i++)
-        listAddBack(this->userInfosList, unpackUserInfo(message->body + i * USER_INFO_SIZE));
+    for (unsigned i = 0; i < message->size; i += USER_INFO_SIZE)
+        listAddBack(this->userInfosList, unpackUserInfo(message->body + i));
 
     if (message->index < message->count - 1) return; // not the last bundle
 
