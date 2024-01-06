@@ -87,6 +87,8 @@ static void showLoginPageOrPerformAutoLoggingIn(void) {
 
 void logicInit(void) {
     assert(!this);
+    assert(NET_MAX_MESSAGE_BODY_SIZE >= RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
+
     this = SDL_malloc(sizeof *this);
     this->netInitialized = false;
     this->usersList = userInitList();
@@ -742,6 +744,7 @@ void logicOnAdminActionsPageRequested(bool enter) {
 
 void logicOnBroadcastMessageSendRequested(const char* text, unsigned size) {
     assert(this && this->netInitialized);
+    assert(!size || size <= NET_MAX_MESSAGE_BODY_SIZE && size <= RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE);
     if (!size) return;
     netSendBroadcast((const byte*) text, size);
 }
