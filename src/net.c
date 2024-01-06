@@ -1061,7 +1061,7 @@ bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accep
         destroyMessage(message);
         message = NULL;
     }
-    destroyMessage(message);
+    if (message) destroyMessage(message);
 
     finishFileExchanging();
     return true; // TODO: check index == __initial_message__->count here and returns check result + this will shorten the loading time
