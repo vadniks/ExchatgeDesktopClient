@@ -592,7 +592,7 @@ static Message* nullable receive(void) {
     assert(size && size <= encryptedMessageMaxSize());
 
     byte buffer[size];
-    if (!receivePart(buffer, size)) return NULL;
+    if (!receivePart(buffer, size)) return NULL; // if size was received but the actual message wasn't then a message was sent right before disconnection - maybe it was an error message // TODO: make size signed and instead of sending a message of error send just error code within size (negative value)
 
     byte* decrypted = cryptoDecrypt(this->connectionCoderStreams, buffer, size, false);
     assert(decrypted);
