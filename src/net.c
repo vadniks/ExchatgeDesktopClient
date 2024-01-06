@@ -238,9 +238,9 @@ static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned 
     SDL_free(clientCoderHeader);
 }
 
-static void destroyMessage(void* nullable msg) { // 'cause null cannot be interpreted as anything else than unspecified/untyped void*
+static void destroyMessage(Message* nullable msg) {
     if (!msg) return;
-    SDL_free(((Message*) msg)->body);
+    SDL_free(msg->body);
     SDL_free(msg);
 }
 
