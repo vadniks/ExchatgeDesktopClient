@@ -661,13 +661,14 @@ bool netSend(int flag, const byte* nullable body, unsigned size, unsigned xTo) {
 
     if (!encryptedMessage) return false;
     this->lastSentFlag = flag;
+    const unsigned encryptedSize = cryptoEncryptedSize(packedSize);
 
-    if (!sendPart(&size, INT_SIZE)) {
+    if (!sendPart(&encryptedSize, INT_SIZE)) {
         SDL_free(encryptedMessage);
         return false;
     }
 
-    const bool result = sendPart(encryptedMessage, cryptoEncryptedSize(packedSize));
+    const bool result = sendPart(encryptedMessage, encryptedSize);
     SDL_free(encryptedMessage);
     return result;
 }
