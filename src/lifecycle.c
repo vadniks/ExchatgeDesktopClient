@@ -65,10 +65,8 @@ static void asyncActionsThreadLooper(void) {
         }
 
         AsyncAction* action = queuePop(this->asyncActionsQueue);
-
         if (action->delayMillis > 0) lifecycleSleep(action->delayMillis);
         (*(action->function))(action->parameter);
-
         SDL_free(action);
     }
 }
