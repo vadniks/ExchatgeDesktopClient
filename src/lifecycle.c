@@ -142,15 +142,13 @@ static bool processEvents(void) {
     return false;
 }
 
-inline static void stopApp(void) { this->running = false; }
-
 void lifecycleLoop(void) {
     unsigned long startMillis, differenceMillis;
     while (this->running) {
         startMillis = logicCurrentTimeMillis();
 
         if (processEvents()) {
-            stopApp();
+            this->running = false;
             lifecycleClean();
             break;
         }
