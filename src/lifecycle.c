@@ -161,7 +161,7 @@ void lifecycleLoop(void) {
         if ((unsigned long) UI_UPDATE_PERIOD > differenceMillis)
             lifecycleSleep((unsigned long) UI_UPDATE_PERIOD - differenceMillis);
 
-         SDL_Log("fps: %u", (unsigned) (1000.0f / (float) (logicCurrentTimeMillis() - startMillis)));
+//        SDL_Log("fps: %u", (unsigned) (1000.0f / (float) (logicCurrentTimeMillis() - startMillis)));
     }
 }
 
