@@ -625,7 +625,7 @@ unsigned netCurrentUserId(void) {
     return this->userId;
 }
 
-static bool sendPart(const void* buffer, unsigned targetSize) {
+static bool sendBytes(const void* buffer, unsigned targetSize) {
     RW_MUTEX_WRITE_LOCKED(this->rwMutex,
         const int bytesSent = SDLNet_TCP_Send(this->socket, buffer, (int) targetSize);
     )
@@ -665,14 +665,12 @@ bool netSend(int flag, const byte* nullable body, unsigned size, unsigned xTo) {
     const unsigned encryptedSize = cryptoEncryptedSize(packedSize);
     assert(encryptedSize <= cryptoEncryptedSize(MAX_MESSAGE_SIZE));
 
-    if (!sendPart(&encryptedSize, INT_SIZE)) {
-        SDL_free(encryptedMessage);
-        return false;
-    }
-
-    const bool result = sendPart(encryptedMessage, encryptedSize);
+    byte buffer[INT_SIZE + encryptedSize];
+    *((unsigned*) buffer) = encryptedSize;
+    SDL_memcpy(buffer + INT_SIZE, encryptedMessage, encryptedSize);
     SDL_free(encryptedMessage);
-    return result;
+
+    return sendBytes(buffer, sizeof buffer);
 }
 
 void netShutdownServer(void) {
