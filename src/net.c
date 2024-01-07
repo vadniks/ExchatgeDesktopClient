@@ -64,8 +64,6 @@ typedef enum : int {
     FLAG_REGISTERED = 0x00000007,
 
     FLAG_ERROR = 0x00000009,
-    FLAG_UNAUTHENTICATED = 0x0000000a,
-    FLAG_ACCESS_DENIED = 0x0000000b,
 
     FLAG_FETCH_USERS = 0x0000000c,
     FLAG_FETCH_MESSAGES = 0x0000000d,
@@ -122,7 +120,6 @@ THIS(
     NetOnRegisterResult onRegisterResult;
     NetOnDisconnected onDisconnected;
     NetCurrentTimeMillisGetter currentTimeMillisGetter;
-    /*__attribute_deprecated__*/ atomic int lastSentFlag; // TODO: remove, redesign the mechanism of error handling
     NetOnUsersFetched onUsersFetched;
     List* userInfosList;
     byte* serverKeyStub;
@@ -289,7 +286,6 @@ bool netInit(
     this->onDisconnected = onDisconnected;
     this->currentTimeMillisGetter = currentTimeMillisGetter;
     this->onUsersFetched = onUsersFetched;
-    this->lastSentFlag = 0;
     this->userInfosList = listInit(&SDL_free);
     this->serverKeyStub = SDL_calloc(CRYPTO_KEY_SIZE, sizeof(byte));
     this->settingUpConversation = false;
@@ -408,7 +404,8 @@ static byte* packMessage(const Message* msg) {
 }
 
 static void processErrors(const Message* message) { // TODO: send operation flag in error message's payload instead of remembering the last operation's flag
-    switch ((int) this->lastSentFlag) {
+    assert(message->size == INT_SIZE && message->body);
+    switch (*((int*) message->body)) {
         case FLAG_LOG_IN:
             this->state = STATE_FINISHED_WITH_ERROR;
             (*(this->onLogInResult))(false);
@@ -417,8 +414,7 @@ static void processErrors(const Message* message) { // TODO: send operation flag
             this->state = STATE_FINISHED_WITH_ERROR;
             (*(this->onRegisterResult))(false);
             break;
-        case FLAG_FETCH_MESSAGES:
-            SDL_Log("pr fm"); // TODO <----------------------------------------------------------------------------
+        case FLAG_FETCH_MESSAGES: // ignore
             break;
         default:
             (*(this->onErrorReceived))(message->flag);
@@ -452,9 +448,7 @@ static void processMessagesFromServer(const Message* message) {
         case FLAG_FETCH_USERS: // TODO: raise assert if the users list hasn't been fully formed or add timeout
             onNextUsersBundleFetched(message);
             break;
-        case FLAG_UNAUTHENTICATED: fallthrough
-        case FLAG_ERROR: fallthrough
-        case FLAG_ACCESS_DENIED:
+        case FLAG_ERROR:
             processErrors(message);
             break;
         case FLAG_FETCH_MESSAGES:
@@ -661,7 +655,6 @@ bool netSend(int flag, const byte* nullable body, unsigned size, unsigned xTo) {
     SDL_free(packedMessage);
 
     if (!encryptedMessage) return false;
-    this->lastSentFlag = flag;
     const unsigned encryptedSize = cryptoEncryptedSize(packedSize);
     assert(encryptedSize <= cryptoEncryptedSize(MAX_MESSAGE_SIZE));
 
