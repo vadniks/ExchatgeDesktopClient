@@ -430,6 +430,11 @@ static void randomiseAndFree(void* object, unsigned size) {
     SDL_free(object);
 }
 
+static void randomPadding(byte* bytes, unsigned size) {
+    assert(this);
+    for (unsigned i = 0; i < size; bytes[i++] = (byte) randombytes_uniform(PADDING_BEGIN_TAG));
+}
+
 byte* nullable cryptoAddPadding(unsigned* newSize, const byte* bytes, unsigned size) { // just like the sodium_pad() except that this implementation doesn't append new block if the $(originalSize % BLOCK_SIZE == 0)
     assert(size && size <= 0x7fffffff);
     const div_t r = div((int) size, (int) PADDING_BLOCK_SIZE);
@@ -441,12 +446,12 @@ byte* nullable cryptoAddPadding(unsigned* newSize, const byte* bytes, unsigned s
     byte* new = SDL_malloc(*newSize);
     SDL_memcpy(new, bytes, size);
     new[size] = PADDING_BEGIN_TAG;
-    SDL_memset(new + size + 1, 0, *newSize - size - 1);
+    randomPadding(new + size + 1, *newSize - size - 1);
 
     return new;
 }
 
-byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigned size) {
+byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigned size) { // almost like sodium_unpad()
     assert(size && size <= 0x7fffffff && size % PADDING_BLOCK_SIZE == 0);
 
     unsigned padding = 0;
@@ -458,7 +463,6 @@ byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigne
             found = true;
             break;
         }
-
     if (!found) return NULL;
 
     *newSize = size - padding;
