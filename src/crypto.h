@@ -67,6 +67,8 @@ byte* nullable cryptoDecryptSingle(const byte* key, const byte* bytes, unsigned 
 char* cryptoBase64Encode(const byte* bytes, unsigned bytesSize); // returns newly allocated null-terminated string
 byte* nullable cryptoBase64Decode(const char* encoded, unsigned encodedSize, unsigned* xDecodedSize); // also accepts pointer to a variable in which the size of the decoded bytes will be stored
 void* nullable cryptoHashMultipart(void* nullable previous, const byte* nullable bytes, unsigned size); // init - (null, null, any) - returns heap-allocated state, update - (state, bytes, sizeof(bytes)) - returns null, finish - (state, null, any) - frees the state and returns heap-allocated hash (cast to byte*)
+byte* nullable cryptoAddPadding(unsigned* newSize, const byte* bytes, unsigned size);
+byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigned size);
 
 // shared
 void cryptoKeysDestroy(CryptoKeys* keys); // fills the memory region, occupied by the object, with random data and then frees that area

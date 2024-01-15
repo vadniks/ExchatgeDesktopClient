@@ -42,6 +42,7 @@ STATIC_CONST_UNSIGNED MAC_SIZE = crypto_secretbox_MACBYTES; // 16
 STATIC_CONST_UNSIGNED NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
 static const byte TAG_INTERMEDIATE = crypto_secretstream_xchacha20poly1305_TAG_MESSAGE; // 0
 __attribute_maybe_unused__ static const byte TAG_LAST = crypto_secretstream_xchacha20poly1305_TAG_FINAL; // 3
+STATIC_CONST_UNSIGNED PADDING_BLOCK_SIZE = 8;
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
@@ -426,6 +427,27 @@ static void randomiseAndFree(void* object, unsigned size) {
 
     cryptoFillWithRandomBytes((byte*) object, size);
     SDL_free(object);
+}
+
+byte* nullable cryptoAddPadding(unsigned* newSize, const byte* bytes, unsigned size) {
+    assert(size <= 0x7fffffff);
+    const div_t r = div((int) size, (int) PADDING_BLOCK_SIZE);
+
+    *newSize = PADDING_BLOCK_SIZE * (r.quot + (r.rem > 0 ? 1 : 0));
+    assert(*newSize >= size);
+    if (*newSize == size) return NULL;
+
+    byte* new = SDL_malloc(*newSize);
+    SDL_memcpy(new, bytes, size);
+    new[size] = 0xff;
+    SDL_memset(new + size + 1, 0, *newSize - size - 1);
+
+    return new;
+}
+
+byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigned size) {
+    assert(size <= 0x7fffffff);
+    return NULL; // TODO
 }
 
 void cryptoKeysDestroy(CryptoKeys* keys) { randomiseAndFree(keys, sizeof *keys); }
