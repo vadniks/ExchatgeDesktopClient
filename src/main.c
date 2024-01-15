@@ -27,7 +27,7 @@
 #include "crypto.h"
 
 int main(void) {
-    int n = 14, d = 16, n2;
+    int n = 18, d = 16, n2;
 
     if (!n) n2 = 0;
     else n2 = n + 1;
@@ -80,11 +80,11 @@ int main(void) {
     printf("\n%u\n", newSize);
     if (new) printBinaryArray(new, newSize); else printBinaryArray(bytes, newSize);
 
-    byte* new2 = cryptoRemovePadding(&newSize, new, newSize);
+    byte* new2 = cryptoRemovePadding(&newSize, new ? new : bytes, newSize);
     SDL_free(new);
 
     printf(" %u\n", newSize);
-    if (new) printBinaryArray(new2, newSize); else printBinaryArray(bytes, newSize); // 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+    if (new2) printBinaryArray(new2, newSize); else printBinaryArray(bytes, newSize); // 1 1 1 1 1 1 1 1 1 1 1 1 1 1
     SDL_free(new2);
 
     SDL_Quit();
