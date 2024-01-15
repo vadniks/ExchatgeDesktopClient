@@ -42,7 +42,8 @@ STATIC_CONST_UNSIGNED MAC_SIZE = crypto_secretbox_MACBYTES; // 16
 STATIC_CONST_UNSIGNED NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
 static const byte TAG_INTERMEDIATE = crypto_secretstream_xchacha20poly1305_TAG_MESSAGE; // 0
 __attribute_maybe_unused__ static const byte TAG_LAST = crypto_secretstream_xchacha20poly1305_TAG_FINAL; // 3
-STATIC_CONST_UNSIGNED PADDING_BLOCK_SIZE = 8;
+STATIC_CONST_UNSIGNED PADDING_BLOCK_SIZE = 1 << 3; // 8
+static byte PADDING_BEGIN_TAG = 0xff; // 255
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
@@ -429,7 +430,7 @@ static void randomiseAndFree(void* object, unsigned size) {
     SDL_free(object);
 }
 
-byte* nullable cryptoAddPadding(unsigned* newSize, const byte* bytes, unsigned size) {
+byte* nullable cryptoAddPadding(unsigned* newSize, const byte* bytes, unsigned size) { // just like the sodium_pad() except that this implementation doesn't append new block if the $(originalSize % BLOCK_SIZE == 0)
     assert(size <= 0x7fffffff);
     const div_t r = div((int) size, (int) PADDING_BLOCK_SIZE);
 
@@ -439,15 +440,26 @@ byte* nullable cryptoAddPadding(unsigned* newSize, const byte* bytes, unsigned s
 
     byte* new = SDL_malloc(*newSize);
     SDL_memcpy(new, bytes, size);
-    new[size] = 0xff;
+    new[size] = PADDING_BEGIN_TAG;
     SDL_memset(new + size + 1, 0, *newSize - size - 1);
 
     return new;
 }
 
 byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigned size) {
-    assert(size <= 0x7fffffff);
-    return NULL; // TODO
+    assert(size <= 0x7fffffff && size % PADDING_BLOCK_SIZE == 0);
+
+    unsigned padding = 0;
+    for (unsigned i = size - 1; i >= size - PADDING_BLOCK_SIZE; i--) {
+        padding++;
+        if (bytes[i] == PADDING_BEGIN_TAG) break;
+    }
+
+    *newSize = size - padding;
+    byte* new = SDL_malloc(*newSize);
+    SDL_memcpy(new, bytes, *newSize);
+
+    return new;
 }
 
 void cryptoKeysDestroy(CryptoKeys* keys) { randomiseAndFree(keys, sizeof *keys); }

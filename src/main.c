@@ -27,7 +27,7 @@
 #include "crypto.h"
 
 int main(void) {
-    int n = 16, d = 16, n2;
+    int n = 14, d = 16, n2;
 
     if (!n) n2 = 0;
     else n2 = n + 1;
@@ -66,16 +66,30 @@ int main(void) {
     }
     printf("%zu\n", buf_padded_len);
 
+
+
+    //
+
+
+
     unsigned size = n, newSize = 0;
     byte bytes[size];
     SDL_memset(bytes, 1, size);
 
     byte* new = cryptoAddPadding(&newSize, bytes, size);
+    printf("\n%u\n", newSize);
     if (new) printBinaryArray(new, newSize); else printBinaryArray(bytes, newSize);
+
+    byte* new2 = cryptoRemovePadding(&newSize, new, newSize);
     SDL_free(new);
 
+    printf(" %u\n", newSize);
+    if (new) printBinaryArray(new2, newSize); else printBinaryArray(bytes, newSize); // 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+    SDL_free(new2);
+
     SDL_Quit();
-    return 0;
+
+    return SDL_GetNumAllocations();
 }
 
 #else
