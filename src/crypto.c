@@ -42,7 +42,7 @@ STATIC_CONST_UNSIGNED MAC_SIZE = crypto_secretbox_MACBYTES; // 16
 STATIC_CONST_UNSIGNED NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
 static const byte TAG_INTERMEDIATE = crypto_secretstream_xchacha20poly1305_TAG_MESSAGE; // 0
 __attribute_maybe_unused__ static const byte TAG_LAST = crypto_secretstream_xchacha20poly1305_TAG_FINAL; // 3
-STATIC_CONST_UNSIGNED PADDING_BLOCK_SIZE = 1 << 3; // 8
+const unsigned CRYPTO_PADDING_BLOCK_SIZE = 1 << 3; // 8
 static byte PADDING_BEGIN_TAG = 0xff; // 255
 
 #pragma clang diagnostic push
@@ -437,9 +437,9 @@ static void randomPadding(byte* bytes, unsigned size) {
 
 byte* nullable cryptoAddPadding(unsigned* newSize, const byte* bytes, unsigned size) { // just like the sodium_pad() except that this implementation doesn't append new block if the $(originalSize % BLOCK_SIZE == 0)
     assert(size && size <= 0x7fffffff);
-    const div_t r = div((int) size, (int) PADDING_BLOCK_SIZE);
+    const div_t r = div((int) size, (int) CRYPTO_PADDING_BLOCK_SIZE);
 
-    *newSize = PADDING_BLOCK_SIZE * (r.quot + (r.rem > 0 ? 1 : 0));
+    *newSize = CRYPTO_PADDING_BLOCK_SIZE * (r.quot + (r.rem > 0 ? 1 : 0));
     assert(*newSize >= size);
     if (*newSize == size) return NULL;
 
@@ -452,11 +452,11 @@ byte* nullable cryptoAddPadding(unsigned* newSize, const byte* bytes, unsigned s
 }
 
 byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigned size) { // almost like sodium_unpad()
-    assert(size && size <= 0x7fffffff && size % PADDING_BLOCK_SIZE == 0);
+    assert(size && size <= 0x7fffffff && size % CRYPTO_PADDING_BLOCK_SIZE == 0);
 
     unsigned padding = 0;
     bool found = false;
-    const unsigned start = size > PADDING_BLOCK_SIZE ? size - PADDING_BLOCK_SIZE : 0;
+    const unsigned start = size > CRYPTO_PADDING_BLOCK_SIZE ? size - CRYPTO_PADDING_BLOCK_SIZE : 0;
 
     for (unsigned i = size - 1; padding++, i > start; i--)
         if (bytes[i] == PADDING_BEGIN_TAG) {

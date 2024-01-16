@@ -26,6 +26,7 @@ extern const unsigned CRYPTO_HEADER_SIZE;
 extern const unsigned CRYPTO_SIGNATURE_SIZE;
 extern const unsigned CRYPTO_STREAMS_STATES_SIZE;
 extern const unsigned CRYPTO_HASH_SIZE;
+extern const unsigned CRYPTO_PADDING_BLOCK_SIZE;
 
 struct CryptoKeys_t;
 typedef struct CryptoKeys_t CryptoKeys;
