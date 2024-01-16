@@ -25,7 +25,7 @@
 void xPrintBinaryArray(const char* name, const void* array, unsigned size) {
     printf("%s: ", name);
     for (unsigned i = 0; i < size; printf("%x ", ((const byte*) array)[i++]));
-    printf("\n");
+    printf("(%u)\n", size);
 }
 
 unsigned stackLimit(void) {

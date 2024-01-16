@@ -27,7 +27,7 @@
 #include "crypto.h"
 
 int main(void) {
-    int n = 5, d = 16, n2;
+    int n = 8, d = 16, n2;
 
     if (!n) n2 = 0;
     else n2 = n + 1;
