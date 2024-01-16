@@ -171,6 +171,8 @@ static void processReceivedMessage(void** parameters) {
     const unsigned paddedSize = encryptedSize - cryptoEncryptedSize(0);
     assert(paddedSize > 0 && paddedSize <= maxUnencryptedMessageBodySize());
 
+    SDL_Log("! %u %u", encryptedSize, paddedSize);
+
     // TODO: update users list on successful conversation setup
     // TODO: test conversation setup and file exchanging with 3 users: 2 try to setup/exchange and the 3rd one tries to interfere
 
@@ -187,6 +189,8 @@ static void processReceivedMessage(void** parameters) {
 
     const byte* finalMessage = message ? message : paddedMessage;
     const unsigned finalSize = message ? size : paddedSize;
+
+    SDL_Log("%u %.*s", finalSize, finalSize, finalMessage);
 
     DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, finalMessage, finalSize);
     assert(databaseAddMessage(dbMessage));
@@ -1107,15 +1111,18 @@ static void sendMessage(void** params) {
     assert(databaseAddMessage(dbMessage));
     databaseMessageDestroy(dbMessage);
 
+    SDL_Log("%u %.*s", size, size, text);
+
     unsigned paddedSize;
     byte* paddedText = cryptoAddPadding(&paddedSize, text, size);
 
-    unsigned encryptedSize = cryptoEncryptedSize(paddedSize);
+    const unsigned maybePaddedSize = paddedText ? paddedSize : size;
+    unsigned encryptedSize = cryptoEncryptedSize(maybePaddedSize);
     assert(encryptedSize <= NET_MAX_MESSAGE_BODY_SIZE);
 
     CryptoCoderStreams* coderStreams = databaseGetConversation(this->toUserId);
     assert(coderStreams);
-    byte* encryptedText = cryptoEncrypt(coderStreams, paddedText ? paddedText : text, size, false);
+    byte* encryptedText = cryptoEncrypt(coderStreams, paddedText ? paddedText : text, maybePaddedSize, false);
     SDL_free(paddedText);
     cryptoCoderStreamsDestroy(coderStreams);
 
