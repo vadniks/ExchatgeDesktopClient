@@ -29,6 +29,7 @@ add_compile_options("-Ofast") # -O3
 set(DEBUG false)
 if(NOT DEBUG)
     add_link_options("-s")
+else()
     add_link_options("-rdynamic") # TODO: debug only for use with backtrace_symbols()
 endif()
 

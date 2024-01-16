@@ -145,6 +145,8 @@ bool logicAutoLoggingInSupplier(void) {
     return this->autoLoggingIn;
 }
 
+static unsigned maxUnencryptedMessageBodySize(void) { return NET_MAX_MESSAGE_BODY_SIZE - cryptoEncryptedSize(0); } // 160 - 17 = 143
+
 static int findUserComparator(const unsigned* xId, const User* const* user)
 { return *xId < (*user)->id ? -1 : (*xId > (*user)->id ? 1 : 0); }
 
@@ -166,8 +168,8 @@ static void processReceivedMessage(void** parameters) {
     const User* user = findUser(fromId);
     if (!user) return; // thanks to caching messages while users information is synchronizing, losing messages here is unlikely to happen, but theoretically it is still possible - it would be an error though as the sender is required to instantiate a conversation with the recipient first and the recipient's logic won't let to do that as it would drop/ignore conversation creation requests/invites from the sender - TODO: assert(user found)?
 
-    const unsigned size = encryptedSize - cryptoEncryptedSize(0);
-    assert(size > 0 && size <= logicMaxUnencryptedMessageBodySize());
+    const unsigned paddedSize = encryptedSize - cryptoEncryptedSize(0);
+    assert(paddedSize > 0 && paddedSize <= maxUnencryptedMessageBodySize());
 
     // TODO: update users list on successful conversation setup
     // TODO: test conversation setup and file exchanging with 3 users: 2 try to setup/exchange and the 3rd one tries to interfere
@@ -175,17 +177,25 @@ static void processReceivedMessage(void** parameters) {
     CryptoCoderStreams* coderStreams = databaseGetConversation(fromId);
     if (!coderStreams) return; // TODO: assert
 
-    byte* message = cryptoDecrypt(coderStreams, encryptedMessage, encryptedSize, false);
-    assert(message); // situation: user1 updating users list & fetching messages, meanwhile user2 sends a message, so we have the following: user1 updated all needed info and didn't receive the new message from user2, user1 doesn't know that there's a new missing message on a server, then without updating messages on user1's side, user2 sends him a new message, what will happen next? - user1 receives the second new message from user2 and tries to decrypt it - it may fail due to 'ratchet' mechanism in the stream cipher. Besides, if user1 after receiving the second message will try to re-fetch messages, he won't receive the first missing message - only those after the second message
+    byte* paddedMessage = cryptoDecrypt(coderStreams, encryptedMessage, encryptedSize, false);
+    assert(paddedMessage); // situation: user1 updating users list & fetching messages, meanwhile user2 sends a paddedMessage, so we have the following: user1 updated all needed info and didn't receive the new paddedMessage from user2, user1 doesn't know that there's a new missing paddedMessage on a server, then without updating messages on user1's side, user2 sends him a new paddedMessage, what will happen next? - user1 receives the second new paddedMessage from user2 and tries to decrypt it - it may fail due to 'ratchet' mechanism in the stream cipher. Besides, if user1 after receiving the second paddedMessage will try to re-fetch messages, he won't receive the first missing paddedMessage - only those after the second paddedMessage
     cryptoCoderStreamsDestroy(coderStreams); // tested this situation ----/\ and everything works fine
-    // TODO: to avoid possibility of this problem appearing can be implemented the following mechanism: periodically check for missing messages presence (like with checking for a new message) and update if needed
+    // TODO: to avoid possibility of this problem appearing can be implemented the following mechanism: periodically check for missing messages presence (like with checking for a new paddedMessage) and update if needed
 
-    DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, (byte*) message, size);
+    unsigned size;
+    byte* message = cryptoRemovePadding(&size, paddedMessage, paddedSize);
+
+    const byte* finalMessage = message ? message : paddedMessage;
+    const unsigned finalSize = message ? size : paddedSize;
+
+    DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, finalMessage, finalSize);
     assert(databaseAddMessage(dbMessage));
     databaseMessageDestroy(dbMessage);
 
     if (fromId == this->toUserId)
-        listAddFront(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
+        listAddFront(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) finalMessage, finalSize));
+
+    SDL_free(paddedMessage);
     SDL_free(message); // TODO: limit the messages count per conversation as the encryption is safe only for $(int32.MAX) (> 2147000000) messages
 }
 
@@ -422,7 +432,7 @@ void logicOnFileChooserRequested(void) {
 static byte* nullable calculateOpenedFileChecksum(void) {
     assert(this->rwops);
 
-    const unsigned bufferSize = logicMaxUnencryptedMessageBodySize();
+    const unsigned bufferSize = maxUnencryptedMessageBodySize();
     byte buffer[bufferSize];
     SDL_memset(buffer, 0, bufferSize);
 
@@ -671,7 +681,7 @@ static void onFileExchangeInviteReceived(
 
 static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) { // TODO: notify user when a new message has been received
     assert(this && this->rwops);
-    const unsigned targetSize = logicMaxUnencryptedMessageBodySize();
+    const unsigned targetSize = maxUnencryptedMessageBodySize();
 
     byte unencryptedBuffer[targetSize];
     const unsigned actualSize = SDL_RWread(this->rwops, unencryptedBuffer, 1, targetSize);
@@ -708,7 +718,7 @@ static void nextFileChunkReceiver(
     assert(this && this->rwops);
 
     const unsigned decryptedSize = receivedBytesCount - cryptoEncryptedSize(0);
-    assert(decryptedSize && decryptedSize <= logicMaxUnencryptedMessageBodySize());
+    assert(decryptedSize && decryptedSize <= maxUnencryptedMessageBodySize());
 
     CryptoCoderStreams* coderStreams = databaseGetConversation(fromId);
     assert(coderStreams);
@@ -757,7 +767,7 @@ static void clipboardPaste(void) {
     if (!SDL_HasClipboardText()) return;
     if (!renderIsConversationShown() && !renderIsFileChooserShown()) return;
 
-    const unsigned maxSize = renderIsConversationShown() ? logicMaxUnencryptedMessageBodySize() : LOGIC_MAX_FILE_PATH_SIZE;
+    const unsigned maxSize = renderIsConversationShown() ? logicMaxMessagePlainPayloadSize() : LOGIC_MAX_FILE_PATH_SIZE;
     char* text = SDL_GetClipboardText(), * buffer = NULL;
     unsigned size;
 
@@ -820,7 +830,7 @@ static void processCredentials(void** data) {
         (byte*) password,
         NET_UNHASHED_PASSWORD_SIZE,
         NET_USERNAME_SIZE,
-        logicMaxUnencryptedMessageBodySize(),
+        logicMaxMessagePlainPayloadSize(),
         &fetchHostId
     )) { // password that's used to sign in also used to encrypt messages & other stuff in the database
         databaseClean();
@@ -1089,17 +1099,24 @@ unsigned long logicCurrentTimeMillis(void) {
 static void sendMessage(void** params) {
     assert(this && params && this->databaseInitialized);
 
-    unsigned size = *((unsigned*) params[1]), encryptedSize = cryptoEncryptedSize(size);
-    assert(size && encryptedSize <= NET_MAX_MESSAGE_BODY_SIZE);
+    const unsigned size = *((unsigned*) params[1]);
+    assert(size && size <= logicMaxMessagePlainPayloadSize());
 
     const byte* text = params[0];
     DatabaseMessage* dbMessage = databaseMessageCreate(logicCurrentTimeMillis(), this->toUserId, netCurrentUserId(), text, size);
     assert(databaseAddMessage(dbMessage));
     databaseMessageDestroy(dbMessage);
 
+    unsigned paddedSize;
+    byte* paddedText = cryptoAddPadding(&paddedSize, text, size);
+
+    unsigned encryptedSize = cryptoEncryptedSize(paddedSize);
+    assert(encryptedSize <= NET_MAX_MESSAGE_BODY_SIZE);
+
     CryptoCoderStreams* coderStreams = databaseGetConversation(this->toUserId);
     assert(coderStreams);
-    byte* encryptedText = cryptoEncrypt(coderStreams, text, size, false);
+    byte* encryptedText = cryptoEncrypt(coderStreams, paddedText ? paddedText : text, size, false);
+    SDL_free(paddedText);
     cryptoCoderStreamsDestroy(coderStreams);
 
     netSend(NET_FLAG_PROCEED, encryptedText, encryptedSize, this->toUserId);
@@ -1136,7 +1153,7 @@ void logicOnUpdateUsersListClicked(void) {
     lifecycleAsync((LifecycleAsyncActionFunction) &netFetchUsers, NULL, 0);
 }
 
-unsigned logicMaxUnencryptedMessageBodySize(void) { return NET_MAX_MESSAGE_BODY_SIZE - cryptoEncryptedSize(0); } // 160 - 17 = 143
+unsigned logicMaxMessagePlainPayloadSize(void) { return (maxUnencryptedMessageBodySize() / CRYPTO_PADDING_BLOCK_SIZE) * CRYPTO_PADDING_BLOCK_SIZE; } // integer (not fractional division) // 136
 
 static long fetchHostId(void) {
     const long dummy = (long) 0xfffffffffffffffFULL; // unsigned long long (= unsigned long)
@@ -1152,7 +1169,7 @@ static long fetchHostId(void) {
     if (!sizeMatched) return dummy;
 
     long hash = 0;
-    for (byte i = 0; i < size; hash = 63 * hash + buffer[i++]);
+    for (byte i = 0; i < size; hash ^= buffer[i++]);
     return hash;
 }
 
