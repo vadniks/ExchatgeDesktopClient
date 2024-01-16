@@ -463,7 +463,11 @@ byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigne
             found = true;
             break;
         }
-    if (!found) return NULL;
+
+    if (!found) {
+        *newSize = size;
+        return NULL;
+    }
 
     *newSize = size - padding;
     byte* new = SDL_malloc(*newSize);
