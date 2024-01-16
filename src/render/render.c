@@ -1,6 +1,6 @@
 /*
  * Exchatge - a secured realtime message exchanger (desktop client).
- * Copyright (C) 2023  Vadim Nikolaev (https://github.com/vadniks)
+ * Copyright (C) 2023-2024  Vadim Nikolaev (https://github.com/vadniks)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

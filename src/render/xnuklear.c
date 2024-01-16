@@ -11,7 +11,7 @@
 ////////////////////////////////////////////////////////
 
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Weverything"
+#pragma clang diagnostic ignored "-Weverything" // external read-only code inclusion
 
 #include "xnuklearDefs.h"
 #include <nuklear.h>
