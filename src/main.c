@@ -16,83 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define DEVELOPMENT_MODE 1 // TODO: debug
+#define DEVELOPMENT_MODE 0 // TODO: debug
 
 #if DEVELOPMENT_MODE == 1 // Designing & testing new feature
 
-#include <stdlib.h>
-#include <SDL.h>
-#include <sodium.h>
-#include "defs.h"
-#include "crypto.h"
-
 int main(void) {
-    int n = 8, d = 16, n2;
 
-    if (!n) n2 = 0;
-    else n2 = n + 1;
-
-//    if (n > 1) n2 = n - 1;
-//    else if (n == 1) n2 = 1;
-//    else n2 = 0;
-
-    div_t r = div(n2, d);
-    printf("%d %d | %d %d\n", r.quot, r.rem, /**/ d * (r.quot + (r.rem > 0 ? 1 : 0)), r.quot + 1);
-
-    unsigned char buf[n + d];
-    size_t        buf_unpadded_len = n;
-    size_t        buf_padded_len;
-    size_t        block_size = d;
-
-    SDL_Init(0);
-    SDL_memset(buf, 1, sizeof buf);
-
-    if (sodium_init() < 0) exit(1);
-
-/* round the length of the buffer to a multiple of `block_size` by appending
- * padding data and put the new, total length into `buf_padded_len` */
-    printBinaryArray(buf, n);
-    if (sodium_pad(&buf_padded_len, buf, buf_unpadded_len, block_size, sizeof buf) != 0) {
-        /* overflow! buf[] is not large enough */
-        exit(1);
-    }
-    printBinaryArray(buf, buf_padded_len);
-    printf("%zu\n", buf_padded_len);
-
-/* compute the original, unpadded length */
-    if (sodium_unpad(&buf_unpadded_len, buf, buf_padded_len, block_size) != 0) {
-        /* incorrect padding */
-        exit(1);
-    }
-    printf("%zu\n", buf_padded_len);
-
-
-
-    //
-
-
-    cryptoInit();
-
-    unsigned size = n, newSize = 0;
-    byte bytes[size];
-    SDL_memset(bytes, 1, size);
-
-    byte* new = cryptoAddPadding(&newSize, bytes, size);
-    printf("\n%u\n", newSize);
-    if (new) printBinaryArray(new, newSize); else printBinaryArray(bytes, newSize);
-
-    byte* new2 = cryptoRemovePadding(&newSize, new ? new : bytes, newSize);
-    SDL_free(new);
-
-    printf(" %u\n", newSize);
-    if (new2) printBinaryArray(new2, newSize); else printBinaryArray(bytes, newSize); // 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-    SDL_free(new2);
-
-    cryptoClean();
-
-    SDL_Quit();
-
-    return SDL_GetNumAllocations();
+    return 0;
 }
 
 #else
