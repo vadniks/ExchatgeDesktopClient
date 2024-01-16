@@ -171,8 +171,6 @@ static void processReceivedMessage(void** parameters) {
     const unsigned paddedSize = encryptedSize - cryptoEncryptedSize(0);
     assert(paddedSize > 0 && paddedSize <= maxUnencryptedMessageBodySize());
 
-    SDL_Log("! %u %u", encryptedSize, paddedSize);
-
     // TODO: update users list on successful conversation setup
     // TODO: test conversation setup and file exchanging with 3 users: 2 try to setup/exchange and the 3rd one tries to interfere
 
@@ -189,8 +187,6 @@ static void processReceivedMessage(void** parameters) {
 
     const byte* finalMessage = message ? message : paddedMessage;
     const unsigned finalSize = message ? size : paddedSize;
-
-    SDL_Log("%u %.*s", finalSize, finalSize, finalMessage);
 
     DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, finalMessage, finalSize);
     assert(databaseAddMessage(dbMessage));
@@ -1110,8 +1106,6 @@ static void sendMessage(void** params) {
     DatabaseMessage* dbMessage = databaseMessageCreate(logicCurrentTimeMillis(), this->toUserId, netCurrentUserId(), text, size);
     assert(databaseAddMessage(dbMessage));
     databaseMessageDestroy(dbMessage);
-
-    SDL_Log("%u %.*s", size, size, text);
 
     unsigned paddedSize;
     byte* paddedText = cryptoAddPadding(&paddedSize, text, size);
