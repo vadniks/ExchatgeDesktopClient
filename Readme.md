@@ -31,10 +31,6 @@ Project is created for Linux x86_64 desktop platforms (PCs).
 * Broadcasting (only one layer of encryption - between client and server, from admin to all others),
 * Instant messages delivery.
 
-## `TODO`
-* Maybe add unit tests,
-* Optimize UI for high dpi displays.
-
 ## Dependencies
 
 Client side is written entirely in C (C11, with GNU extensions).
