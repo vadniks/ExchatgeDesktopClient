@@ -155,6 +155,7 @@ THIS(
     RenderOnBroadcastMessageSendRequested onBroadcastMessageSendRequested;
     char enteredBroadcastMessageText[RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE];
     unsigned enteredBroadcastMessageTextSize;
+    bool fullyInitialized;
 )
 #pragma clang diagnostic pop
 
@@ -235,6 +236,7 @@ void renderInit(
     this->autoLoggingInSupplier = autoLoggingInSupplier;
     this->onAdminActionsPageRequested = onAdminActionsPageRequested;
     this->onBroadcastMessageSendRequested = onBroadcastMessageSendRequested;
+    this->fullyInitialized = false;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -286,30 +288,27 @@ void renderInit(
     this->colorf = (struct nk_colorf) { 0.10f, 0.18f, 0.24f, 1.00f };
 }
 
-void renderSetMaxMessageSizeAndInitConversationMessageBuffer(unsigned size) {
-    assert(this && !this->conversationMessage && size);
-    this->maxMessageSize = size;
-    this->conversationMessage = SDL_calloc(size + 1, sizeof(char));
-}
+void renderPostInit(
+    unsigned maxMessageSize,
+    bool adminMode,
+    RenderThemes theme,
+    List* usersList,
+    List* messagesList
+) {
+    assert(this && !this->fullyInitialized);
 
-void renderSetAdminMode(bool mode) {
-    assert(this);
-    this->adminMode = mode;
-}
+    {
+        assert(this && !this->conversationMessage && maxMessageSize);
+        this->maxMessageSize = maxMessageSize;
+        this->conversationMessage = SDL_calloc(maxMessageSize + 1, sizeof(char));
+    }
 
-void renderSetTheme(RenderThemes theme) {
-    assert(this);
-    !theme ? nk_set_light_theme(this->context) : nk_set_dark_theme(this->context);
-}
+    { this->adminMode = adminMode; }
+    { !theme ? nk_set_light_theme(this->context) : nk_set_dark_theme(this->context); }
+    { this->usersList = usersList; }
+    { this->conversationMessagesList = messagesList; }
 
-void renderSetUsersList(List* usersList) {
-    assert(this);
-    this->usersList = usersList;
-}
-
-void renderSetMessagesList(List* messagesList) {
-    assert(this);
-    this->conversationMessagesList = messagesList;
+    this->fullyInitialized = true;
 }
 
 void renderInputBegan(void) {
@@ -1183,6 +1182,8 @@ static void drawPage(void) {
 }
 
 void renderDraw(void) {
+    assert(this && this->fullyInitialized);
+
     SDL_SetRenderDrawColor(
         this->renderer,
         (int) this->colorf.r * 255,

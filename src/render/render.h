@@ -81,13 +81,13 @@ void renderInit(
     RenderOnBroadcastMessageSendRequested onBroadcastMessageSendRequested
 );
 
-// these must be called before first call to renderDraw() to initialize things, begin1 // TODO: unite them in one function
-void renderSetMaxMessageSizeAndInitConversationMessageBuffer(unsigned size);
-void renderSetAdminMode(bool mode);
-void renderSetTheme(RenderThemes theme);
-void renderSetUsersList(List* usersList); // <User*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
-void renderSetMessagesList(List* messagesList); // <ConversationMessage*> must be deallocated by the caller after this module gets shut down
-// end1
+void renderPostInit( // must be called before first call to renderDraw() to initialize things
+    unsigned maxMessageSize,
+    bool adminMode,
+    RenderThemes theme,
+    List* usersList, // <User*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
+    List* messagesList // <ConversationMessage*> must be deallocated by the caller after this module gets shut down
+);
 
 void renderInputBegan(void);
 void renderProcessEvent(SDL_Event* event);

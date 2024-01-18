@@ -110,11 +110,13 @@ bool lifecycleInit(void) {
         &logicOnBroadcastMessageSendRequested
     );
     logicInit();
-    renderSetMaxMessageSizeAndInitConversationMessageBuffer(logicMaxMessagePlainPayloadSize()); // TODO: unite all setters to one global setter
-    renderSetAdminMode(logicIsAdminMode());
-    renderSetTheme((RenderThemes) logicIsDarkTheme());
-    renderSetUsersList(logicUsersList());
-    renderSetMessagesList(logicMessagesList());
+    renderPostInit(
+        logicMaxMessagePlainPayloadSize(),
+        logicIsAdminMode(),
+        (RenderThemes) logicIsDarkTheme(),
+        logicUsersList(),
+        logicMessagesList()
+    );
 
     this->netUpdateThreadId = SDL_AddTimer(NET_UPDATE_PERIOD, (SDL_TimerCallback) &netUpdateLopper, NULL);
 
