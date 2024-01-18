@@ -28,7 +28,7 @@ add_compile_options("-Ofast") # -O3
 
 set(DEBUG false)
 if(NOT DEBUG)
-    add_link_options("-s")
+#    add_link_options("-s")
 else()
     add_link_options("-rdynamic") # TODO: debug only for use with backtrace_symbols()
 endif()
@@ -105,3 +105,4 @@ add_test(NAME tests1 COMMAND $<TARGET_FILE:tests> 1)
 add_test(NAME tests2 COMMAND $<TARGET_FILE:tests> 2)
 add_test(NAME tests3 COMMAND $<TARGET_FILE:tests> 3)
 add_test(NAME tests4 COMMAND $<TARGET_FILE:tests> 4)
+add_test(NAME tests5 COMMAND $<TARGET_FILE:tests> 5)

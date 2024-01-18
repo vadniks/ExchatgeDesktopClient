@@ -20,6 +20,7 @@
 #include <SDL.h>
 #include "testCollections.h"
 #include "testRender.h"
+#include "testNet.h"
 
 int main(int argc, const char* const* argv) {
     assert(argc == 2);
@@ -33,7 +34,7 @@ int main(int argc, const char* const* argv) {
 
         case 4: testRender_sdlRendererBasic(); break;
 
-//        case 5:  break;
+        case 5: testNet_packMessage(); break;
     }
 
     SDL_Quit();

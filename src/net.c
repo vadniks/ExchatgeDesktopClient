@@ -1081,5 +1081,22 @@ void netClean(void) {
 
 ///////////////////////
 
-ExposedTestNet_Message* exposedTestNet_unpackMessage(const byte* buffer) { return (ExposedTestNet_Message*) unpackMessage(buffer); }
-byte* exposedTestNet_packMessage(const ExposedTestNet_Message* msg) { return packMessage((const Message*) msg); }
+ExposedTestNet_Message* exposedTestNet_unpackMessage(const byte* buffer) {
+    return (ExposedTestNet_Message*) unpackMessage(buffer);
+}
+
+byte* exposedTestNet_packMessage(const ExposedTestNet_Message* msg) {
+    Message xMsg = {
+        msg->flag,
+        msg->timestamp,
+        msg->size,
+        msg->index,
+        msg->count,
+        msg->from,
+        msg->to,
+        {0},
+        msg->body
+    };
+    SDL_memcpy(xMsg.token, msg->token, sizeof xMsg.token);
+    return packMessage(&xMsg);
+}
