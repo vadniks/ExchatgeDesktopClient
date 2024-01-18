@@ -102,7 +102,7 @@ void testCollections_queueBasic(void) {
     assert(allocations == SDL_GetNumAllocations());
 }
 
-int testCollections_queueExtraListener(void* queue) {
+int testCollections_queueExtraManipulator(void* queue) {
     sleep(1);
     unsigned* value = SDL_malloc(sizeof *value);
     *value = 0;
@@ -120,13 +120,13 @@ void testCollections_queueExtra(void) {
     const int allocations = SDL_GetNumAllocations();
 
     Queue* queue = queueInitExtra(&SDL_free, &currentTimeMillis);
-    SDL_Thread* listener = SDL_CreateThread(&testCollections_queueExtraListener, "0", queue);
+    SDL_Thread* manipulator = SDL_CreateThread(&testCollections_queueExtraManipulator, "0", queue);
 
     unsigned* value = queueWaitAndPop(queue, 2000);
     assert(value && !*value);
     SDL_free(value);
 
-    SDL_WaitThread(listener, NULL);
+    SDL_WaitThread(manipulator, NULL);
     queueDestroy(queue);
 
     assert(allocations == SDL_GetNumAllocations());
