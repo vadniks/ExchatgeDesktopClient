@@ -97,6 +97,12 @@ STATIC_CONST_STRING BROADCAST_HINT = "All currently online users will receive th
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
+const struct nk_color
+    COLOR_GREY = {0xff, 0xff, 0xff, 0x7f},
+    COLOR_GREEN = {0, 128, 0, 255},
+    COLOR_LIGHT_GREY = {0xff, 0xff, 0xff, 0x88},
+    COLOR_RED = {0xff, 0, 0, 0xff};
+
 typedef struct {
     char text[RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE]; // TODO: rename constant
     bool error;
@@ -742,9 +748,8 @@ static void drawUserRowColumn(
 }
 
 static void drawUserRowColumnDescriptions(__attribute_maybe_unused__ const void* nullable parameter) {
-    const struct nk_color color = {0xff, 0xff, 0xff, 0x7f};
-    nk_label_colored(this->context, ID_TEXT, NK_TEXT_ALIGN_LEFT, color);
-    nk_label_colored(this->context, NAME_TEXT, NK_TEXT_ALIGN_LEFT, color);
+    nk_label_colored(this->context, ID_TEXT, NK_TEXT_ALIGN_LEFT, COLOR_GREY);
+    nk_label_colored(this->context, NAME_TEXT, NK_TEXT_ALIGN_LEFT, COLOR_GREY);
 }
 
 static void drawUserRowColumnIdAndName(const void* parameter) {
@@ -756,12 +761,7 @@ static void drawUserRowColumnIdAndName(const void* parameter) {
 static void drawUserRowColumnStatus(const void* parameter) {
     assert(parameter);
     const bool online = *((const bool*) parameter);
-
-    const struct nk_color
-        colorOffline = {0xff, 0xff, 0xff, 0x7f}, // TODO: extract colors
-        colorOnline = {0, 128, 0, 255};
-
-    nk_label_colored(this->context, online ? ONLINE : OFFLINE, NK_TEXT_ALIGN_LEFT, online ? colorOnline : colorOffline);
+    nk_label_colored(this->context, online ? ONLINE : OFFLINE, NK_TEXT_ALIGN_LEFT, online ? COLOR_GREEN : COLOR_GREY);
 }
 
 static void drawUserRowColumnActions(const void* parameter) {
@@ -935,10 +935,6 @@ static void drawConversation(void) {
     nk_layout_row_dynamic(this->context, height * (0.85f - heightCorrector), 1);
     if (!nk_group_begin(this->context, title, 0)) return;
 
-    struct nk_color
-        timestampColor = {0, 128, 0, 255},
-        fromUsernameColor = {0xff, 0xff, 0xff, 0x88};
-
     const bool aboveInitialWidth = this->width >= WINDOW_WIDTH * 2;
     const float timestampRatio = aboveInitialWidth ? 0.08f : 0.2f,
         fromRatio = aboveInitialWidth ? 0.05f : 0.1f,
@@ -955,8 +951,8 @@ static void drawConversation(void) {
             timestampRatio,
             fromRatio,
             textRatio,
-            fromUsernameColor,
-            timestampColor
+            COLOR_LIGHT_GREY,
+            COLOR_GREEN
         );
     }
 
@@ -1016,7 +1012,7 @@ static void drawFileChooser(void) {
             this->context,
             ENTER_ABSOLUTE_PATH_TO_FILE,
             NK_TEXT_ALIGN_CENTERED,
-            (struct nk_color) {0xff, 0xff, 0xff, 0x88}
+            COLOR_LIGHT_GREY
         );
         nk_spacer(this->context);
 
@@ -1025,7 +1021,7 @@ static void drawFileChooser(void) {
             this->context,
             PASTE_WITH_CTRL_V,
             NK_TEXT_ALIGN_CENTERED,
-            (struct nk_color) {0xff, 0xff, 0xff, 0x88}
+            COLOR_LIGHT_GREY
         );
         nk_spacer(this->context);
 
@@ -1108,7 +1104,7 @@ static void drawAdminActions(void) {
             } nk_layout_row_end(this->context);
 
             nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
-            nk_label_colored_wrap(this->context, BROADCAST_HINT, (struct nk_color) {0xff, 0xff, 0xff, 0x88});
+            nk_label_colored_wrap(this->context, BROADCAST_HINT, COLOR_LIGHT_GREY);
         } nk_group_end(this->context);
 
         endOfGroup:
@@ -1136,10 +1132,10 @@ static void drawErrorIfNeeded(void) {
     nk_layout_row_dynamic(this->context, 0, 1);
 
     if (this->currentSystemMessage->error) nk_label_colored(
-        this->context,
-        this->currentSystemMessage->text,
-        NK_TEXT_ALIGN_CENTERED | NK_TEXT_ALIGN_BOTTOM,
-        (struct nk_color) { 0xff, 0, 0, 0xff }
+            this->context,
+            this->currentSystemMessage->text,
+            NK_TEXT_ALIGN_CENTERED | NK_TEXT_ALIGN_BOTTOM,
+            COLOR_RED
     ); else nk_label(
         this->context,
         this->currentSystemMessage->text,
