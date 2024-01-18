@@ -20,10 +20,15 @@
 #include <SDL.h>
 #include "collections.h"
 
-int main(void) {
+int main(int argc, const char* const* argv) {
+    assert(argc == 2);
     assert(!SDL_Init(0));
 
-    testCollections_list();
+    switch (SDL_atoi(argv[1])) {
+        case 0: testCollections_listBasic(); break;
+        case 1: testCollections_listExtra(); break;
+        case 2: testCollections_queueBasic(); break;
+    }
 
     SDL_Quit();
     return EXIT_SUCCESS;

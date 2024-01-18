@@ -100,4 +100,6 @@ target_link_libraries(${LIB_TESTS} ${sdl_binaries} ${sodium_binaries} ${LIB_COLL
 
 enable_testing()
 
-add_test(NAME tests COMMAND $<TARGET_FILE:tests>)
+add_test(NAME tests0 COMMAND $<TARGET_FILE:tests> 0)
+add_test(NAME tests1 COMMAND $<TARGET_FILE:tests> 1)
+add_test(NAME tests2 COMMAND $<TARGET_FILE:tests> 2)
