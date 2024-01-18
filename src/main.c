@@ -36,11 +36,14 @@ int main(void) {
 int main(void) {
     if (!lifecycleInit()) return EXIT_FAILURE;
 
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\r\033[1;32m"
-        "_______ _     _ _______ _     _ _______ _______  ______ _______\n"
-        "|______  \\___/  |       |_____| |_____|    |    |  ____ |______\n"
-        "|______ _/   \\_ |_____  |     | |     |    |    |_____| |______\n"
-        "                   free software (GNU GPL v3)                   \033[0m"
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "\r\033[1;32m" // Figlet
+        "           _______ _     _ _______ _     _ _______ _______  ______ _______            \n"
+        "           |______  \\___/  |       |_____| |_____|    |    |  ____ |______           \n"
+        "           |______ _/   \\_ |_____  |     | |     |    |    |_____| |______           \n"
+        "Exchatge (Client) Copyright (C) 2023-2024  Vadim Nikolaev (https://github.com/vadniks)\n"
+        "                   This program comes with ABSOLUTELY NO WARRANTY;                    \n"
+        "This is free software, and you are welcome to redistribute it under certain conditions\n"
+        "\033[0m"
     );
 
     SDL_version version;
