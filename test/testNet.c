@@ -99,3 +99,5 @@ void testNet_unpackMessage(void) {
 
     assert(allocations == SDL_GetNumAllocations());
 }
+
+// TODO: what if body is null?
