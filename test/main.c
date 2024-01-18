@@ -35,6 +35,7 @@ int main(int argc, const char* const* argv) {
         case 4: testRender_sdlRendererBasic(); break;
 
         case 5: testNet_packMessage(); break;
+        case 6: testNet_unpackMessage(); break;
     }
 
     SDL_Quit();
