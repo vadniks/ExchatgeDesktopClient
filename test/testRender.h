@@ -16,26 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <assert.h>
-#include <SDL.h>
-#include "testCollections.h"
-#include "testRender.h"
+#pragma once
 
-int main(int argc, const char* const* argv) {
-    assert(argc == 2);
-    assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
-
-    switch (SDL_atoi(argv[1])) {
-        case 0: testCollections_listBasic(); break;
-        case 1: testCollections_listExtra(); break;
-        case 2: testCollections_queueBasic(); break;
-        case 3: testCollections_queueExtra(); break;
-
-        case 4: testRender_sdlRendererBasic(); break;
-
-//        case 5:  break;
-    }
-
-    SDL_Quit();
-    return EXIT_SUCCESS;
-}
+void testRender_sdlRendererBasic(void);

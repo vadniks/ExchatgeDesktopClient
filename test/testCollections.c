@@ -22,6 +22,7 @@
 #include <SDL.h>
 #include "../src/collections/list.h"
 #include "../src/collections/queue.h"
+#include "testCollections.h"
 
 static int testCollections_listBasicComparator(const unsigned* left, const unsigned** right)
 { return *left < **right ? -1 : (*left > **right ? 1 : 0); }

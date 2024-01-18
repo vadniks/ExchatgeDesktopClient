@@ -18,24 +18,28 @@
 
 #include <assert.h>
 #include <SDL.h>
-#include "testCollections.h"
 #include "testRender.h"
 
-int main(int argc, const char* const* argv) {
-    assert(argc == 2);
-    assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
+void testRender_sdlRendererBasic(void) {
+    SDL_Window* window = SDL_CreateWindow(
+        "Title",
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        160,
+        90,
+        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+    );
+    assert(window);
 
-    switch (SDL_atoi(argv[1])) {
-        case 0: testCollections_listBasic(); break;
-        case 1: testCollections_listExtra(); break;
-        case 2: testCollections_queueBasic(); break;
-        case 3: testCollections_queueExtra(); break;
+    SDL_SetHint(SDL_HINT_RENDER_LINE_METHOD, "3");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
+    SDL_SetHint(SDL_HINT_RENDER_OPENGL_SHADERS, "1");
+    SDL_SetHint(SDL_HINT_RENDER_BATCHING, "1");
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
 
-        case 4: testRender_sdlRendererBasic(); break;
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    assert(renderer);
 
-//        case 5:  break;
-    }
-
-    SDL_Quit();
-    return EXIT_SUCCESS;
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
 }
