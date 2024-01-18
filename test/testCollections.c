@@ -16,11 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
+#include <assert.h>
+#include <unistd.h>
+#include <time.h>
 #include <SDL.h>
-#include <stdio.h>
-#include "../src/defs.h"
 #include "../src/collections/list.h"
 #include "../src/collections/queue.h"
 
@@ -97,6 +96,36 @@ void testCollections_queueBasic(void) {
     }
 
     assert(!queueSize(queue));
+    queueDestroy(queue);
+
+    assert(allocations == SDL_GetNumAllocations());
+}
+
+int testCollections_queueExtraListener(void* queue) {
+    sleep(1);
+    unsigned* value = SDL_malloc(sizeof *value);
+    *value = 0;
+    queuePush(queue, value);
+    return 0;
+}
+
+static unsigned long currentTimeMillis(void) {
+    struct timespec timespec;
+    assert(!clock_gettime(CLOCK_REALTIME, &timespec));
+    return timespec.tv_sec * (unsigned) 1e3f + timespec.tv_nsec / (unsigned) 1e6f;
+}
+
+void testCollections_queueExtra(void) {
+    const int allocations = SDL_GetNumAllocations();
+
+    Queue* queue = queueInitExtra(&SDL_free, &currentTimeMillis);
+    SDL_Thread* listener = SDL_CreateThread(&testCollections_queueExtraListener, "0", queue);
+
+    unsigned* value = queueWaitAndPop(queue, 2000);
+    assert(value && !*value);
+    SDL_free(value);
+
+    SDL_WaitThread(listener, NULL);
     queueDestroy(queue);
 
     assert(allocations == SDL_GetNumAllocations());

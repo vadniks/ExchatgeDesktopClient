@@ -18,7 +18,7 @@
 
 #include <assert.h>
 #include <SDL.h>
-#include "collections.h"
+#include "testCollections.h"
 
 int main(int argc, const char* const* argv) {
     assert(argc == 2);
@@ -28,6 +28,7 @@ int main(int argc, const char* const* argv) {
         case 0: testCollections_listBasic(); break;
         case 1: testCollections_listExtra(); break;
         case 2: testCollections_queueBasic(); break;
+        case 3: testCollections_queueExtra(); break;
     }
 
     SDL_Quit();
