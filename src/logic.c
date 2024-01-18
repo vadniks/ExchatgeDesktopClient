@@ -62,6 +62,7 @@ THIS(
     void* fileHashState;
     atomic unsigned missingMessagesFetchers;
     Queue* userIdsToFetchMessagesFrom;
+    OptionsThemes theme;
 )
 #pragma clang diagnostic pop
 
@@ -106,6 +107,7 @@ void logicInit(void) {
     assert(optionsInit(NET_USERNAME_SIZE, NET_UNHASHED_PASSWORD_SIZE, &fetchHostId));
     this->adminMode = optionsIsAdmin();
     this->autoLoggingIn = optionsCredentials() != NULL;
+    this->theme = optionsTheme();
 
     lifecycleAsync((LifecycleAsyncActionFunction) &showLoginPageOrPerformAutoLoggingIn, NULL, 1000);
 }
@@ -113,6 +115,11 @@ void logicInit(void) {
 bool logicIsAdminMode(void) {
     assert(this);
     return this->adminMode;
+}
+
+bool logicIsDarkTheme(void) {
+    assert(this);
+    return this->theme;
 }
 
 void logicNetListen(void) {
@@ -1007,11 +1014,11 @@ void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVaria
     listClear(this->messagesList);
 
     switch (chooseVariant) {
-        case RENDER_START_CONVERSATION: fallthrough
-        case RENDER_CONTINUE_CONVERSATION:
-            createOrLoadConversation(id, chooseVariant == RENDER_START_CONVERSATION);
+        case RENDER_CONVERSATION_START: fallthrough
+        case RENDER_CONVERSATION_CONTINUE:
+            createOrLoadConversation(id, chooseVariant == RENDER_CONVERSATION_START);
             break;
-        case RENDER_DELETE_CONVERSATION:
+        case RENDER_CONVERSATION_DELETE:
             beginLoading();
 
             unsigned* xId = SDL_malloc(sizeof(int));

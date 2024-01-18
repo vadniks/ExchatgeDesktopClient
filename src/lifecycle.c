@@ -112,6 +112,7 @@ bool lifecycleInit(void) {
     logicInit();
     renderSetMaxMessageSizeAndInitConversationMessageBuffer(logicMaxMessagePlainPayloadSize()); // TODO: unite all setters to one global setter
     renderSetAdminMode(logicIsAdminMode());
+    renderSetTheme((RenderThemes) logicIsDarkTheme());
     renderSetUsersList(logicUsersList());
     renderSetMessagesList(logicMessagesList());
 

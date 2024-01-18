@@ -32,9 +32,9 @@ typedef void (*RenderCredentialsReceivedCallback)( // buffer is filled with rand
 );
 
 typedef enum {
-    RENDER_DELETE_CONVERSATION = -1,
-    RENDER_START_CONVERSATION = false, // 0
-    RENDER_CONTINUE_CONVERSATION = true // 1
+    RENDER_CONVERSATION_DELETE = -1,
+    RENDER_CONVERSATION_START = false, // 0
+    RENDER_CONVERSATION_CONTINUE = true // 1
 } RenderConversationChooseVariants;
 
 typedef void (*RenderCredentialsRandomFiller)(char* credentials, unsigned size); // Function that fills credentials fields with random data & doesn't deallocates them
@@ -51,6 +51,11 @@ typedef bool (*RenderAutoLoggingInSupplier)(void);
 typedef void (*RenderUserForConversationChosenCallback)(unsigned id, RenderConversationChooseVariants chooseVariant);
 typedef void (*RenderOnAdminActionsPageRequested)(bool enter); // true if the page is needed to be shown, else - to be hidden
 typedef void (*RenderOnBroadcastMessageSendRequested)(const char* text, unsigned size);
+
+typedef enum : byte {
+    RENDER_THEME_LIGHT = 0,
+    RENDER_THEME_DARK = 1
+} RenderThemes;
 
 extern const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE; // TODO: make inline all one-line functions in implementation
 
@@ -79,6 +84,7 @@ void renderInit(
 // these must be called before first call to renderDraw() to initialize things, begin1 // TODO: unite them in one function
 void renderSetMaxMessageSizeAndInitConversationMessageBuffer(unsigned size);
 void renderSetAdminMode(bool mode);
+void renderSetTheme(RenderThemes theme);
 void renderSetUsersList(List* usersList); // <User*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
 void renderSetMessagesList(List* messagesList); // <ConversationMessage*> must be deallocated by the caller after this module gets shut down
 // end1

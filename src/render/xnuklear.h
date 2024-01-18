@@ -9,3 +9,6 @@
 #ifndef STBTT_MAX_OVERSAMPLE
 #   define STBTT_MAX_OVERSAMPLE 8
 #endif
+
+void nk_set_light_theme(struct nk_context* context);
+void nk_set_dark_theme(struct nk_context* context);
