@@ -93,6 +93,8 @@ endif()
 #             <.h>
 #
 
+# CTest
+
 file(GLOB test_sources CONFIGURE_DEPENDS "test/*.c" "test/*.h" "src/defs.*" "src/crypto.*" "src/net.*")
 set(LIB_TESTS "tests")
 add_executable(${LIB_TESTS} ${test_sources})
