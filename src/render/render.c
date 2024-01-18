@@ -98,10 +98,10 @@ STATIC_CONST_STRING BROADCAST_HINT = "All currently online users will receive th
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
 const struct nk_color
-    COLOR_GREY = {0xff, 0xff, 0xff, 0x7f},
+    COLOR_LIGHT_GREY = {0xff, 0xff, 0xff, 0x7f},
     COLOR_GREEN = {0, 128, 0, 255},
-    COLOR_LIGHT_GREY = {0xff, 0xff, 0xff, 0x88},
-    COLOR_RED = {0xff, 0, 0, 0xff};
+    COLOR_RED = {0xff, 0, 0, 0xff},
+    COLOR_DARK_GREY = {0x88, 0x88, 0x88, 0xff};
 
 typedef struct {
     char text[RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE]; // TODO: rename constant
@@ -161,6 +161,7 @@ THIS(
     RenderOnBroadcastMessageSendRequested onBroadcastMessageSendRequested;
     char enteredBroadcastMessageText[RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE];
     unsigned enteredBroadcastMessageTextSize;
+    RenderThemes theme;
     bool fullyInitialized;
 )
 #pragma clang diagnostic pop
@@ -310,7 +311,12 @@ void renderPostInit(
     }
 
     { this->adminMode = adminMode; }
-    { !theme ? nk_set_light_theme(this->context) : nk_set_dark_theme(this->context); }
+
+    {
+        !theme ? nk_set_light_theme(this->context) : nk_set_dark_theme(this->context);
+        this->theme = theme;
+    }
+
     { this->usersList = usersList; }
     { this->conversationMessagesList = messagesList; }
 
@@ -602,6 +608,8 @@ static void drawInfiniteProgressBar(float height) {
     nk_label(this->context, animText, NK_TEXT_ALIGN_CENTERED);
 }
 
+static struct nk_color secondaryColor(void) { return this->theme == RENDER_THEME_LIGHT ? COLOR_DARK_GREY : COLOR_LIGHT_GREY; }
+
 static void drawSplashPage(void) {
     const float height = (float) this->height;
 
@@ -748,8 +756,8 @@ static void drawUserRowColumn(
 }
 
 static void drawUserRowColumnDescriptions(__attribute_maybe_unused__ const void* nullable parameter) {
-    nk_label_colored(this->context, ID_TEXT, NK_TEXT_ALIGN_LEFT, COLOR_GREY);
-    nk_label_colored(this->context, NAME_TEXT, NK_TEXT_ALIGN_LEFT, COLOR_GREY);
+    nk_label_colored(this->context, ID_TEXT, NK_TEXT_ALIGN_LEFT, secondaryColor());
+    nk_label_colored(this->context, NAME_TEXT, NK_TEXT_ALIGN_LEFT, secondaryColor());
 }
 
 static void drawUserRowColumnIdAndName(const void* parameter) {
@@ -761,7 +769,7 @@ static void drawUserRowColumnIdAndName(const void* parameter) {
 static void drawUserRowColumnStatus(const void* parameter) {
     assert(parameter);
     const bool online = *((const bool*) parameter);
-    nk_label_colored(this->context, online ? ONLINE : OFFLINE, NK_TEXT_ALIGN_LEFT, online ? COLOR_GREEN : COLOR_GREY);
+    nk_label_colored(this->context, online ? ONLINE : OFFLINE, NK_TEXT_ALIGN_LEFT, online ? COLOR_GREEN : secondaryColor());
 }
 
 static void drawUserRowColumnActions(const void* parameter) {
@@ -951,7 +959,7 @@ static void drawConversation(void) {
             timestampRatio,
             fromRatio,
             textRatio,
-            COLOR_LIGHT_GREY,
+            secondaryColor(),
             COLOR_GREEN
         );
     }
@@ -1012,7 +1020,7 @@ static void drawFileChooser(void) {
             this->context,
             ENTER_ABSOLUTE_PATH_TO_FILE,
             NK_TEXT_ALIGN_CENTERED,
-            COLOR_LIGHT_GREY
+            secondaryColor()
         );
         nk_spacer(this->context);
 
@@ -1021,7 +1029,7 @@ static void drawFileChooser(void) {
             this->context,
             PASTE_WITH_CTRL_V,
             NK_TEXT_ALIGN_CENTERED,
-            COLOR_LIGHT_GREY
+            secondaryColor()
         );
         nk_spacer(this->context);
 
@@ -1104,7 +1112,7 @@ static void drawAdminActions(void) {
             } nk_layout_row_end(this->context);
 
             nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
-            nk_label_colored_wrap(this->context, BROADCAST_HINT, COLOR_LIGHT_GREY);
+            nk_label_colored_wrap(this->context, BROADCAST_HINT, secondaryColor());
         } nk_group_end(this->context);
 
         endOfGroup:
