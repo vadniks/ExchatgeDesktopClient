@@ -90,3 +90,20 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
 bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, const char* filename, unsigned filenameSize); // blocks the caller thread; returns true if another user (identified by toId) accepted the invite
 bool netReplyToFileExchangeInvite(unsigned fromId, unsigned fileSize, bool accept); // blocks the caller thread; returns true on success; must be called only after an invite from this user received & processed
 void netClean(void);
+
+///////////////////////
+
+typedef struct {
+    int flag; // short service description of message
+    unsigned long timestamp; // message created at
+    unsigned size; // actual size of th payload
+    unsigned index; // message part index if the whole message cannot fit in boy
+    unsigned count; // total count of message parts
+    unsigned from; // id of the sender
+    unsigned to; // id of the receiver
+    byte token[64];
+    byte* nullable body; // payload
+} ExposedTestNet_Message;
+
+ExposedTestNet_Message* exposedTestNet_unpackMessage(const byte* buffer);
+byte* exposedTestNet_packMessage(const ExposedTestNet_Message* msg);

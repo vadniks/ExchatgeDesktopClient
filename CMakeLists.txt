@@ -92,3 +92,12 @@ endif()
 #         include
 #             <.h>
 #
+
+file(GLOB test_sources CONFIGURE_DEPENDS "test/*.c" "test/*.h" "src/defs.*" "src/crypto.*" "src/net.*")
+set(LIB_TESTS "tests")
+add_executable(${LIB_TESTS} ${test_sources})
+target_link_libraries(${LIB_TESTS} ${sdl_binaries} ${sodium_binaries} ${LIB_COLLECTIONS_NAME} ${LIB_UTILS_NAME})
+
+enable_testing()
+
+add_test(NAME tests COMMAND $<TARGET_FILE:tests>)

@@ -1078,3 +1078,8 @@ void netClean(void) {
     SDL_free(this);
     this = NULL;
 }
+
+///////////////////////
+
+ExposedTestNet_Message* exposedTestNet_unpackMessage(const byte* buffer) { return (ExposedTestNet_Message*) unpackMessage(buffer); }
+byte* exposedTestNet_packMessage(const ExposedTestNet_Message* msg) { return packMessage((const Message*) msg); }
