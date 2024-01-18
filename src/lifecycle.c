@@ -113,7 +113,7 @@ bool lifecycleInit(void) {
     renderPostInit(
         logicMaxMessagePlainPayloadSize(),
         logicIsAdminMode(),
-        (RenderThemes) logicIsDarkTheme(),
+        logicIsDarkTheme() ? RENDER_THEME_DARK : RENDER_THEME_LIGHT,
         logicUsersList(),
         logicMessagesList()
     );
