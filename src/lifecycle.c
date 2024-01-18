@@ -71,7 +71,7 @@ static void asyncActionsThreadLooper(void) {
     }
 }
 
-static unsigned netUpdateLopper(void) { // TODO: add groups and broadcast
+static unsigned netUpdateLopper(void) {
     if (this->running) {
         logicNetListen(); // gets called in another thread (not even in asyncActionsThread) so the incoming messages can be processed while sending/receiving files and/or setting up conversation
         return NET_UPDATE_PERIOD;
