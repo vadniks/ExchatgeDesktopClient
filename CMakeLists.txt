@@ -106,7 +106,7 @@ if(ENABLE_TESTS)
     enable_testing()
     add_compile_definitions(TESTING)
 
-    add_test(NAME tests0 COMMAND $<TARGET_FILE:tests> 0)
+    add_test(NAME tests0 COMMAND $<TARGET_FILE:tests> 0) # TODO: for loop - how to _concat_('test', _itoa_(i)) ?
     add_test(NAME tests1 COMMAND $<TARGET_FILE:tests> 1)
     add_test(NAME tests2 COMMAND $<TARGET_FILE:tests> 2)
     add_test(NAME tests3 COMMAND $<TARGET_FILE:tests> 3)
