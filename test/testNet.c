@@ -16,29 +16,26 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#pragma ide diagnostic ignored "misc-no-recursion"
+
 #include <assert.h>
 #include <SDL.h>
+#include <SDL_net.h>
 #include "../src/net.h"
 #include "testNet.h"
 
-void testNet_packMessage(void) {
+void testNet_basic(void) {
+    // sockets
+}
+
+void testNet_packMessage(bool first) {
     const int allocations = SDL_GetNumAllocations();
 
     const int size = 2;
     byte body[size];
     SDL_memset(body, 8, sizeof body);
 
-    ExposedTestNet_Message msg = {
-        0,
-        1,
-        size,
-        3,
-        4,
-        5,
-        6,
-        {0},
-        body
-    };
+    ExposedTestNet_Message msg = {0, 1, first ? size : 0, 3, 4, 5, 6, {0}, first ? body : NULL};
     SDL_memset(msg.token, 7, sizeof msg.token);
 
     byte* packed = exposedTestNet_packMessage(&msg);
@@ -49,24 +46,25 @@ void testNet_packMessage(void) {
 
     assert(*((int*) packed) == 0);
     assert(*(long*) (packed + 4) == 1);
-    assert(*(int*) (packed + 4 + 8) == 2);
+    assert(*(int*) (packed + 4 + 8) == (first ? 2 : 0));
     assert(*(int*) (packed + 4 * 2 + 8) == 3);
     assert(*(int*) (packed + 4 * 3 + 8) == 4);
     assert(*(int*) (packed + 4 * 4 + 8) == 5);
     assert(*(int*) (packed + 4 * 5 + 8) == 6);
     assert(!SDL_memcmp(packed + sizeof(int) * 6 + sizeof(long), msg.token, sizeof msg.token));
-    assert(!SDL_memcmp(packed + sizeof(int) * 6 + sizeof(long) + sizeof msg.token, body, sizeof body));
+    first ? assert(!SDL_memcmp(packed + sizeof(int) * 6 + sizeof(long) + sizeof msg.token, body, sizeof body)) : STUB;
 
     SDL_free(packed);
 
     assert(allocations == SDL_GetNumAllocations());
+    first ? testNet_packMessage(false) : STUB;
 }
 
-void testNet_unpackMessage(void) {
+void testNet_unpackMessage(bool first) {
     const int allocations = SDL_GetNumAllocations();
 
     const byte akaPacked[98] = { // Copy bytes from memory view of the array from the above defined function in the GDB
-        0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, first ? 0x2 : 0x0, 0x0, 0x0, 0x0,
         0x3, 0x0, 0x0, 0x0, 0x4, 0x0, 0x0, 0x0, 0x5, 0x0, 0x0, 0x0, 0x6, 0x0, 0x0, 0x0,
         0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7,
         0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7,
@@ -80,7 +78,7 @@ void testNet_unpackMessage(void) {
 
     assert(msg->flag == 0);
     assert(msg->timestamp == 1);
-    assert(msg->size == 2);
+    assert(msg->size == (first ? 2 : 0));
     assert(msg->index == 3);
     assert(msg->count == 4);
     assert(msg->from == 5);
@@ -92,12 +90,24 @@ void testNet_unpackMessage(void) {
     assert(!SDL_memcmp(msg->token, buffer, sizeof msg->token));
 
     SDL_memset(buffer, 8, msg->size);
-    assert(!SDL_memcmp(msg->body, buffer, msg->size));
+    first ? assert(!SDL_memcmp(msg->body, buffer, msg->size)) : assert(!msg->body);
 
     SDL_free(msg->body);
     SDL_free(msg);
 
     assert(allocations == SDL_GetNumAllocations());
+    first ? testNet_unpackMessage(false) : STUB;
 }
 
-// TODO: what if body is null?
+void testNet_unpackUserInfo(void) {
+    const byte akaPacked[21] = {
+        1, 0, 0,0, 1, 't', 'e', 's', 't', 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0
+    };
+
+    ExposedTestNet_UserInfo* info = exposedTestNet_unpackUserInfo(akaPacked);
+    assert(info->id == akaPacked[0]);
+    assert(info->connected == akaPacked[4]);
+    assert(!SDL_strcmp((char*) info->name, (char*) (akaPacked + 4 + 1)));
+    SDL_free(info);
+}

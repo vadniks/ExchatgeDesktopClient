@@ -22,6 +22,8 @@
 #include "testRender.h"
 #include "testNet.h"
 
+#pragma pack(true)
+
 int main(int argc, const char* const* argv) {
     assert(argc == 2);
     assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
@@ -34,8 +36,9 @@ int main(int argc, const char* const* argv) {
 
         case 4: testRender_sdlRendererBasic(); break;
 
-        case 5: testNet_packMessage(); break;
-        case 6: testNet_unpackMessage(); break;
+        case 5: testNet_packMessage(true); break;
+        case 6: testNet_unpackMessage(true); break;
+        case 7: testNet_unpackUserInfo(); break;
     }
 
     SDL_Quit();

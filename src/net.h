@@ -107,3 +107,11 @@ typedef struct {
 
 ExposedTestNet_Message* exposedTestNet_unpackMessage(const byte* buffer);
 byte* exposedTestNet_packMessage(const ExposedTestNet_Message* msg);
+
+typedef struct {
+    unsigned id;
+    bool connected;
+    byte name[16];
+} ExposedTestNet_UserInfo;
+
+ExposedTestNet_UserInfo* exposedTestNet_unpackUserInfo(const byte* bytes);

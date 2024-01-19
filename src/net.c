@@ -1114,3 +1114,15 @@ byte* exposedTestNet_packMessage(const ExposedTestNet_Message* msg) {
     SDL_memcpy(xMsg.token, msg->token, sizeof xMsg.token);
     return packMessage(&xMsg);
 }
+
+ExposedTestNet_UserInfo* exposedTestNet_unpackUserInfo(const byte* bytes) {
+    NetUserInfo* info = unpackUserInfo(bytes);
+
+    ExposedTestNet_UserInfo* xInfo = SDL_malloc(sizeof *xInfo);
+    xInfo->id = info->id;
+    xInfo->connected = info->connected;
+    SDL_memcpy(xInfo->name, info->name, sizeof xInfo->name);
+
+    SDL_free(info);
+    return xInfo;
+}

@@ -18,8 +18,11 @@
 
 #pragma once
 
-void testNet_packMessage(void);
-void testNet_unpackMessage(void);
+#include <stdbool.h>
 
-void testNet_packUserInfo(void);
+void testNet_basic(void);
+
+void testNet_packMessage(bool first);
+void testNet_unpackMessage(bool first);
+
 void testNet_unpackUserInfo(void);
