@@ -167,7 +167,7 @@ void testCrypto_padding(bool first) {
 
     const unsigned size = first ? 10 : CRYPTO_PADDING_BLOCK_SIZE * 2;
     byte original[size];
-    SDL_memset(original, 0xfe, size);
+    SDL_memset(original, 0xff, size);
 
     unsigned paddedSize;
     byte* padded = cryptoAddPadding(&paddedSize, original, size);
@@ -176,7 +176,7 @@ void testCrypto_padding(bool first) {
 
     unsigned unpaddedSize;
     byte* unpadded = cryptoRemovePadding(&unpaddedSize, first ? padded : original, paddedSize);
-    assert(first ? (bool) unpadded : !unpadded);
+    assert(first ? (bool) unpadded : !unpadded); // TODO: fails on second run (!first) if original's last $(PADDING_BLOCK_SIZE) bytes contains 0xff byte
     assert(unpaddedSize == size);
 
     if (first) assert(!SDL_memcmp(original, unpadded, size));
