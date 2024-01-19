@@ -176,7 +176,7 @@ void testCrypto_padding(bool first) {
 
     unsigned unpaddedSize;
     byte* unpadded = cryptoRemovePadding(&unpaddedSize, first ? padded : original, paddedSize);
-    assert(first ? (bool) unpadded : !unpadded); // TODO: fails on second run (!first) if original's last $(PADDING_BLOCK_SIZE) bytes contains 0xff byte
+    assert(first ? (bool) unpadded : !unpadded); // TODO: fails on second run (!first) if original's last $(PADDING_BLOCK_SIZE) bytes contains 0xff byte - same as the tag the algorithm is looking for to shrink the padding
     assert(unpaddedSize == size);
 
     if (first) assert(!SDL_memcmp(original, unpadded, size));
