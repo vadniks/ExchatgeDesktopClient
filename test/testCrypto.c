@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#pragma ide diagnostic ignored "misc-no-recursion"
+
 #include <assert.h>
 #include <SDL.h>
 #include <alloca.h>
@@ -160,26 +162,28 @@ void testCrypto_hash(void) {
     assert(allocations == SDL_GetNumAllocations());
 }
 
-void testCrypto_padding(void) {
+void testCrypto_padding(bool first) {
     const int allocations = SDL_GetNumAllocations();
 
-    const unsigned size = 10;
+    const unsigned size = first ? 10 : CRYPTO_PADDING_BLOCK_SIZE * 2;
     byte original[size];
-    SDL_memset(original, 0xff, size);
+    SDL_memset(original, 0xfe, size);
 
     unsigned paddedSize;
     byte* padded = cryptoAddPadding(&paddedSize, original, size);
-    assert(padded);
-    assert(paddedSize % CRYPTO_PADDING_BLOCK_SIZE == 0 && paddedSize > size);
+    assert(first ? (bool) padded : !padded);
+    assert(first ? paddedSize % CRYPTO_PADDING_BLOCK_SIZE == 0 && paddedSize > size : paddedSize == size);
 
     unsigned unpaddedSize;
-    byte* unpadded = cryptoRemovePadding(&unpaddedSize, padded, paddedSize);
-    assert(unpadded);
+    byte* unpadded = cryptoRemovePadding(&unpaddedSize, first ? padded : original, paddedSize);
+    assert(first ? (bool) unpadded : !unpadded);
+    assert(unpaddedSize == size);
 
-    assert(!SDL_memcmp(original, unpadded, size));
+    if (first) assert(!SDL_memcmp(original, unpadded, size));
 
     SDL_free(padded);
     SDL_free(unpadded);
 
     assert(allocations == SDL_GetNumAllocations());
+    first ? testCrypto_padding(false) : STUB;
 }
