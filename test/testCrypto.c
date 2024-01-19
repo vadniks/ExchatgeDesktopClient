@@ -138,3 +138,28 @@ void testCrypto_singleCrypt(void) {
 
     assert(allocations == SDL_GetNumAllocations());
 }
+
+void testCrypto_hash(void) {
+    const int allocations = SDL_GetNumAllocations();
+
+    const unsigned size = 1 << 10, slice = size / 8;
+    byte bytes[size];
+    cryptoFillWithRandomBytes(bytes, size);
+
+    void* state = cryptoHashMultipart(NULL, NULL, 0);
+    assert(state);
+
+    for (unsigned i = 0; i < size; i += slice)
+        assert(!cryptoHashMultipart(state, bytes + i, slice));
+
+    byte* hash = cryptoHashMultipart(state, NULL, 0);
+    assert(hash);
+
+    SDL_free(hash);
+
+    assert(allocations == SDL_GetNumAllocations());
+}
+
+void testCrypto_padding(void) {
+
+}
