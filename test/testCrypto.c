@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <SDL.h>
+#include <alloca.h>
 #include "../src/crypto.h"
 #include "testCrypto.h"
 
@@ -71,6 +72,43 @@ void testCrypto_signature(void) {
 
     assert(cryptoCheckServerSignedBytes(xSigned, xSigned + CRYPTO_SIGNATURE_SIZE, size));
     SDL_free(xSigned);
+
+    assert(allocations == SDL_GetNumAllocations());
+}
+
+void testCrypto_streamCrypt(void) {
+    const int allocations = SDL_GetNumAllocations();
+
+    byte key[CRYPTO_KEY_SIZE];
+    cryptoFillWithRandomBytes(key, CRYPTO_KEY_SIZE);
+
+    CryptoKeys* keys = alloca(CRYPTO_KEY_SIZE * 5);
+    SDL_memcpy((void*) keys + CRYPTO_KEY_SIZE * 3, key, CRYPTO_KEY_SIZE);
+    SDL_memcpy((void*) keys + CRYPTO_KEY_SIZE * 4, key, CRYPTO_KEY_SIZE);
+
+    CryptoCoderStreams* streams1 = cryptoCoderStreamsInit();
+    byte* header = cryptoCreateEncoderAsServer(keys, streams1);
+    assert(header);
+    assert(cryptoCreateDecoderStreamAsServer(keys, streams1, header));
+    SDL_free(header);
+
+    {
+        const unsigned size = 10;
+        byte original[size];
+        cryptoFillWithRandomBytes(original, size);
+
+        byte* encrypted = cryptoEncrypt(streams1, original, size, false);
+        assert(encrypted);
+
+        byte* decrypted = cryptoDecrypt(streams1, encrypted, cryptoEncryptedSize(size), false);
+        assert(decrypted);
+        SDL_free(encrypted);
+
+        assert(!SDL_memcmp(original, decrypted, size));
+        SDL_free(decrypted);
+    }
+
+    cryptoCoderStreamsDestroy(streams1);
 
     assert(allocations == SDL_GetNumAllocations());
 }

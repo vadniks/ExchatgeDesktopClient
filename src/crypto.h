@@ -54,7 +54,7 @@ byte* cryptoExportStreamsStates(const CryptoCoderStreams* coderStreams); // expo
 const byte* cryptoGenerateKeyPairAsServer(CryptoKeys* keys); // returns public key that must not be deallocated, acts as a server
 bool cryptoExchangeKeysAsServer(CryptoKeys* keys, const byte* clientPublicKey); // returns true on success
 byte* nullable cryptoCreateEncoderAsServer(const CryptoKeys* keys, CryptoCoderStreams* coderStreams); // returns encoder header on success, deallocation's needed
-bool cryptoCreateDecoderStreamAsServer(const CryptoKeys* keys, CryptoCoderStreams* coderStreams, const byte* clientStreamHeader); // returns true on success, expects client's encoderr stream header with size of HEADER_SIZE
+bool cryptoCreateDecoderStreamAsServer(const CryptoKeys* keys, CryptoCoderStreams* coderStreams, const byte* clientStreamHeader); // returns true on success, expects client's encoder stream header with size of HEADER_SIZE
 
 // shared
 unsigned cryptoEncryptedSize(unsigned unencryptedSize);
