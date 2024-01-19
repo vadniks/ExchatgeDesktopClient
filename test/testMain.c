@@ -52,6 +52,7 @@ int main(int argc, const char* const* argv) {
         case 9: testCrypto_keyExchange(); break;
         case 10: testCrypto_signature(); break;
         case 11: testCrypto_streamCrypt(); break;
+        case 12: testCrypto_singleCrypt(); break;
     }
 
     testCrypto_stop();

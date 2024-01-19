@@ -112,3 +112,29 @@ void testCrypto_streamCrypt(void) {
 
     assert(allocations == SDL_GetNumAllocations());
 }
+
+void testCrypto_singleCrypt(void) {
+    const int allocations = SDL_GetNumAllocations();
+
+    byte key[CRYPTO_KEY_SIZE];
+    cryptoFillWithRandomBytes(key, CRYPTO_KEY_SIZE);
+
+    {
+        const unsigned size = 10;
+        byte original[size];
+        cryptoFillWithRandomBytes(original, size);
+
+        byte* encrypted = cryptoEncryptSingle(key, original, size);
+        assert(encrypted);
+
+        byte* decrypted = cryptoDecryptSingle(key, encrypted, cryptoSingleEncryptedSize(size));
+        assert(decrypted);
+
+        assert(!SDL_memcmp(original, decrypted, size));
+
+        SDL_free(encrypted);
+        SDL_free(decrypted);
+    }
+
+    assert(allocations == SDL_GetNumAllocations());
+}

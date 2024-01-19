@@ -24,3 +24,4 @@ void testCrypto_stop(void);
 void testCrypto_keyExchange(void);
 void testCrypto_signature(void);
 void testCrypto_streamCrypt(void);
+void testCrypto_singleCrypt(void);
