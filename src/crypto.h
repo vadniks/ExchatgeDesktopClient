@@ -78,5 +78,9 @@ void cryptoClean(void); // deinitialize the module
 
 //////////////////////
 
+#ifdef TESTING
+
 const byte* exposedTestCrypto_sharedEncryptionKey(const CryptoKeys* keys);
 const byte* exposedTestCrypto_sharedDecryptionKey(const CryptoKeys* keys);
+
+#endif

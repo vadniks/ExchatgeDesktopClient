@@ -26,6 +26,10 @@
 
 #pragma pack(true)
 
+#ifndef TESTING
+#   error "Enable in buildscript"
+#endif
+
 int main(int argc, const char* const* argv) {
     staticAssert(__LINUX__ == 1);
     assert(argc == 2);

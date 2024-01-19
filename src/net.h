@@ -93,6 +93,8 @@ void netClean(void);
 
 ///////////////////////
 
+#ifdef TESTING
+
 typedef struct {
     int flag; // short service description of message
     unsigned long timestamp; // message created at
@@ -115,3 +117,5 @@ typedef struct {
 } ExposedTestNet_UserInfo;
 
 ExposedTestNet_UserInfo* exposedTestNet_unpackUserInfo(const byte* bytes);
+
+#endif

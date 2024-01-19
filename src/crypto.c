@@ -489,5 +489,9 @@ void cryptoClean(void) {
 
 //////////////////////
 
+#ifdef TESTING
+
 const byte* exposedTestCrypto_sharedEncryptionKey(const CryptoKeys* keys) { return keys->clientKey; }
 const byte* exposedTestCrypto_sharedDecryptionKey(const CryptoKeys* keys) { return keys->serverKey; }
+
+#endif

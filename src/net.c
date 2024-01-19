@@ -1081,6 +1081,8 @@ void netClean(void) {
 
 ///////////////////////
 
+#ifdef TESTING
+
 ExposedTestNet_Message* exposedTestNet_unpackMessage(const byte* buffer) {
     Message* msg = unpackMessage(buffer);
 
@@ -1126,3 +1128,5 @@ ExposedTestNet_UserInfo* exposedTestNet_unpackUserInfo(const byte* bytes) {
     SDL_free(info);
     return xInfo;
 }
+
+#endif
