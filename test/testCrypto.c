@@ -161,5 +161,25 @@ void testCrypto_hash(void) {
 }
 
 void testCrypto_padding(void) {
+    const int allocations = SDL_GetNumAllocations();
 
+    const unsigned size = 10;
+    byte original[size];
+    SDL_memset(original, 0xff, size);
+
+    unsigned paddedSize;
+    byte* padded = cryptoAddPadding(&paddedSize, original, size);
+    assert(padded);
+    assert(paddedSize % CRYPTO_PADDING_BLOCK_SIZE == 0 && paddedSize > size);
+
+    unsigned unpaddedSize;
+    byte* unpadded = cryptoRemovePadding(&unpaddedSize, padded, paddedSize);
+    assert(unpadded);
+
+    assert(!SDL_memcmp(original, unpadded, size));
+
+    SDL_free(padded);
+    SDL_free(unpadded);
+
+    assert(allocations == SDL_GetNumAllocations());
 }
