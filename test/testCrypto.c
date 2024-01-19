@@ -50,3 +50,27 @@ void testCrypto_keyExchange(void) {
 
     assert(allocations == SDL_GetNumAllocations());
 }
+
+void testCrypto_signature(void) {
+    const int allocations = SDL_GetNumAllocations();
+
+    byte* publicSignKey = SDL_malloc(CRYPTO_KEY_SIZE);
+    byte* secretSignKey = SDL_malloc(EXPOSED_TEST_CRYPTO_SIGN_SECRET_KEY_SIZE);
+    exposedTestCrypto_makeSignKeys(publicSignKey, secretSignKey);
+
+    cryptoSetServerSignPublicKey(publicSignKey, CRYPTO_KEY_SIZE);
+    SDL_free(publicSignKey);
+
+    const unsigned size = 10;
+    byte bytes[size];
+    cryptoFillWithRandomBytes(bytes, size);
+
+    byte* xSigned = exposedTestCrypto_sign(bytes, size, secretSignKey);
+    assert(xSigned);
+    SDL_free(secretSignKey);
+
+    assert(cryptoCheckServerSignedBytes(xSigned, xSigned + CRYPTO_SIGNATURE_SIZE, size));
+    SDL_free(xSigned);
+
+    assert(allocations == SDL_GetNumAllocations());
+}

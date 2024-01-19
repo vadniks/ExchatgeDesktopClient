@@ -28,6 +28,8 @@ staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SESSIONKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_secretstream_xchacha20poly1305_KEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_generichash_BYTES == crypto_secretbox_KEYBYTES);
+staticAssert(crypto_sign_PUBLICKEYBYTES == crypto_kx_PUBLICKEYBYTES);
+staticAssert(crypto_sign_SECRETKEYBYTES == crypto_sign_BYTES);
 staticAssert(crypto_secretbox_KEYBYTES == 32);
 staticAssert(crypto_sign_BYTES == 64);
 
@@ -493,5 +495,20 @@ void cryptoClean(void) {
 
 const byte* exposedTestCrypto_sharedEncryptionKey(const CryptoKeys* keys) { return keys->clientKey; }
 const byte* exposedTestCrypto_sharedDecryptionKey(const CryptoKeys* keys) { return keys->serverKey; }
+
+void exposedTestCrypto_makeSignKeys(byte* publicKey, byte* secretKey) {
+    assert(this);
+    assert(!crypto_sign_keypair(publicKey, secretKey));
+}
+
+byte* exposedTestCrypto_sign(const byte* bytes, unsigned size, const byte* signSecretKey) {
+    assert(this && size);
+
+    byte* xSigned = SDL_malloc(CRYPTO_SIGNATURE_SIZE + size);
+    unsigned long long signedSize;
+    assert(!crypto_sign(xSigned, &signedSize, bytes, size, signSecretKey));
+
+    return xSigned;
+}
 
 #endif

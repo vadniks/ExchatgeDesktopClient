@@ -50,6 +50,7 @@ int main(int argc, const char* const* argv) {
         case 8: testNet_unpackUserInfo(); break;
 
         case 9: testCrypto_keyExchange(); break;
+        case 10: testCrypto_signature(); break;
     }
 
     testCrypto_stop();

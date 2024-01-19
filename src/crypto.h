@@ -80,7 +80,11 @@ void cryptoClean(void); // deinitialize the module
 
 #ifdef TESTING
 
+#define EXPOSED_TEST_CRYPTO_SIGN_SECRET_KEY_SIZE 64
+
 const byte* exposedTestCrypto_sharedEncryptionKey(const CryptoKeys* keys);
 const byte* exposedTestCrypto_sharedDecryptionKey(const CryptoKeys* keys);
+void exposedTestCrypto_makeSignKeys(byte* publicKey, byte* secretKey);
+byte* exposedTestCrypto_sign(const byte* bytes, unsigned size, const byte* signSecretKey);
 
 #endif
