@@ -51,7 +51,7 @@ void cryptoSetUpAutonomous(CryptoCoderStreams* coderStreams, const byte* key, co
 byte* cryptoExportStreamsStates(const CryptoCoderStreams* coderStreams); // exports encryption/decryption streams states in a byte array form with size of STREAMS_STATES_SIZE which requires freeing
 
 // as 'server', kinda ('cause sodium has ..._client_... & ..._server_..., using only client api won't work - tested)
-const byte* cryptoGenerateKeyPairAsServer(CryptoKeys* keys); // returns public key that must be deallocated, acts as a server
+const byte* cryptoGenerateKeyPairAsServer(CryptoKeys* keys); // returns public key that must not be deallocated, acts as a server
 bool cryptoExchangeKeysAsServer(CryptoKeys* keys, const byte* clientPublicKey); // returns true on success
 byte* nullable cryptoCreateEncoderAsServer(const CryptoKeys* keys, CryptoCoderStreams* coderStreams); // returns encoder header on success, deallocation's needed
 bool cryptoCreateDecoderStreamAsServer(const CryptoKeys* keys, CryptoCoderStreams* coderStreams, const byte* clientStreamHeader); // returns true on success, expects client's encoderr stream header with size of HEADER_SIZE
@@ -75,3 +75,8 @@ byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigne
 void cryptoKeysDestroy(CryptoKeys* keys); // fills the memory region, occupied by the object, with random data and then frees that area
 void cryptoCoderStreamsDestroy(CryptoCoderStreams* coderStreams);
 void cryptoClean(void); // deinitialize the module
+
+//////////////////////
+
+const byte* exposedTestCrypto_sharedEncryptionKey(const CryptoKeys* keys);
+const byte* exposedTestCrypto_sharedDecryptionKey(const CryptoKeys* keys);

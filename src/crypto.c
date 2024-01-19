@@ -21,6 +21,8 @@
 #include <assert.h>
 #include "crypto.h"
 
+#pragma pack(true)
+
 staticAssert(crypto_kx_PUBLICKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SECRETKEYBYTES == crypto_secretbox_KEYBYTES);
 staticAssert(crypto_kx_SESSIONKEYBYTES == crypto_secretbox_KEYBYTES);
@@ -484,3 +486,8 @@ void cryptoClean(void) {
     SDL_free(this);
     this = NULL;
 }
+
+//////////////////////
+
+const byte* exposedTestCrypto_sharedEncryptionKey(const CryptoKeys* keys) { return keys->clientKey; }
+const byte* exposedTestCrypto_sharedDecryptionKey(const CryptoKeys* keys) { return keys->serverKey; }

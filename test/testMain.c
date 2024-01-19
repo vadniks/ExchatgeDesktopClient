@@ -18,15 +18,19 @@
 
 #include <assert.h>
 #include <SDL.h>
+#include "../src/defs.h"
 #include "testCollections.h"
 #include "testRender.h"
 #include "testNet.h"
+#include "testCrypto.h"
 
 #pragma pack(true)
 
 int main(int argc, const char* const* argv) {
+    staticAssert(__LINUX__ == 1);
     assert(argc == 2);
     assert(!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER));
+    testCrypto_start();
 
     switch (SDL_atoi(argv[1])) {
         case 0: testCollections_listBasic(); break;
@@ -40,8 +44,11 @@ int main(int argc, const char* const* argv) {
         case 6: testNet_packMessage(true); break;
         case 7: testNet_unpackMessage(true); break;
         case 8: testNet_unpackUserInfo(); break;
+
+        case 9: testCrypto_keyExchange(); break;
     }
 
+    testCrypto_stop();
     SDL_Quit();
     return EXIT_SUCCESS;
 }

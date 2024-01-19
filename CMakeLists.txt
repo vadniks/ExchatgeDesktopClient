@@ -21,6 +21,7 @@ add_compile_options("-Wno-microsoft-fixed-enum")
 add_compile_options("-Wno-empty-body")
 add_compile_options("-Wno-c2x-extensions")
 add_compile_options("-Wno-gnu-empty-struct")
+add_compile_options("-Wno-gnu-pointer-arith")
 
 add_compile_options("-std=gnu11")
 
@@ -111,3 +112,4 @@ add_test(NAME tests5 COMMAND $<TARGET_FILE:tests> 5)
 add_test(NAME tests6 COMMAND $<TARGET_FILE:tests> 6)
 add_test(NAME tests7 COMMAND $<TARGET_FILE:tests> 7)
 add_test(NAME tests8 COMMAND $<TARGET_FILE:tests> 8)
+add_test(NAME tests9 COMMAND $<TARGET_FILE:tests> 9)
