@@ -21,11 +21,74 @@
 #include <assert.h>
 #include <SDL.h>
 #include <SDL_net.h>
+#include <time.h>
+#include <unistd.h>
 #include "../src/net.h"
 #include "testNet.h"
 
+static int akaServerThread(void*) {
+    IPaddress address = {INADDR_NONE, SDL_Swap16(8080)};
+    TCPsocket server = SDLNet_TCP_Open(&address);
+    assert(server);
+
+    bool clientConnected = false;
+    const time_t started = time(NULL);
+
+    while (difftime(time(NULL), started) <= 5.0) {
+        TCPsocket client = SDLNet_TCP_Accept(server);
+        if (!client) continue;
+        clientConnected = true;
+
+        const int size = 5;
+        byte buffer[size];
+
+        SDL_memset(buffer, 0, size);
+        assert(SDLNet_TCP_Recv(client, buffer, size) == size);
+        assert(!SDL_memcmp(buffer, (byte[size]) {1, 1, 1, 1, 1}, size));
+
+        SDL_memset(buffer, 2, size);
+        assert(SDLNet_TCP_Send(client, buffer, size) == size);
+
+        SDLNet_TCP_Close(client);
+        break;
+    }
+    SDLNet_TCP_Close(server);
+
+    assert(clientConnected);
+    return 0;
+}
+
 void testNet_basic(void) {
-    // sockets
+    staticAssert(BYTE_ORDER == LITTLE_ENDIAN);
+
+    const int allocations = SDL_GetNumAllocations();
+    SDLNet_Init();
+
+    SDL_Thread* akaServer = SDL_CreateThread(&akaServerThread, "0", NULL);
+    sleep(1);
+
+    {
+        IPaddress address = {SDL_Swap32(INADDR_LOOPBACK), SDL_Swap16(8080)};
+        TCPsocket socket = SDLNet_TCP_Open(&address);
+        assert(socket);
+
+        const int size = 5;
+        byte buffer[size];
+
+        SDL_memset(buffer, 1, size);
+        assert(SDLNet_TCP_Send(socket, buffer, size) == size);
+
+        SDL_memset(buffer, 0, size);
+        assert(SDLNet_TCP_Recv(socket, buffer, size) == size);
+        assert(!SDL_memcmp(buffer, (byte[size]) {2, 2, 2, 2, 2}, size));
+
+        SDLNet_TCP_Close(socket);
+    }
+
+    SDL_WaitThread(akaServer, NULL);
+
+    SDLNet_Quit();
+    assert(allocations == SDL_GetNumAllocations());
 }
 
 void testNet_packMessage(bool first) {
