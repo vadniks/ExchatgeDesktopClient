@@ -12,13 +12,20 @@ main() {
     mkdir "$extracted"
   fi
 
-  libs=$(ldd "$executable" | awk '{print $3}') # objdump -p "$executable" | grep NEEDED
+  linkedLibs=$(ldd "$executable" | awk '{print $3}')
+  neededLibs=$(objdump -p "$executable" | grep NEEDED | awk '{print $2}')
 
   index=0
   while read -r lib; do
-    if [[ $index -ne 0 ]]; then processLib "$lib"; fi
+    found=$((0))
+
+    while read -r lib2; do
+      if [[ "$lib" == *"$lib2"* ]]; then found=1; fi
+    done <<< "$neededLibs"
+
+    if [[ $index -ne 0 ]] && [[ $found -eq 1 ]]; then processLib "$lib"; fi
     ((index++))
-  done <<< "$libs"
+  done <<< "$linkedLibs"
 
   cp "$executable" "$extracted"
 }
