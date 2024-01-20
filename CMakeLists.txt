@@ -72,6 +72,10 @@ if(NOT CMAKE_C_BYTE_ORDER STREQUAL LITTLE_ENDIAN)
     message(SEND_ERROR "Target is not little endian")
 endif()
 
+if(NOT LINUX)
+    message(SEND_ERROR "Target is not linux")
+endif()
+
 #
 # libs
 #     nuklear
