@@ -61,6 +61,8 @@ int main(int argc, const char* const* argv) {
 
     ///////////////////////////////////////////////////////////
     // All the rest were tested manually (integration tests) //
+    //  Almost each feature was tested manually with mocked  //
+    //          data at a moment of its development          //
     ///////////////////////////////////////////////////////////
 
     testCrypto_stop();
