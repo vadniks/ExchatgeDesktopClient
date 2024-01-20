@@ -18,4 +18,4 @@
 
 #pragma once
 
-void testRender_sdlRendererBasic(void);
+void testRender_basic(void);

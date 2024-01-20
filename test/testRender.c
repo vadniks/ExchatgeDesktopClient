@@ -20,7 +20,7 @@
 #include <SDL.h>
 #include "testRender.h"
 
-void testRender_sdlRendererBasic(void) {
+void testRender_basic(void) {
     SDL_Window* window = SDL_CreateWindow(
         "Title",
         SDL_WINDOWPOS_CENTERED,

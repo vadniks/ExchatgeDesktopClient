@@ -42,7 +42,7 @@ int main(int argc, const char* const* argv) {
         case 2: testCollections_queueBasic(); break;
         case 3: testCollections_queueExtra(); break;
 
-        case 4: testRender_sdlRendererBasic(); break;
+        case 4: testRender_basic(); break;
 
         case 5: testNet_basic(); break;
         case 6: testNet_packMessage(true); break;
@@ -58,6 +58,10 @@ int main(int argc, const char* const* argv) {
         case 15: testCrypto_coderStreamsSerialization(); break;
         case 16: testCrypto_base64(); break;
     }
+
+    ///////////////////////////////////////////////////////////
+    // All the rest were tested manually (integration tests) //
+    ///////////////////////////////////////////////////////////
 
     testCrypto_stop();
     SDL_Quit();
