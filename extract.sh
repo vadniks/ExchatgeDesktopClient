@@ -15,7 +15,6 @@ main() {
   linkedLibs=$(ldd "$executable" | awk '{print $3}')
   neededLibs=$(objdump -p "$executable" | grep NEEDED | awk '{print $2}')
 
-  index=0
   while read -r lib; do
     found=$((0))
 
@@ -23,8 +22,7 @@ main() {
       if [[ "$lib" == *"$lib2"* ]]; then found=1; fi
     done <<< "$neededLibs"
 
-    if [[ $index -ne 0 ]] && [[ $found -eq 1 ]]; then processLib "$lib"; fi
-    ((index++))
+    if [[ $found -eq 1 ]]; then processLib "$lib"; fi
   done <<< "$linkedLibs"
 
   cp "$executable" "$extracted"

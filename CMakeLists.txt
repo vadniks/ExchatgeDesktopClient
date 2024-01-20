@@ -80,6 +80,10 @@ if(NOT CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_C_COMPILER_ID STREQUAL
     message(SEND_ERROR "GNU extensions are used")
 endif()
 
+# set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-rpath,$ORIGIN/") # no
+#set_target_properties(${PROJECT_NAME} PROPERTIES BUILD_WITH_INSTALL_RPATH true)
+#set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "./../extracted")
+
 #
 # libs
 #     nuklear
@@ -101,8 +105,6 @@ endif()
 #         include
 #             <.h>
 #
-
-# CTest
 
 set(ENABLE_TESTS true)
 if(ENABLE_TESTS)
