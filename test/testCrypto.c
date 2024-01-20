@@ -193,7 +193,7 @@ void testCrypto_padding(bool first) {
 void testCrypto_coderStreamsSerialization(void) {
     const int allocations = SDL_GetNumAllocations();
 
-    const CryptoCoderStreams* original = (CryptoCoderStreams*) (byte[EXPOSED_TEST_CRYPTO_CODER_STATES_SIZE]) {
+    const CryptoCoderStreams* original = (CryptoCoderStreams*) (byte[]) {
         0xcb, 0xaf, 0x03, 0x4e, 0xbe, 0xfc, 0x5b, 0x5f, 0x1c, 0xb0, 0x2f, 0x73, 0x45, 0x0f, 0x29, 0x17,
         0x43, 0xb7, 0x84, 0xc2, 0xcf, 0x4d, 0x59, 0x22, 0x57, 0x78, 0xb8, 0x7c, 0xf4, 0x9b, 0x9f, 0xe2,
         0x01, 0x00, 0x00, 0x00, 0x9d, 0x1a, 0x72, 0xf4, 0xdb, 0x67, 0xec, 0x0c, 0x00, 0x00, 0x00, 0x00,
@@ -205,11 +205,11 @@ void testCrypto_coderStreamsSerialization(void) {
 
     byte* serialized = cryptoExportStreamsStates(original);
 
-    CryptoCoderStreams* deserialized = SDL_malloc(EXPOSED_TEST_CRYPTO_CODER_STATES_SIZE);
+    CryptoCoderStreams* deserialized = SDL_malloc(CRYPTO_STREAMS_STATES_SIZE);
     cryptoSetUpAutonomous(deserialized, (byte[0]) {}, serialized);
     SDL_free(serialized);
 
-    assert(!SDL_memcmp(original, deserialized, EXPOSED_TEST_CRYPTO_CODER_STATES_SIZE));
+    assert(!SDL_memcmp(original, deserialized, CRYPTO_STREAMS_STATES_SIZE));
     SDL_free(deserialized);
 
     assert(allocations == SDL_GetNumAllocations());
