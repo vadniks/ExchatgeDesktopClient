@@ -72,11 +72,16 @@ Execute the following commands to download & build dependencies,
 then, to extract the executable & it's libraries, and finally, to run 
 the executable itself:
 ```shell
+# build
 chmod +x buildDependencies.sh && ./buildDependencies.sh
 mkdir build && (cd build; cmake .. && make)
+# test
 (cd build; ctest tests)
+# prepare to run
 chmod +x extract.sh && ./extract.sh
-LD_LIBRARY_PATH="$(pwd)/extracted" extracted/ExchatgeDesktopClient
+patchelf --set-rpath '$ORIGIN' extracted/ExchatgeDesktopClient
+# run
+extracted/ExchatgeDesktopClient
 ```
 
 ## Documentation
