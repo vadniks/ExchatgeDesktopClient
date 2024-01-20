@@ -47,7 +47,6 @@ STATIC_CONST_UNSIGNED NONCE_SIZE = crypto_secretbox_NONCEBYTES; // 24
 static const byte TAG_INTERMEDIATE = crypto_secretstream_xchacha20poly1305_TAG_MESSAGE; // 0
 __attribute_maybe_unused__ static const byte TAG_LAST = crypto_secretstream_xchacha20poly1305_TAG_FINAL; // 3
 const unsigned CRYPTO_PADDING_BLOCK_SIZE = 1 << 3; // 8
-static byte PADDING_BEGIN_TAG = 0xff; // 255
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection" // they're all used despite what the SAT says
@@ -434,49 +433,42 @@ static void randomiseAndFree(void* object, unsigned size) {
     SDL_free(object);
 }
 
-static void randomPadding(byte* bytes, unsigned size) {
-    assert(this);
-    for (unsigned i = 0; i < size; bytes[i++] = (byte) randombytes_uniform(PADDING_BEGIN_TAG));
-}
+byte* cryptoAddPadding(unsigned* newSize, const byte* bytes, unsigned size) {
+    assert(this && size);
 
-byte* nullable cryptoAddPadding(unsigned* newSize, const byte* bytes, unsigned size) { // just like the sodium_pad() except that this implementation doesn't append new block if the $(originalSize % BLOCK_SIZE == 0)
-    assert(size && size <= 0x7fffffff);
-    const div_t r = div((int) size, (int) CRYPTO_PADDING_BLOCK_SIZE);
-
-    *newSize = CRYPTO_PADDING_BLOCK_SIZE * (r.quot + (r.rem > 0 ? 1 : 0));
-    assert(*newSize >= size);
-    if (*newSize == size) return NULL;
-
-    byte* new = SDL_malloc(*newSize);
+    const unsigned maxSize = size + CRYPTO_PADDING_BLOCK_SIZE;
+    byte* new = SDL_malloc(maxSize);
     SDL_memcpy(new, bytes, size);
-    new[size] = PADDING_BEGIN_TAG;
-    randomPadding(new + size + 1, *newSize - size - 1);
 
+    unsigned long xNewSize; // not directly newSize as it has only 4 bytes but the function needs 8 bytes
+    assert(!sodium_pad(&xNewSize, new, size, CRYPTO_PADDING_BLOCK_SIZE, maxSize));
+    assert(xNewSize > size);
+
+    *newSize = xNewSize;
+    new = SDL_realloc(new, xNewSize);
+
+    assert(new);
     return new;
 }
 
-byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigned size) { // almost like sodium_unpad()
-    assert(size && size <= 0x7fffffff && size % CRYPTO_PADDING_BLOCK_SIZE == 0);
+byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigned size) {
+    assert(this);
+    assert(size && size % CRYPTO_PADDING_BLOCK_SIZE == 0);
 
-    unsigned padding = 0;
-    bool found = false;
-    const unsigned start = size > CRYPTO_PADDING_BLOCK_SIZE ? size - CRYPTO_PADDING_BLOCK_SIZE : 0;
+    byte* new = SDL_malloc(size);
+    SDL_memcpy(new, bytes, size);
 
-    for (unsigned i = size - 1; padding++, i > start; i--)
-        if (bytes[i] == PADDING_BEGIN_TAG) {
-            found = true;
-            break;
-        }
-
-    if (!found) {
-        *newSize = size;
+    unsigned long xNewSize; // not directly newSize as it has only 4 bytes but the function needs 8 bytes
+    if (sodium_unpad(&xNewSize, new, size, CRYPTO_PADDING_BLOCK_SIZE) != 0) {
+        SDL_free(new);
         return NULL;
     }
+    assert(xNewSize > size);
 
-    *newSize = size - padding;
-    byte* new = SDL_malloc(*newSize);
-    SDL_memcpy(new, bytes, *newSize);
+    *newSize = xNewSize;
+    new = SDL_realloc(new, xNewSize);
 
+    assert(new);
     return new;
 }
 

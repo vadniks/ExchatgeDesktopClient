@@ -191,19 +191,17 @@ static void processReceivedMessage(void** parameters) {
 
     unsigned size;
     byte* message = cryptoRemovePadding(&size, paddedMessage, paddedSize);
+    assert(message && size);
 
-    const byte* finalMessage = message ? message : paddedMessage;
-    const unsigned finalSize = message ? size : paddedSize;
-
-    DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, finalMessage, finalSize);
+    DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, message, size);
     assert(databaseAddMessage(dbMessage));
     databaseMessageDestroy(dbMessage);
 
     if (fromId == this->toUserId)
-        listAddFront(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) finalMessage, finalSize));
+        listAddFront(this->messagesList, conversationMessageCreate(timestamp, user->name, NET_USERNAME_SIZE, (const char*) message, size));
 
     SDL_free(paddedMessage);
-    SDL_free(message); // TODO: limit the messages count per conversation as the encryption is safe only for $(int32.MAX) (> 2147000000) messages
+    SDL_free(message);
 }
 
 static void onMessageReceived(unsigned long timestamp, unsigned fromId, const byte* encryptedMessage, unsigned encryptedSize) {
@@ -1117,13 +1115,12 @@ static void sendMessage(void** params) {
     unsigned paddedSize;
     byte* paddedText = cryptoAddPadding(&paddedSize, text, size);
 
-    const unsigned maybePaddedSize = paddedText ? paddedSize : size;
-    unsigned encryptedSize = cryptoEncryptedSize(maybePaddedSize);
+    unsigned encryptedSize = cryptoEncryptedSize(paddedSize);
     assert(encryptedSize <= NET_MAX_MESSAGE_BODY_SIZE);
 
     CryptoCoderStreams* coderStreams = databaseGetConversation(this->toUserId);
     assert(coderStreams);
-    byte* encryptedText = cryptoEncrypt(coderStreams, paddedText ? paddedText : text, maybePaddedSize, false);
+    byte* encryptedText = cryptoEncrypt(coderStreams, paddedText, paddedSize, false);
     SDL_free(paddedText);
     cryptoCoderStreamsDestroy(coderStreams);
 
