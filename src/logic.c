@@ -192,9 +192,6 @@ static void processReceivedMessage(void** parameters) {
     unsigned size;
     byte* message = cryptoRemovePadding(&size, paddedMessage, paddedSize);
     assert(message && size);
-//
-    SDL_Log("r %u %u", paddedSize, size);
-    printBinaryArray(message, size);
 
     DatabaseMessage* dbMessage = databaseMessageCreate(timestamp, fromId, fromId, message, size);
     assert(databaseAddMessage(dbMessage));
@@ -1120,10 +1117,6 @@ static void sendMessage(void** params) {
 
     unsigned encryptedSize = cryptoEncryptedSize(paddedSize);
     assert(encryptedSize <= NET_MAX_MESSAGE_BODY_SIZE);
-//
-    SDL_Log("s %u %u", size, paddedSize);
-    printBinaryArray(text, size);
-    printBinaryArray(paddedText, paddedSize);
 
     CryptoCoderStreams* coderStreams = databaseGetConversation(this->toUserId);
     assert(coderStreams);
