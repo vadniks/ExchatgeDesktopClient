@@ -463,7 +463,7 @@ byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigne
         SDL_free(new);
         return NULL;
     }
-    assert(xNewSize > size);
+    assert(size);
 
     *newSize = xNewSize;
     new = SDL_realloc(new, xNewSize);
