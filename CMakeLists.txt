@@ -76,6 +76,10 @@ if(NOT LINUX)
     message(SEND_ERROR "Target is not linux")
 endif()
 
+if(NOT CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    message(SEND_ERROR "GNU extensions are used")
+endif()
+
 #
 # libs
 #     nuklear
