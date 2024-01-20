@@ -31,7 +31,7 @@ set(DEBUG false)
 if(NOT DEBUG)
     add_link_options("-s")
 else()
-    add_link_options("-rdynamic") # TODO: debug only for use with backtrace_symbols()
+    add_link_options("-rdynamic") # for use with backtrace_symbols()
 endif()
 
 file(GLOB sources CONFIGURE_DEPENDS "src/*.c" "src/*.h")
