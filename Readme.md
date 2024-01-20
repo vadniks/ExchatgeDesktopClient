@@ -74,6 +74,7 @@ the executable itself:
 ```shell
 chmod +x buildDependencies.sh && ./buildDependencies.sh
 mkdir build && (cd build; cmake .. && make)
+(cd build; ctest tests)
 chmod +x extract.sh && ./extract.sh
 LD_LIBRARY_PATH="$(pwd)/extracted" extracted/ExchatgeDesktopClient
 ```
