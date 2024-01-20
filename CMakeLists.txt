@@ -106,7 +106,7 @@ endif()
 
 set(ENABLE_TESTS true)
 if(ENABLE_TESTS)
-    file(GLOB test_sources CONFIGURE_DEPENDS "test/*.c" "test/*.h" "src/defs.*" "src/crypto.*" "src/net.*")
+    file(GLOB test_sources CONFIGURE_DEPENDS "test/*" "src/defs.*" "src/crypto.*" "src/net.*")
     set(LIB_TESTS "tests")
     add_executable(${LIB_TESTS} ${test_sources})
     target_link_libraries(${LIB_TESTS} ${sdl_binaries} ${sodium_binaries} ${LIB_COLLECTIONS_NAME} ${LIB_UTILS_NAME})
