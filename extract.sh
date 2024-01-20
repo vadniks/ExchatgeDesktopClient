@@ -19,7 +19,10 @@ main() {
     found=$((0))
 
     while read -r lib2; do
-      if [[ "$lib" == *"$lib2"* ]]; then found=1; fi
+      if [[ "$lib" == *"$lib2"* ]]; then
+        found=1
+        break
+      fi
     done <<< "$neededLibs"
 
     if [[ $found -eq 1 ]]; then processLib "$lib"; fi
