@@ -187,3 +187,52 @@ void testCrypto_padding(bool first) {
     assert(allocations == SDL_GetNumAllocations());
     first ? testCrypto_padding(false) : STUB;
 }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wzero-length-array"
+void testCrypto_coderStreamsSerialization(void) {
+    const int allocations = SDL_GetNumAllocations();
+
+    const CryptoCoderStreams* original = (CryptoCoderStreams*) (byte[104]) {
+        0xcb, 0xaf, 0x03, 0x4e, 0xbe, 0xfc, 0x5b, 0x5f, 0x1c, 0xb0, 0x2f, 0x73, 0x45, 0x0f, 0x29, 0x17,
+        0x43, 0xb7, 0x84, 0xc2, 0xcf, 0x4d, 0x59, 0x22, 0x57, 0x78, 0xb8, 0x7c, 0xf4, 0x9b, 0x9f, 0xe2,
+        0x01, 0x00, 0x00, 0x00, 0x9d, 0x1a, 0x72, 0xf4, 0xdb, 0x67, 0xec, 0x0c, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0xcb, 0xaf, 0x03, 0x4e, 0xbe, 0xfc, 0x5b, 0x5f, 0x1c, 0xb0, 0x2f, 0x73,
+        0x45, 0x0f, 0x29, 0x17, 0x43, 0xb7, 0x84, 0xc2, 0xcf, 0x4d, 0x59, 0x22, 0x57, 0x78, 0xb8, 0x7c,
+        0xf4, 0x9b, 0x9f, 0xe2, 0x01, 0x00, 0x00, 0x00, 0x9d, 0x1a, 0x72, 0xf4, 0xdb, 0x67, 0xec, 0x0c,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    byte* serialized = cryptoExportStreamsStates(original);
+
+    CryptoCoderStreams* deserialized = SDL_malloc(104);
+    cryptoSetUpAutonomous(deserialized, (byte[0]) {}, serialized);
+    SDL_free(serialized);
+
+    assert(!SDL_memcmp(original, deserialized, 104));
+    SDL_free(deserialized);
+
+    assert(allocations == SDL_GetNumAllocations());
+}
+#pragma clang diagnostic pop
+
+void testCrypto_base64(void) {
+    const int allocations = SDL_GetNumAllocations();
+
+    const unsigned size = 10;
+    byte original[size];
+    cryptoFillWithRandomBytes(original, size);
+
+    char* encoded = cryptoBase64Encode(original, size);
+    unsigned encodedSize = SDL_strlen(encoded), decodedSize;
+    assert(encodedSize > size);
+
+    byte* decoded = cryptoBase64Decode(encoded, encodedSize, &decodedSize);
+    SDL_free(encoded);
+
+    assert(size == decodedSize);
+    assert(!SDL_memcmp(original, decoded, size));
+    SDL_free(decoded);
+
+    assert(allocations == SDL_GetNumAllocations());
+}

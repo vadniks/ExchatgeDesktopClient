@@ -164,7 +164,7 @@ void cryptoSetUpAutonomous(CryptoCoderStreams* coderStreams, const byte* key, co
     assert(this);
     assert(coderStreams && key);
 
-    if (!streamsStates) {
+    if (!streamsStates) { // TODO: the streamsStates parameter is never null in usages - assert(it's not null) and remove this branch
         byte header[CRYPTO_HEADER_SIZE];
         assert(!crypto_secretstream_xchacha20poly1305_init_push(&(coderStreams->clientEncryptionState), header, key));
         assert(!crypto_secretstream_xchacha20poly1305_init_pull(&(coderStreams->clientDecryptionState), header, key));

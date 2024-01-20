@@ -55,6 +55,8 @@ int main(int argc, const char* const* argv) {
         case 12: testCrypto_singleCrypt(); break;
         case 13: testCrypto_hash(); break;
         case 14: testCrypto_padding(true); break;
+        case 15: testCrypto_coderStreamsSerialization(); break;
+        case 16: testCrypto_base64(); break;
     }
 
     testCrypto_stop();

@@ -27,3 +27,5 @@ void testCrypto_streamCrypt(void);
 void testCrypto_singleCrypt(void);
 void testCrypto_hash(void);
 void testCrypto_padding(bool first);
+void testCrypto_coderStreamsSerialization(void);
+void testCrypto_base64(void);
