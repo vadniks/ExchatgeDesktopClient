@@ -1,6 +1,6 @@
 
 cmake_minimum_required(VERSION 3.20)
-set(CMAKE_C_COMPILER "/usr/bin/clang")
+set(CMAKE_C_COMPILER "/usr/bin/clang") # <-------- set compiler path or remove this line to detect automatically
 project(ExchatgeDesktopClient C)
 
 set(CMAKE_C_STANDARD 11)
