@@ -20,7 +20,6 @@
 
 #include <assert.h>
 #include <SDL.h>
-#include <alloca.h>
 #include "../src/crypto.h"
 #include "testCrypto.h"
 
@@ -84,7 +83,7 @@ void testCrypto_streamCrypt(void) {
     byte key[CRYPTO_KEY_SIZE];
     cryptoFillWithRandomBytes(key, CRYPTO_KEY_SIZE);
 
-    CryptoKeys* keys = alloca(CRYPTO_KEY_SIZE * 5);
+    CryptoKeys* keys = (void*) (byte[CRYPTO_KEY_SIZE * 5]) {};
     SDL_memcpy((void*) keys + CRYPTO_KEY_SIZE * 3, key, CRYPTO_KEY_SIZE);
     SDL_memcpy((void*) keys + CRYPTO_KEY_SIZE * 4, key, CRYPTO_KEY_SIZE);
 
