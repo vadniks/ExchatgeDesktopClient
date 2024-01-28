@@ -152,7 +152,7 @@ bool cryptoCheckServerSignedBytes(const byte* signature, const byte* unsignedByt
 
 byte* cryptoMakeKey(const byte* passwordBuffer, unsigned size) {
     assert(this);
-    assert(passwordBuffer && size >= crypto_generichash_BYTES_MIN && size <= crypto_generichash_BYTES_MAX);
+    assert(passwordBuffer && size > 0);
 
     byte* hash = SDL_malloc(CRYPTO_KEY_SIZE * sizeof(char));
     assert(!crypto_generichash(hash, CRYPTO_KEY_SIZE, passwordBuffer, size, NULL, 0));
@@ -463,7 +463,7 @@ byte* nullable cryptoRemovePadding(unsigned* newSize, const byte* bytes, unsigne
         SDL_free(new);
         return NULL;
     }
-    assert(size);
+    assert(xNewSize && xNewSize <= size);
 
     *newSize = xNewSize;
     new = SDL_realloc(new, xNewSize);
