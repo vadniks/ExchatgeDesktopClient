@@ -198,7 +198,7 @@ static inline StreamState* serverEncryptionStateAsServer(CryptoCoderStreams* cod
 const byte* cryptoGenerateKeyPairAsServer(CryptoKeys* keys) {
     assert(this);
     assert(!crypto_kx_keypair(serverPublicKeyAsServer(keys), serverSecretKeyAsServer(keys)));
-    return keys->clientPublicKey;
+    return serverPublicKeyAsServer(keys);
 }
 
 bool cryptoExchangeKeysAsServer(CryptoKeys* keys, const byte* clientPublicKey) {
