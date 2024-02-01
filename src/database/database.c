@@ -182,7 +182,7 @@ static void createMessagesTableIfNotExits(void) {
             "%s blob not null, " // text
             "%s unsigned int not null, " // size
             "primary key (%s, %s, %s), " // conversation, timestamp, from
-            "foreign key (%s) references %s(%s)" // conversation, conversations, user
+            "foreign key (%s) references %s(%s)" // conversation, conversations, user // TODO: PRAGMA foreign_keys = ON; foreign key (%s) references %s(%s) on update cascade on delete cascade
         ")",
         MESSAGES_TABLE, TIMESTAMP_COLUMN, CONVERSATION_COLUMN, FROM_COLUMN, TEXT_COLUMN, SIZE_COLUMN,
         CONVERSATION_COLUMN, TIMESTAMP_COLUMN, FROM_COLUMN, CONVERSATION_COLUMN, CONVERSATIONS_TABLE, USER_COLUMN
