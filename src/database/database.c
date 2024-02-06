@@ -128,7 +128,7 @@ static void executeSingle(
 static inline void executeSingleMinimal(const char* sql, unsigned sqlSize)
 { executeSingle(sql, sqlSize, NULL, NULL, NULL, NULL); }
 
-static void disableJournalingResultHandler(__attribute_maybe_unused__ void* _, sqlite3_stmt* statement)
+static void disableJournalingResultHandler(void*, sqlite3_stmt* statement)
 { assert(sqlite3_step(statement) == SQLITE_ROW); }
 
 static void disableJournaling(void) {
@@ -145,6 +145,26 @@ static void disableJournaling(void) {
         sql, sqlSize,
         NULL, NULL,
         &disableJournalingResultHandler, NULL
+    );
+}
+
+static void enableForeignKeysResultHandler(void*, sqlite3_stmt* statement)
+{ assert(sqlite3_step(statement) == SQLITE_ROW); }
+
+static void enableForeignKeys(void) {
+    const unsigned bufferSize = 0xff;
+    char sql[bufferSize];
+
+    const unsigned sqlSize = (unsigned) SDL_snprintf(
+        sql, bufferSize,
+        "pragma foreign_keys = on"
+    );
+    assert(sqlSize > 0 && sqlSize <= bufferSize);
+
+    executeSingle(
+        sql, sqlSize,
+        NULL, NULL,
+        &enableForeignKeysResultHandler, NULL
     );
 }
 
@@ -182,7 +202,7 @@ static void createMessagesTableIfNotExits(void) {
             "%s blob not null, " // text
             "%s unsigned int not null, " // size
             "primary key (%s, %s, %s), " // conversation, timestamp, from
-            "foreign key (%s) references %s(%s)" // conversation, conversations, user // TODO: PRAGMA foreign_keys = ON; foreign key (%s) references %s(%s) on update cascade on delete cascade
+            "foreign key (%s) references %s(%s) on update cascade on delete cascade" // conversation, conversations, user
         ")",
         MESSAGES_TABLE, TIMESTAMP_COLUMN, CONVERSATION_COLUMN, FROM_COLUMN, TEXT_COLUMN, SIZE_COLUMN,
         CONVERSATION_COLUMN, TIMESTAMP_COLUMN, FROM_COLUMN, CONVERSATION_COLUMN, CONVERSATIONS_TABLE, USER_COLUMN
@@ -236,6 +256,7 @@ static void createMessagesIndexIfNotExists(void) {
 
 static void createTablesIfNotExist(void) {
     disableJournaling();
+    enableForeignKeys();
 
     createConversationsTableIfNotExists();
     createMessagesTableIfNotExits();
