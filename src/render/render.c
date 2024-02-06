@@ -97,6 +97,8 @@ STATIC_CONST_STRING BROADCAST_HINT = "All currently online users will receive th
 
 STATIC_CONST_STRING FONT_FILE = "font.ttf"; // TODO: check file presence in runtime
 
+// TODO: UTF-8 not working (can display only ASCII) despite the library can process it
+
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
 const struct nk_color
