@@ -88,5 +88,9 @@ void nk_set_dark_theme(struct nk_context* context) {
     nk_style_from_table(context, table);
 }
 
+// https://github.com/vurtun/nuklear/wiki/UTF-8-Support
+// https://www.utf8-chartable.de/unicode-utf8-table.pl
+const nk_rune nk_font_glyph_ranges[3] = {0x0020, 0x323af, 0};
+
 //
 ///////////////////////////////////////////////////////////////////////////////

@@ -12,3 +12,5 @@
 
 void nk_set_light_theme(struct nk_context* context);
 void nk_set_dark_theme(struct nk_context* context);
+
+extern const nk_rune nk_font_glyph_ranges[];

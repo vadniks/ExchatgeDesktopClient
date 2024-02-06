@@ -97,8 +97,6 @@ STATIC_CONST_STRING BROADCAST_HINT = "All currently online users will receive th
 
 STATIC_CONST_STRING FONT_FILE = "font.ttf"; // TODO: check file presence in runtime
 
-// TODO: UTF-8 not working (can display only ASCII) despite the library can process it
-
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
 const struct nk_color
@@ -286,6 +284,9 @@ void renderInit(
     struct nk_font_config config = nk_font_config((float) FONT_SIZE);
     config.oversample_v = STBTT_MAX_OVERSAMPLE; // 8
     config.oversample_h = STBTT_MAX_OVERSAMPLE;
+    config.range = nk_font_glyph_ranges;
+
+    // TODO: nk_widget_bounds();
 
     struct nk_font_atlas* atlas = NULL;
     nk_sdl_font_stash_begin(&atlas);
