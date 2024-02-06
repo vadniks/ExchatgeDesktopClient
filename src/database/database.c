@@ -149,7 +149,7 @@ static void disableJournaling(void) {
 }
 
 static void enableForeignKeysResultHandler(void*, sqlite3_stmt* statement)
-{ assert(sqlite3_step(statement) == SQLITE_ROW); }
+{ assert(sqlite3_step(statement) == SQLITE_DONE); }
 
 static void enableForeignKeys(void) {
     const unsigned bufferSize = 0xff;
