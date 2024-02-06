@@ -660,7 +660,7 @@ static void drawLogInForm(int width, float height, bool logIn) {
     nk_label(this->context, USERNAME, NK_TEXT_ALIGN_LEFT);
     nk_edit_string(
         this->context,
-        NK_EDIT_FIELD,
+        NK_EDIT_SIMPLE,
         this->enteredCredentialsBuffer,
         (int*) &(this->enteredUsernameSize),
         (int) this->usernameSize,
@@ -670,7 +670,7 @@ static void drawLogInForm(int width, float height, bool logIn) {
     nk_label(this->context, PASSWORD, NK_TEXT_ALIGN_LEFT);
     nk_edit_string(
         this->context,
-        NK_EDIT_FIELD,
+        NK_EDIT_SIMPLE,
         this->enteredCredentialsBuffer + this->usernameSize,
         (int*) &(this->enteredPasswordSize),
         (int) this->passwordSize,
