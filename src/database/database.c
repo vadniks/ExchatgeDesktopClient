@@ -32,7 +32,6 @@ STATIC_CONST_STRING TIMESTAMP_COLUMN = "timestamp";
 STATIC_CONST_STRING CONVERSATION_COLUMN = "conversation";
 STATIC_CONST_STRING FROM_COLUMN = "\"from\""; // quotes are used 'cause it's a reserved keyword in sql
 STATIC_CONST_STRING TEXT_COLUMN = "text";
-STATIC_CONST_STRING SIZE_COLUMN = "size";
 STATIC_CONST_STRING SERVICE_TABLE = "service";
 STATIC_CONST_STRING MACHINE_ID_COLUMN = "machineId";
 
@@ -200,12 +199,11 @@ static void createMessagesTableIfNotExits(void) {
             "%s unsigned int not null, " // conversation
             "%s unsigned int not null, " // from
             "%s blob not null, " // text
-            "%s unsigned int not null, " // size
             "primary key (%s, %s, %s), " // conversation, timestamp, from
             "foreign key (%s) references %s(%s) on update cascade on delete cascade" // conversation, conversations, user
         ")",
-        MESSAGES_TABLE, TIMESTAMP_COLUMN, CONVERSATION_COLUMN, FROM_COLUMN, TEXT_COLUMN, SIZE_COLUMN,
-        CONVERSATION_COLUMN, TIMESTAMP_COLUMN, FROM_COLUMN, CONVERSATION_COLUMN, CONVERSATIONS_TABLE, USER_COLUMN
+        MESSAGES_TABLE, TIMESTAMP_COLUMN, CONVERSATION_COLUMN, FROM_COLUMN, TEXT_COLUMN, CONVERSATION_COLUMN,
+        TIMESTAMP_COLUMN, FROM_COLUMN, CONVERSATION_COLUMN, CONVERSATIONS_TABLE, USER_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
@@ -576,7 +574,6 @@ static void addMessageBinder(const void* const* parameters, sqlite3_stmt* statem
     assert(!sqlite3_bind_int(statement, 2, (int) message->conversation));
     assert(!sqlite3_bind_int(statement, 3, (int) message->from));
     assert(!sqlite3_bind_blob(statement, 4, encryptedText, cryptoSingleEncryptedSize(message->size), SQLITE_STATIC));
-    assert(!sqlite3_bind_int(statement, 5, (int) message->size));
 }
 
 bool databaseAddMessage(const DatabaseMessage* message) {
@@ -588,8 +585,8 @@ bool databaseAddMessage(const DatabaseMessage* message) {
 
     const unsigned sqlSize = (unsigned) SDL_snprintf(
         sql, bufferSize,
-        "insert into %s (%s, %s, %s, %s, %s) values (?, ?, ?, ?, ?)",
-        MESSAGES_TABLE, TIMESTAMP_COLUMN, CONVERSATION_COLUMN, FROM_COLUMN, TEXT_COLUMN, SIZE_COLUMN
+        "insert into %s (%s, %s, %s, %s) values (?, ?, ?, ?)",
+        MESSAGES_TABLE, TIMESTAMP_COLUMN, CONVERSATION_COLUMN, FROM_COLUMN, TEXT_COLUMN
     );
     assert(sqlSize > 0 && sqlSize <= bufferSize);
 
@@ -624,8 +621,8 @@ static void getMessagesResultHandler(List* messages, sqlite3_stmt* statement) { 
 
         text = cryptoDecryptSingle(this->key, encryptedText, encryptedTextSize);
         assert(text);
-        textSize = (unsigned) sqlite3_column_int(statement, 4);
-        assert(encryptedTextSize == cryptoSingleEncryptedSize(textSize) && textSize <= this->maxMessageTextSize);
+        textSize = encryptedTextSize - cryptoSingleEncryptedSize(0);
+        assert(textSize && textSize <= this->maxMessageTextSize);
 
         message = databaseMessageCreate(
             (unsigned long) sqlite3_column_int64(statement, 0),
