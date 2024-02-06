@@ -81,7 +81,7 @@ mkdir build && (cd build; cmake .. && make)
 chmod +x extract.sh && ./extract.sh
 patchelf --set-rpath '$ORIGIN' extracted/ExchatgeDesktopClient
 # run
-extracted/ExchatgeDesktopClient
+(cd extracted; ./ExchatgeDesktopClient)
 ```
 
 ## Documentation

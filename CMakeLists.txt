@@ -64,6 +64,10 @@ target_link_libraries(${PROJECT_NAME} ${LIB_UTILS_NAME})
 
 file(COPY options.txt DESTINATION ${CMAKE_BINARY_DIR})
 
+set(FONT_FILE RobotoMono-Regular_GoogleFonts_ApacheLicense2_0.ttf) # Google Fonts, Apache License 2.0
+file(COPY ${FONT_FILE} DESTINATION ${CMAKE_BINARY_DIR})
+file(RENAME ${CMAKE_BINARY_DIR}/${FONT_FILE} ${CMAKE_BINARY_DIR}/font.ttf)
+
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(SEND_ERROR "Target is not 64 bits")
 endif()

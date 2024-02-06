@@ -2,6 +2,7 @@
 
 executable="$(pwd)/build/ExchatgeDesktopClient"
 extracted="$(pwd)/extracted"
+ttf="$(pwd)/build/font.ttf"
 
 if ! [ -r "$(pwd)" ] || ! [ -w "$(pwd)" ]; then exit 1; fi
 if ! [ -x "$executable" ]; then exit 1; fi
@@ -29,6 +30,7 @@ main() {
   done <<< "$linkedLibs"
 
   cp "$executable" "$extracted"
+  cp "$ttf" "$extracted"
 }
 
 function processLib() {

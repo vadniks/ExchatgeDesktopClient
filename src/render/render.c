@@ -27,7 +27,7 @@
 
 STATIC_CONST_UNSIGNED WINDOW_WIDTH = 16 * 50;
 STATIC_CONST_UNSIGNED WINDOW_HEIGHT = 9 * 50;
-STATIC_CONST_UNSIGNED FONT_SIZE = 14;
+STATIC_CONST_UNSIGNED FONT_SIZE = 16;
 STATIC_CONST_UNSIGNED MAX_U32_DEC_DIGITS_COUNT = 10; // 0xffffffff = 4294967295, 10 digits
 STATIC_CONST_UNSIGNED MAX_U64_DEC_DIGITS_COUNT = 20; // 0xffffffffffffffff - 18446744073709551615, 20 digits
 
@@ -94,6 +94,8 @@ STATIC_CONST_STRING AUTO_LOGGING_IN = "Auto logging in";
 STATIC_CONST_STRING ADMIN_ACTIONS = "Admin actions";
 STATIC_CONST_STRING BROADCAST_MESSAGE = "Broadcast message";
 STATIC_CONST_STRING BROADCAST_HINT = "All currently online users will receive this message, no encryption will be performed";
+
+STATIC_CONST_STRING FONT_FILE = "font.ttf"; // TODO: check file presence in runtime
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -286,7 +288,7 @@ void renderInit(
     struct nk_font_atlas* atlas = NULL;
     nk_sdl_font_stash_begin(&atlas);
 
-    struct nk_font* font = nk_font_atlas_add_default(atlas, config.size * fontScale, &config);
+    struct nk_font* font = nk_font_atlas_add_from_file(atlas, FONT_FILE, config.size * fontScale, &config); // nk_font_atlas_add_default(atlas, config.size * fontScale, &config);
     nk_sdl_font_stash_end();
 
     font->handle.height /= fontScale;
