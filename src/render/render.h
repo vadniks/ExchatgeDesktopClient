@@ -20,7 +20,7 @@
 
 #include <SDL.h>
 #include <stdbool.h>
-#include "collections/list.h"
+#include "../collections/list.h"
 #include "../defs.h"
 
 typedef void (*RenderCredentialsReceivedCallback)( // buffer is filled with random bytes after callback returns
