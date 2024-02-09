@@ -763,6 +763,8 @@ void logicOnBroadcastMessageSendRequested(const char* text, unsigned size) {
     netSendBroadcast((const byte*) text, size);
 }
 
+bool logicFilePresenceChecker(const char* file) { return !access(file, F_OK | R_OK); }
+
 static void onBroadcastMessageReceived(const byte* text, unsigned size) {
     assert(this);
     renderShowSystemMessage((const char*) text, size);

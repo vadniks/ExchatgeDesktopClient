@@ -107,7 +107,8 @@ bool lifecycleInit(void) {
         &logicOnAutoLoggingInChanged,
         &logicAutoLoggingInSupplier,
         &logicOnAdminActionsPageRequested,
-        &logicOnBroadcastMessageSendRequested
+        &logicOnBroadcastMessageSendRequested,
+        &logicFilePresenceChecker
     );
     logicInit();
     renderPostInit(

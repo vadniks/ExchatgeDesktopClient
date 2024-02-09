@@ -36,6 +36,7 @@ void logicOnFileChooserRequested(void);
 void logicFileChooseResultHandler(const char* nullable filePath, unsigned size);
 void logicOnAdminActionsPageRequested(bool enter);
 void logicOnBroadcastMessageSendRequested(const char* text, unsigned size);
+bool logicFilePresenceChecker(const char* file);
 void logicProcessEvent(SDL_Event* event);
 void logicOnCredentialsReceived(const char* username, unsigned usernameSize, const char* password, unsigned passwordSize, bool logIn);
 void logicCredentialsRandomFiller(char* credentials, unsigned size);

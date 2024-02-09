@@ -95,7 +95,7 @@ STATIC_CONST_STRING ADMIN_ACTIONS = "Admin actions";
 STATIC_CONST_STRING BROADCAST_MESSAGE = "Broadcast message";
 STATIC_CONST_STRING BROADCAST_HINT = "All currently online users will receive this message, no encryption will be performed";
 
-STATIC_CONST_STRING FONT_FILE = "font.ttf"; // TODO: check file presence in runtime
+STATIC_CONST_STRING FONT_FILE = "font.ttf";
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -165,6 +165,7 @@ THIS(
     unsigned enteredBroadcastMessageTextSize;
     RenderThemes theme;
     bool fullyInitialized;
+    RenderFilePresenceChecker filePresenceChecker;
 )
 #pragma clang diagnostic pop
 
@@ -189,7 +190,8 @@ void renderInit(
     RenderOnAutoLoggingInChanged onAutoLoggingInChanged,
     RenderAutoLoggingInSupplier autoLoggingInSupplier,
     RenderOnAdminActionsPageRequested onAdminActionsPageRequested,
-    RenderOnBroadcastMessageSendRequested onBroadcastMessageSendRequested
+    RenderOnBroadcastMessageSendRequested onBroadcastMessageSendRequested,
+    RenderFilePresenceChecker filePresenceChecker
 ) {
     assert(!this);
     this = SDL_malloc(sizeof *this);
@@ -246,6 +248,7 @@ void renderInit(
     this->onAdminActionsPageRequested = onAdminActionsPageRequested;
     this->onBroadcastMessageSendRequested = onBroadcastMessageSendRequested;
     this->fullyInitialized = false;
+    this->filePresenceChecker = filePresenceChecker;
 
     this->window = SDL_CreateWindow(
         TITLE,
@@ -291,6 +294,7 @@ void renderInit(
     struct nk_font_atlas* atlas = NULL;
     nk_sdl_font_stash_begin(&atlas);
 
+    assert((*(this->filePresenceChecker))(FONT_FILE));
     struct nk_font* font = nk_font_atlas_add_from_file(atlas, FONT_FILE, config.size * fontScale, &config); // nk_font_atlas_add_default(atlas, config.size * fontScale, &config);
     nk_sdl_font_stash_end();
 

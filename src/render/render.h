@@ -51,6 +51,7 @@ typedef bool (*RenderAutoLoggingInSupplier)(void);
 typedef void (*RenderUserForConversationChosenCallback)(unsigned id, RenderConversationChooseVariants chooseVariant);
 typedef void (*RenderOnAdminActionsPageRequested)(bool enter); // true if the page is needed to be shown, else - to be hidden
 typedef void (*RenderOnBroadcastMessageSendRequested)(const char* text, unsigned size);
+typedef bool (*RenderFilePresenceChecker)(const char* file); // returns true if exists
 
 typedef enum : byte {
     RENDER_THEME_LIGHT = 0,
@@ -78,7 +79,8 @@ void renderInit(
     RenderOnAutoLoggingInChanged onAutoLoggingInChanged,
     RenderAutoLoggingInSupplier autoLoggingInSupplier,
     RenderOnAdminActionsPageRequested onAdminActionsPageRequested,
-    RenderOnBroadcastMessageSendRequested onBroadcastMessageSendRequested
+    RenderOnBroadcastMessageSendRequested onBroadcastMessageSendRequested,
+    RenderFilePresenceChecker filePresenceChecker
 );
 
 void renderPostInit( // must be called before first call to renderDraw() to initialize things
