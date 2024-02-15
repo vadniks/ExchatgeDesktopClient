@@ -403,7 +403,7 @@ static byte* packMessage(const Message* msg) {
     return buffer;
 }
 
-static void processErrors(const Message* message) { // TODO: send operation flag in error message's payload instead of remembering the last operation's flag
+static void processErrors(const Message* message) {
     assert(message->size == INT_SIZE && message->body);
     switch (*((int*) message->body)) {
         case FLAG_LOG_IN:
@@ -589,7 +589,9 @@ static Message* nullable receive(void) {
     byte buffer[size];
     if (!receivePart(buffer, size)) return NULL;
 
-    byte* decrypted = cryptoDecrypt(this->connectionCoderStreams, buffer, size, false);
+    RW_MUTEX_WRITE_LOCKED(this->rwMutex,
+        byte* decrypted = cryptoDecrypt(this->connectionCoderStreams, buffer, size, false);
+    )
     assert(decrypted);
 
     Message* message = unpackMessage(decrypted);
@@ -641,7 +643,9 @@ bool netSend(int flag, const byte* nullable body, unsigned size, unsigned xTo) {
         {0},
         size ? (byte*) body : NULL
     };
-    SDL_memcpy(&(message.token), this->token, TOKEN_SIZE);
+    RW_MUTEX_READ_LOCKED(this->rwMutex,
+        SDL_memcpy(&(message.token), this->token, TOKEN_SIZE);
+    )
 
     const unsigned packedSize = wholeMessageBytesSize(size);
 
@@ -654,7 +658,7 @@ bool netSend(int flag, const byte* nullable body, unsigned size, unsigned xTo) {
     );
     SDL_free(packedMessage);
 
-    if (!encryptedMessage) return false;
+    assert(encryptedMessage);
     const unsigned encryptedSize = cryptoEncryptedSize(packedSize);
     assert(encryptedSize <= cryptoEncryptedSize(MAX_MESSAGE_SIZE));
 
