@@ -51,7 +51,7 @@ STATIC_CONST_UNSIGNED TOKEN_SIZE = TOKEN_UNSIGNED_VALUE_SIZE + 40 + TOKEN_TRAILI
 STATIC_CONST_UNSIGNED MESSAGE_HEAD_SIZE = INT_SIZE * 6 + LONG_SIZE + TOKEN_SIZE; // 96
 const unsigned NET_MAX_MESSAGE_BODY_SIZE = MAX_MESSAGE_SIZE - MESSAGE_HEAD_SIZE; // 160
 
-STATIC_CONST_UNSIGNED long TIMEOUT = 5000; // in milliseconds
+STATIC_CONST_UNSIGNED long TIMEOUT = 15000; // in milliseconds
 
 typedef enum : int {
     FLAG_PROCEED = 0x00000000,
@@ -549,7 +549,7 @@ static void processMessage(const Message* message) {
         case FLAG_PROCEED:
             assert(message->body && message->size);
             if (!this->fetchingUsers && !this->fetchingMessages && !this->ignoreUsualMessages) // messages from other users can be lost here, but as we now have a re-fetching messages mechanism, this is no longer a problem
-                (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size);
+                (*(this->onMessageReceived))(message->timestamp, message->from, message->body, message->size); // TODO: update users list gets updated and re-fetch messages right after setup (after successful calls to createConversation and replyToConversationSetupInvite)
             break;
         case FLAG_FETCH_MESSAGES:
             onNextMessageFetched(message);

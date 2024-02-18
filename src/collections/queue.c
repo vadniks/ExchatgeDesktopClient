@@ -87,8 +87,8 @@ void* nullable queueWaitAndPop(Queue* queue, int timeout) {
     const unsigned long startMillis = (*(queue->currentTimeMillisGetter))();
 
     while (timeout >= 0 ? !queue->destroyed && (*(queue->currentTimeMillisGetter))() - startMillis < (unsigned long) timeout : true)
-        if (queueSize(queue))
-            return queuePop(queue);
+        if (queueSize(queue)) // TODO: add mutex lock here
+            return queuePop(queue); // TODO: assert not null
 
     return NULL;
 }
