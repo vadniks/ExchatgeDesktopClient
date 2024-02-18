@@ -50,7 +50,8 @@ Client side uses the following libraries:
 
 ## The project is currently in development stage
 
-[The server](https://github.com/vadniks/ExchatgeServer)
+[The server](https://github.com/vadniks/ExchatgeServer) \
+[Android client](https://github.com/vadniks/ExchatgeAndroidClient)
 
 ## Screenshots
 
