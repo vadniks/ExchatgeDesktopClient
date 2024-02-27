@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+/*
+ * Exchatge - a secured realtime message exchanger (desktop client).
+ * Copyright (C) 2023-2024  Vadim Nikolaev (https://github.com/vadniks)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+-->
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="200"
+    height="200"
+    viewBox="0 0 512 512">
+    <path
+        d="m256,18.52c-131.72,0 -238.71,89.2 -238.71,199.08 0,109.89 106.99,193.57 238.71,198.66 28.11,30.01 24.37,53.25 113.75,68.05C349.11,464.86 322.7,448.81 327.11,409.49 423.95,385.83 494.71,307.64 494.71,217.61 494.71,106.44 387.73,18.52 256,18.52Z"
+        stroke-width="5.22"
+        fill="#0cbd66"
+        stroke="#0af020"/>
+    <path
+        d="M156.99,291.23L58.05,291.23L58.05,124.63h98.93v36.17h-53.9v26.13h49.93v36.17h-49.93v31.5h53.9zM210.89,225.43 L171.45,162.2h50.63l19.6,36.17 20.07,-36.17h50.63l-40.37,63.23 42,65.8h-50.63l-21.7,-39.2 -21.7,39.2h-50.63zM371.89,159.87q13.53,0 21.7,5.37 8.4,5.13 13.53,12.83h0.93l3.27,-15.87h38.5v129.27q0,27.3 -17.03,41.53 -16.8,14.23 -51.8,14.23 -15.63,0 -27.53,-1.63 -11.9,-1.63 -22.87,-5.83v-37.1q11.67,4.9 22.17,7.23 10.5,2.57 25.67,2.57 26.83,0 26.83,-19.13v-2.33q0,-6.77 1.4,-16.1h-1.4q-4.43,7.7 -12.6,13.3 -8.17,5.37 -21.47,5.37 -20.53,0 -33.37,-17.03 -12.83,-17.03 -12.83,-49.7 0,-32.67 13.07,-49.7 13.07,-17.27 33.83,-17.27zM388.69,194.4q-18.43,0 -18.43,33.13 0,16.8 4.67,24.27 4.67,7.23 14.47,7.23 10.97,0 15.17,-6.77 4.2,-7 4.2,-20.77v-5.37q0,-15.17 -4.2,-23.33 -3.97,-8.4 -15.87,-8.4z"
+        stroke-width="5.22"
+        fill="#0af020"/>
+    <path
+        d="M162.04,299.8L63.1,299.8L63.1,133.2h98.93v36.17h-53.9v26.13h49.93v36.17h-49.93v31.5h53.9zM215.94,234 L176.5,170.76h50.63l19.6,36.17 20.07,-36.17h50.63l-40.37,63.23 42,65.8h-50.63l-21.7,-39.2 -21.7,39.2h-50.63zM376.94,168.43q13.53,0 21.7,5.37 8.4,5.13 13.53,12.83h0.93l3.27,-15.87h38.5v129.27q0,27.3 -17.03,41.53 -16.8,14.23 -51.8,14.23 -15.63,0 -27.53,-1.63 -11.9,-1.63 -22.87,-5.83v-37.1q11.67,4.9 22.17,7.23 10.5,2.57 25.67,2.57 26.83,0 26.83,-19.13v-2.33q0,-6.77 1.4,-16.1h-1.4q-4.43,7.7 -12.6,13.3 -8.17,5.37 -21.47,5.37 -20.53,0 -33.37,-17.03 -12.83,-17.03 -12.83,-49.7 0,-32.67 13.07,-49.7 13.07,-17.27 33.83,-17.27zM393.74,202.96q-18.43,0 -18.43,33.13 0,16.8 4.67,24.27 4.67,7.23 14.47,7.23 10.97,0 15.17,-6.77 4.2,-7 4.2,-20.77v-5.37q0,-15.17 -4.2,-23.33 -3.97,-8.4 -15.87,-8.4z"
+        stroke-width="5.22"
+        fill="#8edf96"/>
+</svg>

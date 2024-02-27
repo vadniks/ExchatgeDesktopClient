@@ -7,6 +7,8 @@ _______ _     _ _______ _     _ _______ _______  ______ _______
 |______ _/   \_ |_____  |     | |     |    |    |_____| |______
 ```
 
+![Icon](exchatgeIcon.svg "Icon")
+
 The purpose of this project is to easily exchange messages 
 via binary protocol using an encrypted communication channel 
 in the realtime. Each client-to-server connection is encrypted, 
