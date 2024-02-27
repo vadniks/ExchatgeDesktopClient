@@ -410,9 +410,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
 
         assert(databaseAddConversation(xFromId, coderStreams, logicCurrentTimeMillis())),
         cryptoCoderStreamsDestroy(coderStreams),
-
-        tryLoadPreviousMessages(xFromId),
-        renderShowConversation(user->name);
+        logicOnUpdateUsersListClicked();
     else
         renderShowUnableToCreateConversation();
 
@@ -932,20 +930,17 @@ void logicOnLoginRegisterPageQueriedByUser(bool logIn) {
 
 static void startConversation(void** parameters) {
     unsigned* id = parameters[0];
-    const User* user = parameters[1];
-
     assert(this && this->databaseInitialized);
 
     if (databaseConversationExists(*id))
         renderShowConversationAlreadyExists();
     else {
         CryptoCoderStreams* coderStreams = NULL;
+
         if ((coderStreams = netCreateConversation(*id))) // blocks the thread until either an error has happened or the conversation has been created
             assert(databaseAddConversation(*id, coderStreams, logicCurrentTimeMillis())),
             cryptoCoderStreamsDestroy(coderStreams),
-
-            tryLoadPreviousMessages(*id),
-            renderShowConversation(user->name);
+            logicOnUpdateUsersListClicked();
         else
             renderShowUnableToCreateConversation();
     }
