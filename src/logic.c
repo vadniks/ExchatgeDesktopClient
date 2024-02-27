@@ -388,6 +388,8 @@ static void tryLoadPreviousMessages(unsigned id) {
     listDestroy(messages);
 }
 
+static inline void updateUsersList(void) { logicOnUpdateUsersListClicked(); }
+
 static void replyToConversationSetUpInvite(unsigned* fromId) {
     assert(this && fromId);
     unsigned xFromId = *fromId;
@@ -409,7 +411,7 @@ static void replyToConversationSetUpInvite(unsigned* fromId) {
 
         assert(databaseAddConversation(xFromId, coderStreams, logicCurrentTimeMillis())),
         cryptoCoderStreamsDestroy(coderStreams),
-        logicOnUpdateUsersListClicked();
+        updateUsersList();
     else
         renderShowUnableToCreateConversation();
 
@@ -939,7 +941,7 @@ static void startConversation(void** parameters) {
         if ((coderStreams = netCreateConversation(*id))) // blocks the thread until either an error has happened or the conversation has been created
             assert(databaseAddConversation(*id, coderStreams, logicCurrentTimeMillis())),
             cryptoCoderStreamsDestroy(coderStreams),
-            logicOnUpdateUsersListClicked();
+            updateUsersList();
         else
             renderShowUnableToCreateConversation();
     }
@@ -998,7 +1000,7 @@ static void deleteConversation(unsigned* id) {
     SDL_free(id);
 
     finishLoading();
-    logicOnUpdateUsersListClicked();
+    updateUsersList();
 }
 
 void logicOnUserForConversationChosen(unsigned id, RenderConversationChooseVariants chooseVariant) {
