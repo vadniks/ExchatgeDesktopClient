@@ -3,6 +3,7 @@
 executable="$(pwd)/build/ExchatgeDesktopClient"
 extracted="$(pwd)/extracted"
 ttf="$(pwd)/build/font.ttf"
+bmp="$(pwd)/build/icon.bmp"
 
 if ! [ -r "$(pwd)" ] || ! [ -w "$(pwd)" ]; then exit 1; fi
 if ! [ -x "$executable" ]; then exit 1; fi
@@ -31,6 +32,7 @@ main() {
 
   cp "$executable" "$extracted"
   cp "$ttf" "$extracted"
+  cp "$bmp" "$extracted"
 }
 
 function processLib() {
