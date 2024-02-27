@@ -96,6 +96,7 @@ STATIC_CONST_STRING BROADCAST_MESSAGE = "Broadcast message";
 STATIC_CONST_STRING BROADCAST_HINT = "All currently online users will receive this message, no encryption will be performed";
 
 STATIC_CONST_STRING FONT_FILE = "font.ttf";
+STATIC_CONST_STRING ICON_FILE = "icon.bmp"; // 'cause SDL can process only bmp (bitmap), for other formats are needed
 
 const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
 
@@ -302,6 +303,10 @@ void renderInit(
     nk_style_set_font(this->context, &(font->handle));
 
     this->colorf = (struct nk_colorf) { 0.10f, 0.18f, 0.24f, 1.00f };
+
+    SDL_Surface* surface = SDL_LoadBMP(ICON_FILE);
+    SDL_SetWindowIcon(this->window, surface);
+    SDL_FreeSurface(surface);
 }
 
 void renderPostInit(
