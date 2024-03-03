@@ -1154,10 +1154,10 @@ static void drawErrorIfNeeded(void) {
     nk_layout_row_dynamic(this->context, 0, 1);
 
     if (this->currentSystemMessage->error) nk_label_colored(
-            this->context,
-            this->currentSystemMessage->text,
-            NK_TEXT_ALIGN_CENTERED | NK_TEXT_ALIGN_BOTTOM,
-            COLOR_RED
+        this->context,
+        this->currentSystemMessage->text,
+        NK_TEXT_ALIGN_CENTERED | NK_TEXT_ALIGN_BOTTOM,
+        COLOR_RED
     ); else nk_label(
         this->context,
         this->currentSystemMessage->text,
