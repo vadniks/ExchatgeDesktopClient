@@ -828,9 +828,11 @@ CryptoCoderStreams* nullable netCreateConversation(unsigned id) { // TODO: start
         return NULL;
     }
 
+    const unsigned encryptedHeaderSize = cryptoSingleEncryptedSize(CRYPTO_HEADER_SIZE);
+
     if (!(message = queueWaitAndPop(this->conversationSetupMessages, (int) TIMEOUT))
         || message->flag != FLAG_EXCHANGE_HEADERS
-        || message->size != CRYPTO_HEADER_SIZE
+        || message->size != encryptedHeaderSize
         || !message->body)
     {
         finishSettingUpConversation();
@@ -839,22 +841,35 @@ CryptoCoderStreams* nullable netCreateConversation(unsigned id) { // TODO: start
         return NULL;
     }
 
-    byte akaServerStreamHeader[CRYPTO_HEADER_SIZE];
-    SDL_memcpy(akaServerStreamHeader, message->body, CRYPTO_HEADER_SIZE);
+    byte akaEncryptedServerStreamHeader[encryptedHeaderSize];
+    SDL_memcpy(akaEncryptedServerStreamHeader, message->body, encryptedHeaderSize);
     destroyMessage(message);
+
+    byte* akaServerStreamHeader = cryptoDecryptSingle(cryptoServerKey(keys), akaEncryptedServerStreamHeader, encryptedHeaderSize);
+    if (!akaServerStreamHeader) {
+        finishSettingUpConversation();
+        cryptoKeysDestroy(keys);
+        return NULL;
+    }
 
     CryptoCoderStreams* coderStreams = cryptoCoderStreamsInit();
     byte* akaClientStreamHeader = cryptoInitializeCoderStreams(keys, coderStreams, akaServerStreamHeader);
-    cryptoKeysDestroy(keys);
+    SDL_free(akaServerStreamHeader);
 
     if (!akaClientStreamHeader) {
         finishSettingUpConversation();
         cryptoCoderStreamsDestroy(coderStreams);
+        cryptoKeysDestroy(keys);
         return NULL;
     }
 
-    const bool result = netSend(FLAG_EXCHANGE_HEADERS_DONE, akaClientStreamHeader, CRYPTO_HEADER_SIZE, id);
+    byte* akaEncryptedClientStreamHeader = cryptoEncryptSingle(cryptoClientKey(keys), akaClientStreamHeader, CRYPTO_HEADER_SIZE);
+    assert(akaEncryptedClientStreamHeader);
+    cryptoKeysDestroy(keys);
     SDL_free(akaClientStreamHeader);
+
+    const bool result = netSend(FLAG_EXCHANGE_HEADERS_DONE, akaEncryptedClientStreamHeader, encryptedHeaderSize, id);
+    SDL_free(akaEncryptedClientStreamHeader);
     finishSettingUpConversation();
 
     if (!result) {
@@ -924,8 +939,14 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
         return NULL;
     }
 
-    const bool result = netSend(FLAG_EXCHANGE_HEADERS, akaServerStreamHeader, CRYPTO_HEADER_SIZE, fromId);
+    const unsigned encryptedHeaderSize = cryptoSingleEncryptedSize(CRYPTO_HEADER_SIZE);
+
+    byte* akaEncryptedServerStreamHeader = cryptoEncryptSingle(cryptoServerKey(keys), akaServerStreamHeader, CRYPTO_HEADER_SIZE);
+    assert(akaEncryptedServerStreamHeader);
     SDL_free(akaServerStreamHeader);
+
+    const bool result = netSend(FLAG_EXCHANGE_HEADERS, akaEncryptedServerStreamHeader, encryptedHeaderSize, fromId);
+    SDL_free(akaEncryptedServerStreamHeader);
 
     if (!result) {
         finishSettingUpConversation();
@@ -936,7 +957,7 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
 
     if (!(message = queueWaitAndPop(this->conversationSetupMessages, (int) TIMEOUT))
         || message->flag != FLAG_EXCHANGE_HEADERS_DONE
-        || message->size != CRYPTO_HEADER_SIZE
+        || message->size != encryptedHeaderSize
         || !message->body)
     {
         finishSettingUpConversation();
@@ -946,14 +967,22 @@ CryptoCoderStreams* nullable netReplyToConversationSetUpInvite(bool accept, unsi
         return NULL;
     }
 
-    byte akaClientStreamHeader[CRYPTO_HEADER_SIZE];
-    SDL_memcpy(akaClientStreamHeader, message->body, CRYPTO_HEADER_SIZE);
+    byte akaEncryptedClientStreamHeader[encryptedHeaderSize];
+    SDL_memcpy(akaEncryptedClientStreamHeader, message->body, encryptedHeaderSize);
     destroyMessage(message);
 
     finishSettingUpConversation();
 
+    byte* akaClientStreamHeader = cryptoDecryptSingle(cryptoClientKey(keys), akaEncryptedClientStreamHeader, encryptedHeaderSize);
+    if (!akaClientStreamHeader) {
+        cryptoKeysDestroy(keys);
+        cryptoCoderStreamsDestroy(coderStreams);
+        return NULL;
+    }
+
     const bool decoderCreated = cryptoCreateDecoderStreamAsServer(keys, coderStreams, akaClientStreamHeader);
     cryptoKeysDestroy(keys);
+    SDL_free(akaClientStreamHeader);
 
     if (!decoderCreated) {
         cryptoCoderStreamsDestroy(coderStreams);
