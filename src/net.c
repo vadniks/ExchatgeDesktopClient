@@ -185,9 +185,7 @@ static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned 
     byte serverSignedPublicKey[signedPublicKeySize];
     const byte* serverKeyStart = serverSignedPublicKey + CRYPTO_SIGNATURE_SIZE;
 
-    // TODO: add timeout to server too
     if (!waitForReceiveWithTimeout()) return;
-
     if (SDLNet_TCP_Recv(
         this->socket,
         serverSignedPublicKey,
