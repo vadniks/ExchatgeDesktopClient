@@ -207,32 +207,40 @@ static void initiateSecuredConnection(const byte* serverSignPublicKey, unsigned 
     ) != (int) CRYPTO_KEY_SIZE) return;
     this->state = STATE_CLIENT_PUBLIC_KEY_SENT;
 
-    const unsigned serverSignedCoderHeaderSize = CRYPTO_SIGNATURE_SIZE + CRYPTO_HEADER_SIZE;
-    byte serverSignedCoderHeader[serverSignedCoderHeaderSize];
-    const byte* serverCoderHeaderStart = serverSignedCoderHeader + CRYPTO_SIGNATURE_SIZE;
+    const unsigned encryptedCoderHeaderSize = cryptoSingleEncryptedSize(CRYPTO_HEADER_SIZE);
+    byte encryptedServerCoderHeader[encryptedCoderHeaderSize];
 
     if (!waitForReceiveWithTimeout()) return;
     if (SDLNet_TCP_Recv(
         this->socket,
-        serverSignedCoderHeader,
-        (int) serverSignedCoderHeaderSize
-    ) != (int) serverSignedCoderHeaderSize) return;
-
-    assert(cryptoCheckServerSignedBytes(serverSignedCoderHeader, serverCoderHeaderStart, CRYPTO_HEADER_SIZE));
+        encryptedServerCoderHeader,
+        (int) encryptedCoderHeaderSize
+    ) != (int) encryptedCoderHeaderSize) return;
     this->state = STATE_SERVER_CODER_HEADER_RECEIVED;
+
+    byte* serverCoderHeader = cryptoDecryptSingle(
+        cryptoServerKey(connectionKeys),
+        encryptedServerCoderHeader,
+        encryptedCoderHeaderSize
+    );
+    if (!serverCoderHeader) return;
 
     byte* clientCoderHeader = cryptoInitializeCoderStreams(
         connectionKeys,
         this->connectionCoderStreams,
-        serverCoderHeaderStart
+        serverCoderHeader
     );
+    SDL_free(serverCoderHeader);
 
-    if (clientCoderHeader) {
-        if (SDLNet_TCP_Send(this->socket, clientCoderHeader, (int) CRYPTO_HEADER_SIZE) == (int) CRYPTO_HEADER_SIZE)
-            this->state = STATE_CLIENT_CODER_HEADER_SENT;
-    }
-
+    if (!clientCoderHeader) return;
+    byte* encryptedClientCoderHeader = cryptoEncryptSingle(cryptoClientKey(connectionKeys), clientCoderHeader, CRYPTO_HEADER_SIZE);
+    assert(encryptedClientCoderHeader);
     SDL_free(clientCoderHeader);
+
+    if (SDLNet_TCP_Send(this->socket, encryptedClientCoderHeader, (int) encryptedCoderHeaderSize) == (int) encryptedCoderHeaderSize)
+        this->state = STATE_CLIENT_CODER_HEADER_SENT;
+
+    SDL_free(encryptedClientCoderHeader);
 }
 
 static void destroyMessage(Message* nullable msg) {

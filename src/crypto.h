@@ -59,6 +59,8 @@ bool cryptoCreateDecoderStreamAsServer(const CryptoKeys* keys, CryptoCoderStream
 // shared
 unsigned cryptoEncryptedSize(unsigned unencryptedSize);
 const byte* cryptoClientPublicKey(const CryptoKeys* keys);
+const byte* cryptoServerKey(const CryptoKeys* keys);
+const byte* cryptoClientKey(const CryptoKeys* keys);
 byte* nullable cryptoEncrypt(CryptoCoderStreams* coderStreams, const byte* bytes, unsigned bytesSize, bool server); // returns encryptedSize()-sized encrypted bytes
 byte* nullable cryptoDecrypt(CryptoCoderStreams* coderStreams, const byte* bytes, unsigned bytesSize, bool server); // consumes what is returned by encrypt
 void cryptoFillWithRandomBytes(byte* filled, unsigned size);

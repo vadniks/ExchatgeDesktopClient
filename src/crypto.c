@@ -249,6 +249,16 @@ const byte* cryptoClientPublicKey(const CryptoKeys* keys) {
     return keys->clientPublicKey;
 }
 
+const byte* cryptoServerKey(const CryptoKeys* keys) {
+    assert(keys);
+    return keys->serverKey;
+}
+
+const byte* cryptoClientKey(const CryptoKeys* keys) {
+    assert(keys);
+    return keys->clientKey;
+}
+
 byte* nullable cryptoEncrypt(CryptoCoderStreams* coderStreams, const byte* bytes, unsigned bytesSize, bool server) {
     assert(this);
     assert(coderStreams && bytes && bytesSize > 0);
