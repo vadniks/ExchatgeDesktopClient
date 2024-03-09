@@ -20,10 +20,95 @@
 
 #if DEVELOPMENT_MODE == 1 // Designing & testing new feature
 
-int main(void) {
+#include <assert.h>
+#include <SDL.h>
+#include <sodium.h>
+#include "defs.h"
+#include "crypto.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-auto-type"
+int main(void) {
+    SDL_Init(0);
+    assert(sodium_init() >= 0);
+
+    {
+        auto_type original = (const byte*) "Hello World!";
+        auto_type originalSize = SDL_strlen((char*) original);
+        auto_type encryptedSize = crypto_box_SEALBYTES + originalSize;
+
+        const auto_type pkSize = crypto_box_PUBLICKEYBYTES;
+        staticAssert(pkSize == crypto_box_SECRETKEYBYTES);
+
+        byte publicKey[pkSize], secretKey[pkSize];
+        assert(!crypto_box_keypair(publicKey, secretKey));
+
+        byte encrypted[encryptedSize];
+        assert(!crypto_box_seal(encrypted, original, originalSize, publicKey));
+
+        byte decrypted[originalSize];
+        assert(!crypto_box_seal_open(decrypted, encrypted, encryptedSize, publicKey, secretKey));
+        assert(!SDL_memcmp(original, decrypted, originalSize));
+    }
+
+    {
+        const unsigned keySize = crypto_secretbox_KEYBYTES;
+        staticAssert(keySize == crypto_kdf_KEYBYTES);
+        byte masterKey[keySize], key0[keySize], key1[keySize], key2[keySize];
+        crypto_kdf_keygen(masterKey);
+
+        assert(!crypto_kdf_blake2b_derive_from_key(key0, keySize, 0, "0", masterKey));
+        assert(!crypto_kdf_blake2b_derive_from_key(key1, keySize, 1, "1", masterKey));
+        assert(!crypto_kdf_blake2b_derive_from_key(key2, keySize, 2, "2", masterKey));
+
+        printBinaryArray(masterKey, keySize);
+        printBinaryArray(key0, keySize);
+        printBinaryArray(key1, keySize);
+        printBinaryArray(key2, keySize);
+
+        const unsigned nonceSize = crypto_secretbox_NONCEBYTES;
+        byte nonce0[nonceSize], nonce1[nonceSize], nonce2[nonceSize];
+        randombytes_buf(nonce0, nonceSize);
+
+        SDL_memcpy(nonce1, nonce0, nonceSize);
+        sodium_increment(nonce1, nonceSize);
+
+        SDL_memcpy(nonce2, nonce1, nonceSize);
+        sodium_increment(nonce2, nonceSize);
+
+        printBinaryArray(nonce0, nonceSize);
+        printBinaryArray(nonce1, nonceSize);
+        printBinaryArray(nonce2, nonceSize);
+
+        const unsigned messageSize = 10;
+        byte message0[messageSize], message1[messageSize], message2[messageSize];
+        randombytes_buf(message0, messageSize);
+        randombytes_buf(message1, messageSize);
+        randombytes_buf(message2, messageSize);
+
+        const unsigned encryptedSize = crypto_secretbox_MACBYTES + messageSize;
+        byte encrypted[encryptedSize];
+
+        assert(!crypto_secretbox_easy(encrypted, message0, messageSize, nonce0, key0));
+        sodium_increment(nonce0, nonceSize);
+
+//        assert(!crypto_secretbox_easy(encrypted, message1, messageSize, nonce1, key1));
+//        sodium_increment(nonce1, nonceSize);
+//
+//        assert(!crypto_secretbox_easy(encrypted, message2, messageSize, nonce2, key2));
+//        sodium_increment(nonce2, nonceSize);
+
+        byte decrypted[messageSize];
+
+        sodium_sub(nonce0, (byte[keySize]) {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, keySize); // *
+        assert(!crypto_secretbox_open_easy(decrypted, encrypted, encryptedSize, nonce0, key0));
+        assert(!SDL_memcmp(message0, decrypted, messageSize));
+    }
+
+    SDL_Quit();
     return 0;
 }
+#pragma clang diagnostic pop
 
 #else
 
