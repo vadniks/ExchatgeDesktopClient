@@ -31,7 +31,8 @@ Project is created for Linux x86_64 desktop platforms (PCs).
 * Multiple active simultaneous connections,
 * Digital signatures checking between clients and server,
 * Broadcasting (only one layer of encryption - between client and server, from admin to all others),
-* Instant messages delivery.
+* Instant messages delivery,
+* Different languages support.
 
 ## Dependencies
 
