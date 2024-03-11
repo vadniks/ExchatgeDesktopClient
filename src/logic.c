@@ -138,6 +138,11 @@ List* logicMessagesList(void) {
     return this->messagesList;
 }
 
+byte logicLanguage(void) {
+    assert(this);
+    return optionsLanguage();
+}
+
 void logicOnAutoLoggingInChanged(bool value) {
     assert(this);
 

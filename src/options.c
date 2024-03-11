@@ -30,6 +30,7 @@ STATIC_CONST_STRING HOST_OPTION = "host";
 STATIC_CONST_STRING PORT_OPTION = "port";
 STATIC_CONST_STRING SSPK_OPTION = "sspk";
 STATIC_CONST_STRING THEME_OPTION = "theme";
+STATIC_CONST_STRING LANGUAGE_OPTION = "language";
 STATIC_CONST_STRING CREDENTIALS_OPTION = "credentials";
 
 #pragma clang diagnostic push
@@ -41,6 +42,7 @@ THIS(
     byte* serverSignPublicKey;
     unsigned serverSignPublicKeySize;
     OptionsThemes theme;
+    OptionsLanguages language;
     unsigned usernameSize;
     unsigned passwordSize;
     char* credentials;
@@ -129,6 +131,12 @@ static void parseThemeOption(const char* line) {
     assert(this->theme == OPTIONS_THEME_LIGHT || this->theme == OPTIONS_THEME_DARK);
 }
 
+static void parseLanguageOption(const char* line) {
+    const char language[2] = {line[SDL_strlen(line) - 1], 0};
+    this->language = SDL_atoi(language);
+    assert(this->language >= OPTIONS_LANGUAGE_ENGLISH && this->language <= OPTIONS_LANGUAGE_RUSSIAN);
+}
+
 static inline unsigned credentialsSize(void)
 { return this->usernameSize + this->passwordSize; }
 
@@ -165,15 +173,15 @@ static bool createDefaultOptionsFileIfNotExists(void) {
     if (!access(OPTIONS_FILE, F_OK))
         return true;
 
-    const unsigned size = 176;
+    const unsigned size = 187;
     const byte content[size] = // hexdump -ve '1/1 "x%.2x"' options.txt | sed 's/x/\\x/g'
         "\x61\x64\x6d\x69\x6e\x3d\x66\x61\x6c\x73\x65\x0a\x68\x6f\x73\x74\x3d\x31\x32\x37\x2e\x30\x2e\x30\x2e\x31\x0a\x70"
         "\x6f\x72\x74\x3d\x38\x30\x38\x30\x0a\x73\x73\x70\x6b\x3d\x32\x35\x35\x2c\x32\x33\x2c\x32\x31\x2c\x32\x34\x33\x2c"
         "\x31\x34\x38\x2c\x31\x37\x37\x2c\x31\x38\x36\x2c\x30\x2c\x37\x33\x2c\x33\x34\x2c\x31\x37\x33\x2c\x31\x33\x30\x2c"
         "\x32\x33\x34\x2c\x32\x35\x31\x2c\x38\x33\x2c\x31\x33\x30\x2c\x31\x33\x38\x2c\x35\x34\x2c\x32\x31\x35\x2c\x35\x2c"
         "\x31\x37\x30\x2c\x31\x33\x39\x2c\x31\x37\x35\x2c\x31\x34\x38\x2c\x37\x31\x2c\x32\x31\x35\x2c\x37\x34\x2c\x31\x37"
-        "\x32\x2c\x32\x37\x2c\x32\x32\x35\x2c\x32\x36\x2c\x32\x34\x39\x0a\x74\x68\x65\x6d\x65\x3d\x31\x0a\x63\x72\x65\x64"
-        "\x65\x6e\x74\x69\x61\x6c\x73\x3d";
+        "\x32\x2c\x32\x37\x2c\x32\x32\x35\x2c\x32\x36\x2c\x32\x34\x39\x0a\x74\x68\x65\x6d\x65\x3d\x31\x0a\x6c\x61\x6e\x67"
+        "\x75\x61\x67\x65\x3d\x30\x0a\x63\x72\x65\x64\x65\x6e\x74\x69\x61\x6c\x73\x3d";
 
     SDL_RWops* rwOps = SDL_RWFromFile(OPTIONS_FILE, "wb");
     if (!rwOps) return false;
@@ -217,6 +225,7 @@ bool optionsInit(unsigned usernameSize, unsigned passwordSize, OptionsHostIdSupp
         else if (SDL_strstr(line, PORT_OPTION)) parsePortOption(line);
         else if (SDL_strstr(line, SSPK_OPTION)) parseSskpOption(line);
         else if (SDL_strstr(line, THEME_OPTION)) parseThemeOption(line);
+        else if (SDL_strstr(line, LANGUAGE_OPTION)) parseLanguageOption(line);
         else if (SDL_strstr(line, CREDENTIALS_OPTION)) parseCredentialsOption(line);
         else assert(false);
 
@@ -256,6 +265,11 @@ unsigned optionsServerSignPublicKeySize(void) {
 OptionsThemes optionsTheme(void) {
     assert(this);
     return this->theme;
+}
+
+OptionsLanguages optionsLanguage(void) {
+    assert(this);
+    return this->language;
 }
 
 const char* nullable optionsCredentials(void) {

@@ -22,6 +22,7 @@
 #include <stdbool.h>
 #include "../collections/list.h"
 #include "../defs.h"
+#include "strings.h"
 
 typedef void (*RenderCredentialsReceivedCallback)( // buffer is filled with random bytes after callback returns
     const char* username,
@@ -88,7 +89,8 @@ void renderPostInit( // must be called before first call to renderDraw() to init
     bool adminMode,
     RenderThemes theme,
     List* usersList, // <User*> must be deallocated by a caller of the renderInit function after work with the module itself is finished (renderClean is called)
-    List* messagesList // <ConversationMessage*> must be deallocated by the caller after this module gets shut down
+    List* messagesList, // <ConversationMessage*> must be deallocated by the caller after this module gets shut down
+    StringsLanguages language
 );
 
 void renderInputBegan(void);

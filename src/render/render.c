@@ -41,64 +41,10 @@ typedef enum : unsigned {
     STATE_ADMIN_ACTIONS = 6
 } States;
 
-STATIC_CONST_STRING TITLE = "Exchatge";
-STATIC_CONST_STRING SUBTITLE = "A secured text exchanger";
-STATIC_CONST_STRING LOG_IN = "Log in";
-STATIC_CONST_STRING REGISTER = "Register";
-STATIC_CONST_STRING USERNAME = "Username";
-STATIC_CONST_STRING PASSWORD = "Password";
-STATIC_CONST_STRING PROCEED = "Proceed";
-STATIC_CONST_STRING USERS_LIST = "Users list";
-STATIC_CONST_STRING START_CONVERSATION = "Start conversation";
-STATIC_CONST_STRING CONTINUE_CONVERSATION = "Continue conversation";
-STATIC_CONST_STRING DELETE_CONVERSATION = "Delete conversation";
-STATIC_CONST_STRING ID_TEXT = "Id";
-STATIC_CONST_STRING NAME_TEXT = "Name";
-STATIC_CONST_STRING ERROR_TEXT = "Error";
-STATIC_CONST_STRING WELCOME = "Welcome ";
-STATIC_CONST_STRING SHUTDOWN_SERVER = "Shutdown the server";
-STATIC_CONST_STRING DISCONNECTED = "Disconnected";
-STATIC_CONST_STRING UNABLE_TO_CONNECT_TO_THE_SERVER = "Unable to connect to the server";
-STATIC_CONST_STRING SEND = "Send";
-STATIC_CONST_STRING ONLINE = "Online";
-STATIC_CONST_STRING OFFLINE = "Offline";
-STATIC_CONST_STRING BACK = "Back";
-STATIC_CONST_STRING YOU = "You";
-STATIC_CONST_STRING UPDATE = "Update";
-STATIC_CONST_STRING REGISTRATION_SUCCEEDED = "Registration succeeded";
-STATIC_CONST_STRING USER_IS_OFFLINE = "User is offline";
-STATIC_CONST_STRING INVITATION_RECEIVED = "Invitation received";
-STATIC_CONST_STRING YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER = "You are invited to create conversation by user ";
-STATIC_CONST_STRING ACCEPT = "Accept";
-STATIC_CONST_STRING DECLINE = "Decline";
-STATIC_CONST_STRING UNABLE_TO_DECRYPT_DATABASE = "Unable to decrypt the database";
-STATIC_CONST_STRING UNABLE_TO_CREATE_CONVERSATION = "Unable to create the conversation";
-STATIC_CONST_STRING CONVERSATION_DOESNT_EXIST = "Conversation doesn't exist";
-STATIC_CONST_STRING CONVERSATION_ALREADY_EXISTS = "Conversation already exists";
-STATIC_CONST_STRING FILE_EXCHANGE_REQUESTED = "File exchange requested";
-STATIC_CONST_STRING FILE_EXCHANGE_REQUESTED_BY_USER = "File exchange requested by user";
-STATIC_CONST_STRING WITH_SIZE_OF = "with size of";
-STATIC_CONST_STRING BYTES = "bytes";
-STATIC_CONST_STRING CHOOSE = "Choose";
-STATIC_CONST_STRING FILE_TEXT = "File";
-STATIC_CONST_STRING FILE_SELECTION = "File selection";
-STATIC_CONST_STRING CANNOT_OPEN_FILE = "Cannot open the file";
-STATIC_CONST_STRING EMPTY_FILE_PATH = "Empty file path";
-STATIC_CONST_STRING FILE_IS_EMPTY = "File is empty";
-STATIC_CONST_STRING UNABLE_TO_TRANSMIT_FILE = "Unable to transmit file";
-STATIC_CONST_STRING FILE_IS_TOO_BIG = "File is too big (> 20 mb)";
-STATIC_CONST_STRING FILE_TRANSMITTED = "File transmitted";
-STATIC_CONST_STRING ENTER_ABSOLUTE_PATH_TO_FILE = "Enter absolute path to the file";
-STATIC_CONST_STRING PASTE_WITH_CTRL_V = "Paste with Ctrl+V";
-STATIC_CONST_STRING AUTO_LOGGING_IN = "Auto logging in";
-STATIC_CONST_STRING ADMIN_ACTIONS = "Admin actions";
-STATIC_CONST_STRING BROADCAST_MESSAGE = "Broadcast message";
-STATIC_CONST_STRING BROADCAST_HINT = "All currently online users will receive this message, no encryption will be performed";
-
 STATIC_CONST_STRING FONT_FILE = "font.ttf";
 STATIC_CONST_STRING ICON_FILE = "icon.bmp"; // 'cause SDL can process only bmp (bitmap), for other formats are needed
 
-const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 64;
+const unsigned RENDER_MAX_MESSAGE_SYSTEM_TEXT_SIZE = 75;
 
 const struct nk_color
     COLOR_LIGHT_GREY = {0xff, 0xff, 0xff, 0x7f},
@@ -314,7 +260,8 @@ void renderPostInit(
     bool adminMode,
     RenderThemes theme,
     List* usersList,
-    List* messagesList
+    List* messagesList,
+    StringsLanguages language
 ) {
     assert(this && !this->fullyInitialized);
 
@@ -333,6 +280,7 @@ void renderPostInit(
 
     { this->usersList = usersList; }
     { this->conversationMessagesList = messagesList; }
+    { stringsSetLanguage(language); }
 
     this->fullyInitialized = true;
 }

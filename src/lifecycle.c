@@ -116,7 +116,8 @@ bool lifecycleInit(void) {
         logicIsAdminMode(),
         logicIsDarkTheme() ? RENDER_THEME_DARK : RENDER_THEME_LIGHT,
         logicUsersList(),
-        logicMessagesList()
+        logicMessagesList(),
+        logicLanguage()
     );
 
     this->netUpdateThreadId = SDL_AddTimer(NET_UPDATE_PERIOD, (SDL_TimerCallback) &netUpdateLopper, NULL);
