@@ -30,56 +30,56 @@ extern const unsigned STRINGS;
 void stringsSetLanguage(StringsLanguages language);
 const char* stringsString(unsigned id);
 
-#define TITLE stringsString(0)
-#define SUBTITLE stringsString(1)
-#define LOG_IN stringsString(2)
-#define REGISTER stringsString(3)
-#define USERNAME stringsString(4)
-#define PASSWORD stringsString(5)
-#define PROCEED stringsString(6)
-#define USERS_LIST stringsString(7)
-#define START_CONVERSATION stringsString(8)
-#define CONTINUE_CONVERSATION stringsString(9)
-#define DELETE_CONVERSATION stringsString(10)
-#define ID_TEXT stringsString(11)
-#define NAME_TEXT stringsString(12)
-#define ERROR_TEXT stringsString(13)
-#define WELCOME stringsString(14)
-#define SHUTDOWN_SERVER stringsString(15)
-#define DISCONNECTED stringsString(16)
-#define UNABLE_TO_CONNECT_TO_THE_SERVER stringsString(17)
-#define SEND stringsString(18)
-#define ONLINE stringsString(19)
-#define OFFLINE stringsString(20)
-#define BACK stringsString(21)
-#define YOU stringsString(22)
-#define UPDATE stringsString(23)
-#define REGISTRATION_SUCCEEDED stringsString(24)
-#define USER_IS_OFFLINE stringsString(25)
-#define INVITATION_RECEIVED stringsString(26)
-#define YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER stringsString(27)
-#define ACCEPT stringsString(28)
-#define DECLINE stringsString(29)
-#define UNABLE_TO_DECRYPT_DATABASE stringsString(30)
-#define UNABLE_TO_CREATE_CONVERSATION stringsString(31)
-#define CONVERSATION_DOESNT_EXIST stringsString(32)
-#define CONVERSATION_ALREADY_EXISTS stringsString(33)
-#define FILE_EXCHANGE_REQUESTED stringsString(34)
-#define FILE_EXCHANGE_REQUESTED_BY_USER stringsString(35)
-#define WITH_SIZE_OF stringsString(36)
-#define BYTES stringsString(37)
-#define CHOOSE stringsString(38)
-#define FILE_TEXT stringsString(39)
-#define FILE_SELECTION stringsString(40)
-#define CANNOT_OPEN_FILE stringsString(41)
-#define EMPTY_FILE_PATH stringsString(42)
-#define FILE_IS_EMPTY stringsString(43)
-#define UNABLE_TO_TRANSMIT_FILE stringsString(44)
-#define FILE_IS_TOO_BIG stringsString(45)
-#define FILE_TRANSMITTED stringsString(46)
-#define ENTER_ABSOLUTE_PATH_TO_FILE stringsString(47)
-#define PASTE_WITH_CTRL_V stringsString(48)
-#define AUTO_LOGGING_IN stringsString(49)
-#define ADMIN_ACTIONS stringsString(50)
-#define BROADCAST_MESSAGE stringsString(51)
-#define BROADCAST_HINT stringsString(52)
+extern const unsigned TITLE;
+extern const unsigned SUBTITLE;
+extern const unsigned LOG_IN;
+extern const unsigned REGISTER;
+extern const unsigned USERNAME;
+extern const unsigned PASSWORD;
+extern const unsigned PROCEED;
+extern const unsigned USERS_LIST;
+extern const unsigned START_CONVERSATION;
+extern const unsigned CONTINUE_CONVERSATION;
+extern const unsigned DELETE_CONVERSATION;
+extern const unsigned ID_TEXT;
+extern const unsigned NAME_TEXT;
+extern const unsigned ERROR_TEXT;
+extern const unsigned WELCOME;
+extern const unsigned SHUTDOWN_SERVER;
+extern const unsigned DISCONNECTED;
+extern const unsigned UNABLE_TO_CONNECT_TO_THE_SERVER;
+extern const unsigned SEND;
+extern const unsigned ONLINE;
+extern const unsigned OFFLINE;
+extern const unsigned BACK;
+extern const unsigned YOU;
+extern const unsigned UPDATE;
+extern const unsigned REGISTRATION_SUCCEEDED;
+extern const unsigned USER_IS_OFFLINE;
+extern const unsigned INVITATION_RECEIVED;
+extern const unsigned YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER;
+extern const unsigned ACCEPT;
+extern const unsigned DECLINE;
+extern const unsigned UNABLE_TO_DECRYPT_DATABASE;
+extern const unsigned UNABLE_TO_CREATE_CONVERSATION;
+extern const unsigned CONVERSATION_DOESNT_EXIST;
+extern const unsigned CONVERSATION_ALREADY_EXISTS;
+extern const unsigned FILE_EXCHANGE_REQUESTED;
+extern const unsigned FILE_EXCHANGE_REQUESTED_BY_USER;
+extern const unsigned WITH_SIZE_OF;
+extern const unsigned BYTES;
+extern const unsigned CHOOSE;
+extern const unsigned FILE_TEXT;
+extern const unsigned FILE_SELECTION;
+extern const unsigned CANNOT_OPEN_FILE;
+extern const unsigned EMPTY_FILE_PATH;
+extern const unsigned FILE_IS_EMPTY;
+extern const unsigned UNABLE_TO_TRANSMIT_FILE;
+extern const unsigned FILE_IS_TOO_BIG;
+extern const unsigned FILE_TRANSMITTED;
+extern const unsigned ENTER_ABSOLUTE_PATH_TO_FILE;
+extern const unsigned PASTE_WITH_CTRL_V;
+extern const unsigned AUTO_LOGGING_IN;
+extern const unsigned ADMIN_ACTIONS;
+extern const unsigned BROADCAST_MESSAGE;
+extern const unsigned BROADCAST_HINT;
