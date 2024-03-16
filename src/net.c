@@ -483,25 +483,24 @@ static void processConversationSetUpMessage(const Message* message) {
 }
 
 static inline unsigned fileExchangeRequestInitialSize(void)
-{ return INT_SIZE + CRYPTO_HASH_SIZE + INT_SIZE + NET_MAX_FILENAME_SIZE; }
+{ return INT_SIZE + CRYPTO_HASH_SIZE + INT_SIZE + NET_MAX_FILENAME_SIZE; } // 160
 
 static void processFileExchangeRequestMessage(const Message* message) {
     assert(message->body && message->size);
     assert(message->flag == FLAG_FILE_ASK && message->size == fileExchangeRequestInitialSize());
 
-    if (this->settingUpConversation || this->exchangingFile)
-        return;
-
+    if (this->settingUpConversation || this->exchangingFile) return;
     this->exchangingFile = true;
     this->inviteProcessingStartMillis = (*(this->currentTimeMillisGetter))();
 
-    const unsigned fileSize = *((unsigned*) message->body);
+    const unsigned fileSize = *(unsigned*) (message->body);
     assert(fileSize);
 
     byte hash[CRYPTO_HASH_SIZE];
     SDL_memcpy(hash, message->body + INT_SIZE, CRYPTO_HASH_SIZE);
 
-    const unsigned filenameSize = *((unsigned*) message->body + INT_SIZE + CRYPTO_HASH_SIZE);
+    const unsigned filenameSize = *(unsigned*) (message->body + INT_SIZE + CRYPTO_HASH_SIZE);
+    assert(filenameSize && filenameSize <= NET_MAX_FILENAME_SIZE);
     char filename[filenameSize];
     SDL_memcpy(filename, message->body + INT_SIZE + CRYPTO_HASH_SIZE + INT_SIZE, filenameSize);
 
@@ -1011,7 +1010,7 @@ bool netBeginFileExchange(unsigned toId, unsigned fileSize, const byte* hash, co
 
     *((unsigned*) body) = fileSize;
     SDL_memcpy(body + INT_SIZE, hash, CRYPTO_HASH_SIZE);
-    *((unsigned*) body + INT_SIZE + CRYPTO_HASH_SIZE) = filenameSize;
+    *(unsigned*) (body + INT_SIZE + CRYPTO_HASH_SIZE) = filenameSize;
     SDL_memcpy(body + INT_SIZE + CRYPTO_HASH_SIZE + INT_SIZE, filename, filenameSize);
 
     if (!netSend(FLAG_FILE_ASK, body, fileExchangeRequestInitialSize(), toId)) {

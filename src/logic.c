@@ -703,6 +703,7 @@ static unsigned nextFileChunkSupplier(unsigned index, byte* encryptedBuffer) { /
     assert(encryptedSize <= NET_MAX_MESSAGE_BODY_SIZE);
 
     byte* encryptedChunk = cryptoEncrypt(coderStreams, unencryptedBuffer, actualSize, false);
+    assert(encryptedChunk);
     SDL_memcpy(encryptedBuffer, encryptedChunk, encryptedSize);
     SDL_free(encryptedChunk);
 
