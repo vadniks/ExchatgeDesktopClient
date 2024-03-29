@@ -198,7 +198,7 @@ void renderInit(
     this->filePresenceChecker = filePresenceChecker;
 
     this->window = SDL_CreateWindow(
-        stringsString(TITLE),
+        stringsString(STRINGS_TITLE),
         SDL_WINDOWPOS_CENTERED, // don't work on 2.28.1
         SDL_WINDOWPOS_CENTERED,
         (int) this->width,
@@ -315,11 +315,11 @@ void renderInputEnded(void) {
 void renderSetWindowTitle(const char* title) {
     assert(this);
 
-    const unsigned winTitleSize = SDL_strlen(stringsString(TITLE)), separatorSize = 2,
+    const unsigned winTitleSize = SDL_strlen(stringsString(STRINGS_TITLE)), separatorSize = 2,
         size = winTitleSize + separatorSize + this->usernameSize + 1;
 
     char xTitle[size];
-    SDL_memcpy(xTitle, stringsString(TITLE), winTitleSize);
+    SDL_memcpy(xTitle, stringsString(STRINGS_TITLE), winTitleSize);
     SDL_memcpy(xTitle + winTitleSize, ", ", separatorSize);
     SDL_memcpy(xTitle + winTitleSize + separatorSize, title, this->usernameSize);
     xTitle[size - 1] = 0;
@@ -407,24 +407,24 @@ bool renderIsFileChooserShown(void) {
 bool renderShowInviteDialog(const char* fromUserName) {
     assert(this);
 
-    const unsigned messageSize = SDL_strlen(stringsString(YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER)),
+    const unsigned messageSize = SDL_strlen(stringsString(STRINGS_YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER)),
         xMessageSize = messageSize + 1 + this->usernameSize + 1;
 
     char xMessage[xMessageSize];
-    SDL_memcpy(xMessage, stringsString(YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER), messageSize);
+    SDL_memcpy(xMessage, stringsString(STRINGS_YOU_ARE_INVITED_TO_CREATE_CONVERSATION_BY_USER), messageSize);
     xMessage[messageSize] = ' ';
     SDL_memcpy(xMessage + messageSize + 1, fromUserName, this->usernameSize);
     xMessage[xMessageSize - 1] = 0;
 
     const SDL_MessageBoxButtonData buttons[2] = {
-        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, stringsString(ACCEPT) },
-        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, stringsString(DECLINE) }
+        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, stringsString(STRINGS_ACCEPT) },
+        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, stringsString(STRINGS_DECLINE) }
     };
 
     SDL_MessageBoxData data = {
         SDL_MESSAGEBOX_INFORMATION,
         this->window,
-        stringsString(INVITATION_RECEIVED),
+        stringsString(STRINGS_INVITATION_RECEIVED),
         xMessage,
         2,
         buttons,
@@ -445,24 +445,24 @@ bool renderShowFileExchangeRequestDialog(const char* fromUserName, unsigned file
     const unsigned written = SDL_snprintf(
         buffer, bufferSize,
         "%s %s %s %u %s (%s)",
-        stringsString(FILE_EXCHANGE_REQUESTED_BY_USER),
+        stringsString(STRINGS_FILE_EXCHANGE_REQUESTED_BY_USER),
         fromUserName,
-        stringsString(WITH_SIZE_OF),
+        stringsString(STRINGS_WITH_SIZE_OF),
         fileSize,
-        stringsString(BYTES),
+        stringsString(STRINGS_BYTES),
         filename
     );
     assert(written > 0 && written <= bufferSize);
 
     const SDL_MessageBoxButtonData buttons[2] = {
-        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, stringsString(ACCEPT) },
-        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, stringsString(DECLINE) }
+        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, stringsString(STRINGS_ACCEPT) },
+        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, stringsString(STRINGS_DECLINE) }
     };
 
     SDL_MessageBoxData data = {
         SDL_MESSAGEBOX_INFORMATION,
         this->window,
-        stringsString(FILE_EXCHANGE_REQUESTED),
+        stringsString(STRINGS_FILE_EXCHANGE_REQUESTED),
         buffer,
         2,
         buttons,
@@ -514,21 +514,21 @@ void renderShowSystemMessage(const char* text, unsigned size) {
     queuePush(this->systemMessagesQueue, message);
 }
 
-void renderShowSystemError(void) { postSystemMessage(stringsString(ERROR_TEXT), true); }
-void renderShowDisconnectedError(void) { postSystemMessage(stringsString(DISCONNECTED), true); }
-void renderShowUnableToConnectToTheServerError(void) { postSystemMessage(stringsString(UNABLE_TO_CONNECT_TO_THE_SERVER), true); }
-void renderShowRegistrationSucceededSystemMessage(void) { postSystemMessage(stringsString(REGISTRATION_SUCCEEDED), false); }
-void renderShowUserIsOfflineError(void) { postSystemMessage(stringsString(USER_IS_OFFLINE), true); }
-void renderShowUnableToDecryptDatabaseError(void) { postSystemMessage(stringsString(UNABLE_TO_DECRYPT_DATABASE), true); }
-void renderShowUnableToCreateConversation(void) { postSystemMessage(stringsString(UNABLE_TO_CREATE_CONVERSATION), true); }
-void renderShowConversationDoesntExist(void) { postSystemMessage(stringsString(CONVERSATION_DOESNT_EXIST), true); }
-void renderShowConversationAlreadyExists(void) { postSystemMessage(stringsString(CONVERSATION_ALREADY_EXISTS), true); }
-void renderShowCannotOpenFileError(void) { postSystemMessage(stringsString(CANNOT_OPEN_FILE), true); }
-void renderShowEmptyFilePathError(void) { postSystemMessage(stringsString(EMPTY_FILE_PATH), true); }
-void renderShowFileIsEmptyError(void) { postSystemMessage(stringsString(FILE_IS_EMPTY), true); }
-void renderShowUnableToTransmitFileError(void) { postSystemMessage(stringsString(UNABLE_TO_TRANSMIT_FILE), true); }
-void renderShowFileIsTooBig(void) { postSystemMessage(stringsString(FILE_IS_TOO_BIG), true); }
-void renderShowFileTransmittedSystemMessage(void) { postSystemMessage(stringsString(FILE_TRANSMITTED), false); }
+void renderShowSystemError(void) { postSystemMessage(stringsString(STRINGS_ERROR_TEXT), true); }
+void renderShowDisconnectedError(void) { postSystemMessage(stringsString(STRINGS_DISCONNECTED), true); }
+void renderShowUnableToConnectToTheServerError(void) { postSystemMessage(stringsString(STRINGS_UNABLE_TO_CONNECT_TO_THE_SERVER), true); }
+void renderShowRegistrationSucceededSystemMessage(void) { postSystemMessage(stringsString(STRINGS_REGISTRATION_SUCCEEDED), false); }
+void renderShowUserIsOfflineError(void) { postSystemMessage(stringsString(STRINGS_USER_IS_OFFLINE), true); }
+void renderShowUnableToDecryptDatabaseError(void) { postSystemMessage(stringsString(STRINGS_UNABLE_TO_DECRYPT_DATABASE), true); }
+void renderShowUnableToCreateConversation(void) { postSystemMessage(stringsString(STRINGS_UNABLE_TO_CREATE_CONVERSATION), true); }
+void renderShowConversationDoesntExist(void) { postSystemMessage(stringsString(STRINGS_CONVERSATION_DOESNT_EXIST), true); }
+void renderShowConversationAlreadyExists(void) { postSystemMessage(stringsString(STRINGS_CONVERSATION_ALREADY_EXISTS), true); }
+void renderShowCannotOpenFileError(void) { postSystemMessage(stringsString(STRINGS_CANNOT_OPEN_FILE), true); }
+void renderShowEmptyFilePathError(void) { postSystemMessage(stringsString(STRINGS_EMPTY_FILE_PATH), true); }
+void renderShowFileIsEmptyError(void) { postSystemMessage(stringsString(STRINGS_FILE_IS_EMPTY), true); }
+void renderShowUnableToTransmitFileError(void) { postSystemMessage(stringsString(STRINGS_UNABLE_TO_TRANSMIT_FILE), true); }
+void renderShowFileIsTooBig(void) { postSystemMessage(stringsString(STRINGS_FILE_IS_TOO_BIG), true); }
+void renderShowFileTransmittedSystemMessage(void) { postSystemMessage(stringsString(STRINGS_FILE_TRANSMITTED), false); }
 
 void renderShowInfiniteProgressBar(void) {
     assert(this);
@@ -579,8 +579,8 @@ static void drawSplashPage(void) {
     nk_spacer(this->context);
 
     nk_layout_row_dynamic(this->context, height * 0.0625f, 1);
-    nk_label(this->context, stringsString(TITLE), NK_TEXT_CENTERED);
-    nk_label(this->context, stringsString(SUBTITLE), NK_TEXT_CENTERED);
+    nk_label(this->context, stringsString(STRINGS_TITLE), NK_TEXT_CENTERED);
+    nk_label(this->context, stringsString(STRINGS_SUBTITLE), NK_TEXT_CENTERED);
     drawInfiniteProgressBar(height * 0.125f);
 
     nk_layout_row_dynamic(this->context, height * 0.25f, 1);
@@ -615,11 +615,11 @@ static void drawLogInForm(int width, float height, bool logIn) {
     const float sectionHeightMultiplier = logIn ? 0.2f : 0.25f;
 
     nk_layout_row_dynamic(this->context, height * sectionHeightMultiplier, 1);
-    nk_label(this->context, logIn ? stringsString(LOG_IN) : stringsString(REGISTER), NK_TEXT_CENTERED);
+    nk_label(this->context, logIn ? stringsString(STRINGS_LOG_IN) : stringsString(STRINGS_REGISTER), NK_TEXT_CENTERED);
 
     nk_layout_row_static(this->context, height * sectionHeightMultiplier, width / 2, 2);
 
-    nk_label(this->context, stringsString(USERNAME), NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, stringsString(STRINGS_USERNAME), NK_TEXT_ALIGN_LEFT);
     nk_edit_string(
         this->context,
         NK_EDIT_SIMPLE,
@@ -629,7 +629,7 @@ static void drawLogInForm(int width, float height, bool logIn) {
         &nk_filter_default
     );
 
-    nk_label(this->context, stringsString(PASSWORD), NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, stringsString(STRINGS_PASSWORD), NK_TEXT_ALIGN_LEFT);
     nk_edit_password_string(
         this->context,
         NK_EDIT_SIMPLE,
@@ -650,7 +650,7 @@ static void drawLogInForm(int width, float height, bool logIn) {
 
         nk_layout_row_push(this->context, checkboxWidth);
         bool autoLoggingIn = (*(this->autoLoggingInSupplier))();
-        if (nk_checkbox_label(this->context, stringsString(AUTO_LOGGING_IN), &autoLoggingIn))
+        if (nk_checkbox_label(this->context, stringsString(STRINGS_AUTO_LOGGING_IN), &autoLoggingIn))
             (*(this->onAutoLoggingInChanged))(autoLoggingIn);
 
         nk_layout_row_push(this->context, spacerWidth);
@@ -660,8 +660,8 @@ static void drawLogInForm(int width, float height, bool logIn) {
     }
 
     nk_layout_row_static(this->context, height * sectionHeightMultiplier, width / 2, 2);
-    if (nk_button_label(this->context, stringsString(PROCEED))) onProceedClickedAfterLogInRegister(logIn);
-    if (nk_button_label(this->context, stringsString(logIn ? REGISTER : LOG_IN))) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
+    if (nk_button_label(this->context, stringsString(STRINGS_PROCEED))) onProceedClickedAfterLogInRegister(logIn);
+    if (nk_button_label(this->context, stringsString(logIn ? STRINGS_REGISTER : STRINGS_LOG_IN))) (*(this->onLoginRegisterPageQueriedByUser))(!logIn);
 
     nk_group_end(this->context);
 }
@@ -718,8 +718,8 @@ static void drawUserRowColumn(
 }
 
 static void drawUserRowColumnDescriptions(__attribute_maybe_unused__ const void* nullable parameter) {
-    nk_label_colored(this->context, stringsString(ID_TEXT), NK_TEXT_ALIGN_LEFT, secondaryColor());
-    nk_label_colored(this->context, stringsString(NAME_TEXT), NK_TEXT_ALIGN_LEFT, secondaryColor());
+    nk_label_colored(this->context, stringsString(STRINGS_ID_TEXT), NK_TEXT_ALIGN_LEFT, secondaryColor());
+    nk_label_colored(this->context, stringsString(STRINGS_NAME_TEXT), NK_TEXT_ALIGN_LEFT, secondaryColor());
 }
 
 static void drawUserRowColumnIdAndName(const void* parameter) {
@@ -731,7 +731,7 @@ static void drawUserRowColumnIdAndName(const void* parameter) {
 static void drawUserRowColumnStatus(const void* parameter) {
     assert(parameter);
     const bool online = *((const bool*) parameter);
-    nk_label_colored(this->context, stringsString(online ? ONLINE : OFFLINE), NK_TEXT_ALIGN_LEFT, online ? COLOR_GREEN : secondaryColor());
+    nk_label_colored(this->context, stringsString(online ? STRINGS_ONLINE : STRINGS_OFFLINE), NK_TEXT_ALIGN_LEFT, online ? COLOR_GREEN : secondaryColor());
 }
 
 static void drawUserRowColumnActions(const void* parameter) {
@@ -739,13 +739,13 @@ static void drawUserRowColumnActions(const void* parameter) {
     const unsigned id = *((const unsigned*) ((const void**) parameter)[0]);
 
     if (*((const bool*) ((const void**) parameter)[1])) {
-        if (nk_button_label(this->context, stringsString(CONTINUE_CONVERSATION)))
+        if (nk_button_label(this->context, stringsString(STRINGS_CONTINUE_CONVERSATION)))
             (*(this->onUserForConversationChosen))(id, RENDER_CONVERSATION_CONTINUE);
 
-        if (nk_button_label(this->context, stringsString(DELETE_CONVERSATION)))
+        if (nk_button_label(this->context, stringsString(STRINGS_DELETE_CONVERSATION)))
             (*(this->onUserForConversationChosen))(id, RENDER_CONVERSATION_DELETE);
     } else {
-        if (nk_button_label(this->context, stringsString(START_CONVERSATION)))
+        if (nk_button_label(this->context, stringsString(STRINGS_START_CONVERSATION)))
             (*(this->onUserForConversationChosen))(id, RENDER_CONVERSATION_START);
 
         nk_spacer(this->context);
@@ -772,19 +772,19 @@ static void drawUsersList(void) {
     currentUserName[this->usernameSize] = 0;
 
     nk_layout_row_dynamic(this->context, decreasedHeight * 0.1f, 3);
-    nk_label(this->context, stringsString(WELCOME), NK_TEXT_ALIGN_CENTERED);
+    nk_label(this->context, stringsString(STRINGS_WELCOME), NK_TEXT_ALIGN_CENTERED);
     nk_label(this->context, currentUserName, NK_TEXT_ALIGN_CENTERED);
 
     if (this->adminMode) {
-        if (nk_button_label(this->context, stringsString(ADMIN_ACTIONS)))
+        if (nk_button_label(this->context, stringsString(STRINGS_ADMIN_ACTIONS)))
             (*(this->onAdminActionsPageRequested))(true);
     } else
         nk_spacer(this->context);
 
     nk_layout_row_dynamic(this->context, decreasedHeight * 0.1f, 5);
-    nk_label(this->context, stringsString(USERS_LIST), NK_TEXT_ALIGN_LEFT);
+    nk_label(this->context, stringsString(STRINGS_USERS_LIST), NK_TEXT_ALIGN_LEFT);
     for (unsigned i = 0; i < 3; i++) nk_spacer(this->context);
-    if (nk_button_label(this->context, stringsString(UPDATE))) (*(this->onUpdateUsersListClicked))();
+    if (nk_button_label(this->context, stringsString(STRINGS_UPDATE))) (*(this->onUpdateUsersListClicked))();
 
     float heightMultiplier = 0.8f;
     if (this->loading) heightMultiplier -= 0.05f;
@@ -845,7 +845,7 @@ static void drawConversationMessage(
 
     if (!message->from) {
         nk_layout_row_push(this->context, fromRatio);
-        nk_label_colored(this->context, stringsString(YOU), NK_TEXT_ALIGN_CENTERED, fromUsernameColor);
+        nk_label_colored(this->context, stringsString(STRINGS_YOU), NK_TEXT_ALIGN_CENTERED, fromUsernameColor);
 
         nk_layout_row_push(this->context, textRatio);
         nk_spacer(this->context);
@@ -888,7 +888,7 @@ static void drawConversation(void) {
     nk_layout_row_begin(this->context, NK_DYNAMIC, height * 0.05f, 3);
 
     nk_layout_row_push(this->context, 0.15f);
-    if (nk_button_label(this->context, stringsString(BACK))) (*(this->onReturnFromConversationPageRequested))();
+    if (nk_button_label(this->context, stringsString(STRINGS_BACK))) (*(this->onReturnFromConversationPageRequested))();
 
     nk_layout_row_push(this->context, 0.55f);
     nk_spacer(this->context);
@@ -941,10 +941,10 @@ static void drawConversation(void) {
     );
 
     nk_layout_row_push(this->context, aboveInitialWidth ? 0.069f : 0.067f);
-    if (nk_button_label(this->context, stringsString(SEND))) onSendClicked();
+    if (nk_button_label(this->context, stringsString(STRINGS_SEND))) onSendClicked();
 
     nk_layout_row_push(this->context, aboveInitialWidth ? 0.079f : 0.077f);
-    if (nk_button_label(this->context, stringsString(FILE_TEXT))) (*(this->onFileChooserRequested))();
+    if (nk_button_label(this->context, stringsString(STRINGS_FILE_TEXT))) (*(this->onFileChooserRequested))();
 
     nk_layout_row_end(this->context);
 }
@@ -964,10 +964,10 @@ static void drawFileChooser(void) {
 
     nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3); {
         nk_layout_row_push(this->context, 0.2f);
-        if (nk_button_label(this->context, stringsString(BACK))) (*(this->fileChooseResultHandler))(NULL, 0);
+        if (nk_button_label(this->context, stringsString(STRINGS_BACK))) (*(this->fileChooseResultHandler))(NULL, 0);
 
         nk_layout_row_push(this->context, aboveInitialWidth ? 0.33f : 0.38f);
-        nk_label(this->context, stringsString(FILE_SELECTION), NK_TEXT_ALIGN_RIGHT);
+        nk_label(this->context, stringsString(STRINGS_FILE_SELECTION), NK_TEXT_ALIGN_RIGHT);
 
         nk_layout_row_push(this->context, aboveInitialWidth ? 0.47f : 0.42f);
         nk_label(this->context, this->conversationName, NK_TEXT_ALIGN_RIGHT);
@@ -980,7 +980,7 @@ static void drawFileChooser(void) {
         nk_spacer(this->context);
         nk_label_colored(
             this->context,
-            stringsString(ENTER_ABSOLUTE_PATH_TO_FILE),
+            stringsString(STRINGS_ENTER_ABSOLUTE_PATH_TO_FILE),
             NK_TEXT_ALIGN_CENTERED,
             secondaryColor()
         );
@@ -989,7 +989,7 @@ static void drawFileChooser(void) {
         nk_spacer(this->context);
         nk_label_colored(
             this->context,
-            stringsString(PASTE_WITH_CTRL_V),
+            stringsString(STRINGS_PASTE_WITH_CTRL_V),
             NK_TEXT_ALIGN_CENTERED,
             secondaryColor()
         );
@@ -1007,7 +1007,7 @@ static void drawFileChooser(void) {
         nk_spacer(this->context);
 
         nk_spacer(this->context);
-        if (nk_button_label(this->context, stringsString(CHOOSE))) onFileChosen();
+        if (nk_button_label(this->context, stringsString(STRINGS_CHOOSE))) onFileChosen();
         nk_spacer(this->context);
     }
 }
@@ -1027,10 +1027,10 @@ static void drawAdminActions(void) {
 
     nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 3); {
         nk_layout_row_push(this->context, 0.2f);
-        if (nk_button_label(this->context, stringsString(BACK))) (*(this->onAdminActionsPageRequested))(false);
+        if (nk_button_label(this->context, stringsString(STRINGS_BACK))) (*(this->onAdminActionsPageRequested))(false);
 
         nk_layout_row_push(this->context, aboveInitialWidth ? 0.33f : 0.38f);
-        nk_label(this->context, stringsString(ADMIN_ACTIONS), NK_TEXT_ALIGN_RIGHT);
+        nk_label(this->context, stringsString(STRINGS_ADMIN_ACTIONS), NK_TEXT_ALIGN_RIGHT);
 
         nk_layout_row_push(this->context, aboveInitialWidth ? 0.47f : 0.42f);
         nk_spacer(this->context);
@@ -1041,7 +1041,7 @@ static void drawAdminActions(void) {
 
     nk_layout_row_dynamic(this->context, rowHeight, 3); {
         nk_spacer(this->context);
-        if (nk_button_label(this->context, stringsString(SHUTDOWN_SERVER))) (*(this->onServerShutdownRequested))();
+        if (nk_button_label(this->context, stringsString(STRINGS_SHUTDOWN_SERVER))) (*(this->onServerShutdownRequested))();
         nk_spacer(this->context);
     }
 
@@ -1051,12 +1051,12 @@ static void drawAdminActions(void) {
         nk_spacer(this->context);
 
         nk_layout_row_push(this->context, 0.4f);
-        if (!nk_group_begin(this->context, stringsString(BROADCAST_HINT), NK_WINDOW_NO_SCROLLBAR)) {
+        if (!nk_group_begin(this->context, stringsString(STRINGS_BROADCAST_HINT), NK_WINDOW_NO_SCROLLBAR)) {
             nk_spacer(this->context);
             goto endOfGroup;
         } {
             nk_layout_row_dynamic(this->context, rowHeight * 0.5f, 1);
-            nk_label(this->context, stringsString(BROADCAST_MESSAGE), NK_TEXT_ALIGN_CENTERED);
+            nk_label(this->context, stringsString(STRINGS_BROADCAST_MESSAGE), NK_TEXT_ALIGN_CENTERED);
 
             nk_layout_row_begin(this->context, NK_DYNAMIC, rowHeight, 2); {
                 nk_layout_row_push(this->context, aboveInitialWidth ? 0.85f : 0.75f);
@@ -1070,11 +1070,11 @@ static void drawAdminActions(void) {
                 );
 
                 nk_layout_row_push(this->context, aboveInitialWidth ? 0.15f : 0.25f);
-                if (nk_button_label(this->context, stringsString(SEND))) onBroadcastMessageSendRequested();
+                if (nk_button_label(this->context, stringsString(STRINGS_SEND))) onBroadcastMessageSendRequested();
             } nk_layout_row_end(this->context);
 
             nk_layout_row_dynamic(this->context, height * (aboveInitialWidth ? 0.33f : 0.25f), 1);
-            nk_label_colored_wrap(this->context, stringsString(BROADCAST_HINT), secondaryColor());
+            nk_label_colored_wrap(this->context, stringsString(STRINGS_BROADCAST_HINT), secondaryColor());
         } nk_group_end(this->context);
 
         endOfGroup:
@@ -1162,7 +1162,7 @@ void renderDraw(void) {
 
     if (nk_begin(
         this->context,
-        stringsString(TITLE),
+        stringsString(STRINGS_TITLE),
         nk_rect(0, 0, (float) this->width, (float) this->height),
         NK_WINDOW_BORDER
     )) drawPage();
